@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../domain/device.dart';
 import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
 import '../../ports/input/get_monitoring_overview.dart';
+import '../widgets/admin_scaffold.dart';
+import '../widgets/common.dart';
 
-/// Pantalla principal: resumen de sedes, dispositivos e incidentes.
+/// Resumen general: KPIs, disponibilidad de la flota,
+/// dispositivos fuera de línea e incidentes recientes.
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key, required this.getOverview});
 
@@ -36,16 +38,14 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('FICON Power')),
+    return AdminScaffold(
+      currentRoute: AppRoutes.dashboard,
+      title: 'Resumen',
       body: FutureBuilder<MonitoringOverview>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return _ErrorView(
-              error: snapshot.error,
-              onRetry: _refresh,
-            );
+            return ErrorView(error: snapshot.error, onRetry: _refresh);
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -67,77 +67,111 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final offlineDevices =
+        data.devices.where((d) => !d.isOnline && d.active).toList();
+    final recentIncidents = data.incidents.take(6).toList();
+
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final cardWidth =
-                width >= 720 ? (width - 3 * 12) / 4 : (width - 12) / 2;
+            final cardWidth = width >= 900
+                ? (width - 3 * 16) / 4
+                : width >= 560
+                    ? (width - 16) / 2
+                    : width;
             return Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 16,
+              runSpacing: 16,
               children: [
-                _SummaryCard(
+                _KpiCard(
                   title: 'Sedes',
                   value: '${data.sites.length}',
+                  icon: Icons.business,
+                  color: Colors.indigo.shade600,
                   width: cardWidth,
                 ),
-                _SummaryCard(
+                _KpiCard(
+                  title: 'Dispositivos',
+                  value: '${data.devices.length}',
+                  icon: Icons.electrical_services,
+                  color: Colors.blueGrey.shade600,
+                  width: cardWidth,
+                ),
+                _KpiCard(
                   title: 'En línea',
                   value: '${data.onlineCount}',
-                  valueColor: Colors.green.shade700,
+                  icon: Icons.check_circle_outline,
+                  color: StatusColors.online,
                   width: cardWidth,
                 ),
-                _SummaryCard(
-                  title: 'Fuera de línea',
-                  value: '${data.offlineCount}',
-                  valueColor:
-                      data.offlineCount > 0 ? Colors.red.shade700 : null,
-                  width: cardWidth,
-                ),
-                _SummaryCard(
+                _KpiCard(
                   title: 'Incidentes activos',
                   value: '${data.openIncidents}',
-                  valueColor:
-                      data.openIncidents > 0 ? Colors.red.shade700 : null,
+                  icon: Icons.warning_amber,
+                  color: data.openIncidents > 0
+                      ? StatusColors.offline
+                      : StatusColors.resolved,
                   width: cardWidth,
                 ),
               ],
             );
           },
         ),
-        const SizedBox(height: 24),
-        _SectionTitle('Dispositivos'),
-        if (data.devices.isEmpty)
-          const _EmptyNote('No hay dispositivos registrados.')
-        else
-          ...data.devices.map(_DeviceTile.new),
-        const SizedBox(height: 24),
-        _SectionTitle('Incidentes recientes'),
-        if (data.incidents.isEmpty)
-          const _EmptyNote('No hay incidentes registrados.')
-        else
-          ...data.incidents.take(20).map(_IncidentTile.new),
+        const SizedBox(height: 20),
+        _FleetHealthCard(
+          online: data.onlineCount,
+          total: data.devices.length,
+        ),
+        const SizedBox(height: 20),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
+            final lists = [
+              _OfflineDevicesCard(devices: offlineDevices),
+              _RecentIncidentsCard(incidents: recentIncidents),
+            ];
+            if (!wide) {
+              return Column(
+                children: [
+                  lists[0],
+                  const SizedBox(height: 20),
+                  lists[1],
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: lists[0]),
+                const SizedBox(width: 20),
+                Expanded(child: lists[1]),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
+class _KpiCard extends StatelessWidget {
+  const _KpiCard({
     required this.title,
     required this.value,
+    required this.icon,
+    required this.color,
     required this.width,
-    this.valueColor,
   });
 
   final String title;
   final String value;
+  final IconData icon;
+  final Color color;
   final double width;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -146,15 +180,30 @@ class _SummaryCard extends StatelessWidget {
       width: width,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(18),
+          child: Row(
             children: [
-              Text(title, style: textTheme.labelLarge),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: textTheme.headlineMedium?.copyWith(color: valueColor),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Text(title, style: textTheme.bodyMedium),
+                  ],
+                ),
               ),
             ],
           ),
@@ -164,150 +213,162 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+class _FleetHealthCard extends StatelessWidget {
+  const _FleetHealthCard({required this.online, required this.total});
 
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-    );
-  }
-}
-
-class _EmptyNote extends StatelessWidget {
-  const _EmptyNote(this.text);
-
-  final String text;
+  final int online;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
-    );
-  }
-}
-
-class _DeviceTile extends StatelessWidget {
-  const _DeviceTile(this.device);
-
-  final Device device;
-
-  @override
-  Widget build(BuildContext context) {
-    final online = device.isOnline;
-    final subtitle = [
-      if (device.siteName != null && device.siteName!.isNotEmpty)
-        device.siteName!,
-      if (device.district != null && device.district!.isNotEmpty)
-        device.district!,
-    ].join(' - ');
+    final ratio = total == 0 ? 0.0 : online / total;
+    final percent = (ratio * 100).round();
+    final color = ratio >= 0.9
+        ? StatusColors.online
+        : ratio >= 0.5
+            ? StatusColors.acknowledged
+            : StatusColors.offline;
     return Card(
-      child: ListTile(
-        title: Text(
-            device.name.isNotEmpty ? device.name : device.externalId ?? ''),
-        subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
-        trailing: Text(
-          online ? 'En línea' : 'Fuera de línea',
-          style: TextStyle(
-            color: online ? Colors.green.shade700 : Colors.red.shade700,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IncidentTile extends StatelessWidget {
-  const _IncidentTile(this.incident);
-
-  final Incident incident;
-
-  static final _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-
-  @override
-  Widget build(BuildContext context) {
-    final start = incident.startTime;
-    final subtitle = StringBuffer();
-    if (incident.siteName != null && incident.siteName!.isNotEmpty) {
-      subtitle.write(incident.siteName);
-    }
-    if (start != null) {
-      if (subtitle.isNotEmpty) subtitle.write(' - ');
-      subtitle.write('Inicio: ${_dateFormat.format(start.toLocal())}');
-    }
-    final duration = _durationLabel();
-    if (duration != null) {
-      if (subtitle.isNotEmpty) subtitle.write(' - ');
-      subtitle.write(duration);
-    }
-    return Card(
-      child: ListTile(
-        title: Text(incident.deviceName ?? 'Dispositivo'),
-        subtitle: subtitle.isNotEmpty ? Text(subtitle.toString()) : null,
-        trailing: Text(
-          _statusLabel(incident.status),
-          style: TextStyle(
-            color: incident.isOpen ? Colors.red.shade700 : null,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String? _durationLabel() {
-    final seconds = incident.durationSeconds;
-    if (seconds == null) return null;
-    final duration = Duration(seconds: seconds);
-    if (duration.inHours > 0) {
-      return 'Duración: ${duration.inHours} h ${duration.inMinutes % 60} min';
-    }
-    if (duration.inMinutes > 0) {
-      return 'Duración: ${duration.inMinutes} min';
-    }
-    return 'Duración: ${duration.inSeconds} s';
-  }
-
-  static String _statusLabel(String status) => switch (status) {
-        'active' => 'Activo',
-        'acknowledged' => 'Atendido',
-        'resolved' => 'Resuelto',
-        _ => status,
-      };
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error, required this.onRetry});
-
-  final Object? error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(18),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'No se pudieron cargar los datos.',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Disponibilidad de dispositivos',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  '$percent %',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(color: color, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 10,
+                color: color,
+                backgroundColor: color.withValues(alpha: 0.15),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              '$error',
-              textAlign: TextAlign.center,
+              '$online de $total dispositivos en línea',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Reintentar')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfflineDevicesCard extends StatelessWidget {
+  const _OfflineDevicesCard({required this.devices});
+
+  final List<Device> devices;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Fuera de línea',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(width: 8),
+                if (devices.isNotEmpty)
+                  StatusChip(
+                    label: '${devices.length}',
+                    color: StatusColors.offline,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (devices.isEmpty)
+              const EmptyNote('Todos los dispositivos están en línea.')
+            else
+              ...devices.take(6).map(
+                    (d) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading:
+                          Icon(Icons.power_off, color: StatusColors.offline),
+                      title: Text(
+                        d.name.isNotEmpty ? d.name : d.externalId ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(d.siteName ?? 'Sin sede'),
+                      trailing: Text(
+                        formatDateTime(d.lastStatusChange),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentIncidentsCard extends StatelessWidget {
+  const _RecentIncidentsCard({required this.incidents});
+
+  final List<Incident> incidents;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Incidentes recientes',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            if (incidents.isEmpty)
+              const EmptyNote('No hay incidentes registrados.')
+            else
+              ...incidents.map(
+                (i) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    i.isOpen ? Icons.error_outline : Icons.task_alt,
+                    color: i.isOpen
+                        ? StatusColors.offline
+                        : StatusColors.resolved,
+                  ),
+                  title: Text(
+                    i.deviceName ?? 'Dispositivo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    '${i.siteName ?? 'Sin sede'} · '
+                    '${formatDateTime(i.startTime)}',
+                  ),
+                  trailing: IncidentStatusChip(status: i.status),
+                ),
+              ),
           ],
         ),
       ),

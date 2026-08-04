@@ -68,6 +68,39 @@ class StatusChip extends StatelessWidget {
   }
 }
 
+/// Chip de estado de un dispositivo (en línea / fuera de línea).
+class DeviceStatusChip extends StatelessWidget {
+  const DeviceStatusChip({super.key, required this.online});
+
+  final bool online;
+
+  @override
+  Widget build(BuildContext context) {
+    return StatusChip(
+      label: online ? 'En línea' : 'Fuera de línea',
+      color: online ? StatusColors.online : StatusColors.offline,
+    );
+  }
+}
+
+/// Chip de estado de un incidente (activo / atendido / resuelto).
+class IncidentStatusChip extends StatelessWidget {
+  const IncidentStatusChip({super.key, required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      'active' => ('Activo', StatusColors.offline),
+      'acknowledged' => ('Atendido', StatusColors.acknowledged),
+      'resolved' => ('Resuelto', StatusColors.resolved),
+      _ => (status, StatusColors.resolved),
+    };
+    return StatusChip(label: label, color: color);
+  }
+}
+
 /// Vista de error con botón de reintento.
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.error, required this.onRetry});
