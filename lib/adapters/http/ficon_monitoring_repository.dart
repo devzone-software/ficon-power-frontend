@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
 import '../../domain/device.dart';
+import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/site.dart';
 import '../../ports/output/monitoring_query_repository.dart';
@@ -51,6 +52,12 @@ class FiconMonitoringRepository implements MonitoringQueryRepository {
   Future<List<Incident>> fetchIncidents({int limit = 100}) async {
     final data = await _getList('/api/incidents?limit=$limit');
     return data.map(Incident.fromJson).toList();
+  }
+
+  @override
+  Future<List<Event>> fetchEvents({int limit = 100}) async {
+    final data = await _getList('/api/events?limit=$limit');
+    return data.map(Event.fromJson).toList();
   }
 
   Future<List<Map<String, dynamic>>> _getList(String path) async {

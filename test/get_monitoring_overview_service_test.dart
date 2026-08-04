@@ -1,4 +1,5 @@
 import 'package:ficon_power_frontend/domain/device.dart';
+import 'package:ficon_power_frontend/domain/event.dart';
 import 'package:ficon_power_frontend/domain/incident.dart';
 import 'package:ficon_power_frontend/domain/site.dart';
 import 'package:ficon_power_frontend/ports/output/monitoring_query_repository.dart';
@@ -38,6 +39,9 @@ class FakeMonitoringQueryRepository implements MonitoringQueryRepository {
         Incident(id: '1', status: 'active', deviceName: 'Medidor B'),
         Incident(id: '2', status: 'resolved', deviceName: 'Medidor A'),
       ];
+
+  @override
+  Future<List<Event>> fetchEvents({int limit = 100}) async => const [];
 }
 
 void main() {
