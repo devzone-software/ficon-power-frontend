@@ -68,11 +68,11 @@ En Android emulator, el backend local se alcanza como `http://10.0.2.2:8080`.
 
 ### Sistema completo con Docker
 
-Desde el directorio padre que contiene `docker-compose.yml`, `ficon-power-frontend/` y `ficon-power-backend/`:
+Desde `ficon-power-frontend/`, manteniendo `ficon-power-backend/` como carpeta hermana:
 
 ```bash
-cp ficon-power-backend/.env.example ficon-power-backend/.env
-# Complete las variables de ficon-power-backend/.env antes de continuar.
+cp ../ficon-power-backend/.env.example ../ficon-power-backend/.env
+# Complete las variables de ../ficon-power-backend/.env antes de continuar.
 docker compose build
 docker compose up -d
 docker compose ps
@@ -91,7 +91,7 @@ docker compose ps
 docker compose exec frontend wget -qO- http://ficon-power-backend:8080/
 ```
 
-Si `API_KEY` está configurada en el backend, defina el mismo valor en el archivo `.env` situado junto al `docker-compose.yml` raíz; nginx lo añadirá como `X-API-Key`. Para detener el sistema:
+Si `API_KEY` está configurada en el backend, defina el mismo valor en un archivo `.env` situado junto a este `docker-compose.yml`; nginx lo añadirá como `X-API-Key`. Si se deja vacía, la configuración de nginx sigue siendo válida y el header se omite en la práctica. Para detener el sistema:
 
 ```bash
 docker compose down

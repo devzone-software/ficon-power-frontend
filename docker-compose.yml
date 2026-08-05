@@ -1,0 +1,40 @@
+# Levanta el sistema completo FICON Power (backend + frontend).
+# Uso desde ficon-power-frontend/:  docker compose up --build
+# La app web queda en http://localhost:3000 y nginx reenvía /api/* al
+# backend por la red interna (el backend no expone puerto al host).
+#
+# Requisitos:
+#   - ../ficon-power-backend/.env con la configuración del backend
+#     (BD, Tuya, WhatsApp, API_KEY, ...).
+#   - API_KEY en el entorno del host (o en un .env junto a este archivo)
+#     para que nginx la inyecte en las llamadas /api/*.
+name: ficon-power
+
+services:
+  backend:
+    build: ../ficon-power-backend
+    container_name: ficon-power-backend
+    env_file:
+      - path: ../ficon-power-backend/.env
+        required: false
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build: .
+    container_name: ficon-power-frontend
+    ports:
+      - "3000:80"
+    environment:
+      # Siempre definida (vacía por defecto) para que el envsubst de
+      # nginx no deje el placeholder literal en la configuración.
+      API_KEY: ${API_KEY:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
