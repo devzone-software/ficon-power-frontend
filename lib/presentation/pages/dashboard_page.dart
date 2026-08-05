@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/device.dart';
@@ -29,21 +31,39 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  static const _autoRefreshInterval = Duration(seconds: 10);
+
   late Future<MonitoringOverview> _future;
+  Timer? _autoRefreshTimer;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
     _future = widget.getOverview();
+    _autoRefreshTimer = Timer.periodic(
+      _autoRefreshInterval,
+      (_) => _refresh(),
+    );
   }
 
   Future<void> _refresh() async {
+    if (!mounted || _refreshing) return;
+    _refreshing = true;
     setState(() => _future = widget.getOverview());
     try {
       await _future;
     } catch (_) {
       // El error se muestra en el FutureBuilder.
+    } finally {
+      _refreshing = false;
     }
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/incident.dart';
@@ -16,21 +18,39 @@ class IncidentsPage extends StatefulWidget {
 }
 
 class _IncidentsPageState extends State<IncidentsPage> {
+  static const _autoRefreshInterval = Duration(seconds: 10);
+
   late Future<List<Incident>> _future;
+  Timer? _autoRefreshTimer;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
     _future = widget.getIncidents();
+    _autoRefreshTimer = Timer.periodic(
+      _autoRefreshInterval,
+      (_) => _refresh(),
+    );
   }
 
   Future<void> _refresh() async {
+    if (!mounted || _refreshing) return;
+    _refreshing = true;
     setState(() => _future = widget.getIncidents());
     try {
       await _future;
     } catch (_) {
       // El error se muestra en el FutureBuilder.
+    } finally {
+      _refreshing = false;
     }
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
