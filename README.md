@@ -2,6 +2,30 @@
 
 Frontend en Flutter para el sistema de gestión de continuidad eléctrica y alerta temprana de Grupo FICON S.A.C. Consume la API REST del [backend Java/Spring Boot](../ficon-power-backend).
 
+## Versiones y requisitos
+
+| Componente | Versión | Fuente |
+|------------|---------|--------|
+| Flutter | `3.44.8` | `Dockerfile` |
+| Dart | `3.12.2` o compatible | `pubspec.yaml` (`sdk: ^3.12.2`) |
+| nginx | `1.27-alpine` | `Dockerfile` |
+| Docker Engine + Compose | Compose v2 (`docker compose`) | Ejecución del sistema completo |
+
+Dependencias directas de la aplicación: `cupertino_icons ^1.0.8`, `http ^1.2.0` e `intl ^0.20.0`. Para desarrollo y pruebas se usa `flutter_lints ^6.0.0` y el SDK `flutter_test`. Las versiones exactas resueltas, incluidas las dependencias transitivas, están fijadas en `pubspec.lock`.
+
+## Instalación de dependencias
+
+Con Flutter `3.44.8` disponible en el `PATH`:
+
+```bash
+flutter --version
+flutter pub get
+```
+
+`flutter pub get` instala tanto las dependencias de ejecución como las de desarrollo indicadas en `pubspec.yaml`, respetando `pubspec.lock`.
+
+No es necesario instalar Flutter en el host si se usa Docker: la etapa de compilación descarga Flutter `3.44.8`, ejecuta `flutter pub get`, genera la aplicación web y la imagen final la sirve con nginx.
+
 ## Arquitectura hexagonal
 
 La estructura de `lib/` refleja la del backend (`adapters`, `domain`, `ports`, `usecase`):
@@ -41,6 +65,37 @@ flutter run -d chrome \
 ```
 
 En Android emulator, el backend local se alcanza como `http://10.0.2.2:8080`.
+
+### Sistema completo con Docker
+
+Desde el directorio padre que contiene `docker-compose.yml`, `ficon-power-frontend/` y `ficon-power-backend/`:
+
+```bash
+cp ficon-power-backend/.env.example ficon-power-backend/.env
+# Complete las variables de ficon-power-backend/.env antes de continuar.
+docker compose build
+docker compose up -d
+docker compose ps
+```
+
+La interfaz queda disponible en `http://localhost:3000`. En esta modalidad el navegador solicita `/api/*` al mismo origen; nginx reenvía esas solicitudes a `http://ficon-power-backend:8080` dentro de la red de Compose.
+
+Para comprobar la comunicación entre ambos contenedores:
+
+```bash
+# Debe responder HTTP 200 y devolver la lista de sedes (o [] en una BD vacía).
+curl -i http://localhost:3000/api/sites
+
+# Verificaciones adicionales de estado y resolución interna.
+docker compose ps
+docker compose exec frontend wget -qO- http://ficon-power-backend:8080/
+```
+
+Si `API_KEY` está configurada en el backend, defina el mismo valor en el archivo `.env` situado junto al `docker-compose.yml` raíz; nginx lo añadirá como `X-API-Key`. Para detener el sistema:
+
+```bash
+docker compose down
+```
 
 ## Pruebas y análisis
 
