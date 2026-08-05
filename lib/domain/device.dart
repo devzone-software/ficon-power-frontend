@@ -9,6 +9,7 @@ class Device {
     required this.active,
     required this.status,
     this.lastStatusChange,
+    this.siteId,
     this.siteName,
     this.district,
     this.currentIncidentStartedAt,
@@ -27,6 +28,7 @@ class Device {
   /// `online` u `offline` (valores del CHECK constraint del backend).
   final String status;
   final DateTime? lastStatusChange;
+  final String? siteId;
   final String? siteName;
   final String? district;
   final DateTime? currentIncidentStartedAt;
@@ -46,6 +48,7 @@ class Device {
       active: json['active'] as bool? ?? false,
       status: json['status'] as String? ?? 'offline',
       lastStatusChange: _parseDate(json['lastStatusChange']),
+      siteId: json['siteId'] as String?,
       siteName: json['siteName'] as String?,
       district: json['district'] as String?,
       currentIncidentStartedAt: _parseDate(json['currentIncidentStartedAt']),
