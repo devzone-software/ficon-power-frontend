@@ -1,0 +1,27 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA de Flutter: cualquier ruta desconocida cae al index.html
+    # para que el router de la app la resuelva (/dashboard, /devices, ...).
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Reverse proxy al backend por la red interna de Docker.
+    # El navegador solo habla con este contenedor (mismo origen, sin CORS).
+    # La API key se inyecta aquí con envsubst al arrancar el contenedor;
+    # si API_KEY está vacía, nginx no envía el header.
+    location /api/ {
+        proxy_pass http://ficon-power-backend:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-API-Key ${API_KEY};
+        proxy_read_timeout 20s;
+    }
+}

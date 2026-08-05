@@ -3,16 +3,26 @@ import 'package:flutter/material.dart';
 import '../../domain/device.dart';
 import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
+import '../../domain/notification_template.dart';
 import '../../ports/input/get_monitoring_overview.dart';
+import '../../ports/input/get_notification_templates.dart';
+import '../../ports/input/update_notification_template.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
 /// Resumen general: KPIs, disponibilidad de la flota,
 /// dispositivos fuera de línea e incidentes recientes.
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key, required this.getOverview});
+  const DashboardPage({
+    super.key,
+    required this.getOverview,
+    required this.getNotificationTemplates,
+    required this.updateNotificationTemplate,
+  });
 
   final GetMonitoringOverview getOverview;
+  final GetNotificationTemplates getNotificationTemplates;
+  final UpdateNotificationTemplate updateNotificationTemplate;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -52,7 +62,11 @@ class _DashboardPageState extends State<DashboardPage> {
           }
           return RefreshIndicator(
             onRefresh: _refresh,
-            child: _DashboardBody(data: snapshot.data!),
+            child: _DashboardBody(
+              data: snapshot.data!,
+              getNotificationTemplates: widget.getNotificationTemplates,
+              updateNotificationTemplate: widget.updateNotificationTemplate,
+            ),
           );
         },
       ),
@@ -61,9 +75,15 @@ class _DashboardPageState extends State<DashboardPage> {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.data});
+  const _DashboardBody({
+    required this.data,
+    required this.getNotificationTemplates,
+    required this.updateNotificationTemplate,
+  });
 
   final MonitoringOverview data;
+  final GetNotificationTemplates getNotificationTemplates;
+  final UpdateNotificationTemplate updateNotificationTemplate;
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +172,11 @@ class _DashboardBody extends StatelessWidget {
               ],
             );
           },
+        ),
+        const SizedBox(height: 20),
+        _NotificationTemplatesCard(
+          getNotificationTemplates: getNotificationTemplates,
+          updateNotificationTemplate: updateNotificationTemplate,
         ),
       ],
     );
@@ -372,6 +397,237 @@ class _RecentIncidentsCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tarjeta para ver y editar las plantillas de los mensajes
+/// de notificación (corte y retorno de energía).
+class _NotificationTemplatesCard extends StatefulWidget {
+  const _NotificationTemplatesCard({
+    required this.getNotificationTemplates,
+    required this.updateNotificationTemplate,
+  });
+
+  final GetNotificationTemplates getNotificationTemplates;
+  final UpdateNotificationTemplate updateNotificationTemplate;
+
+  @override
+  State<_NotificationTemplatesCard> createState() =>
+      _NotificationTemplatesCardState();
+}
+
+class _NotificationTemplatesCardState
+    extends State<_NotificationTemplatesCard> {
+  late Future<List<NotificationTemplate>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.getNotificationTemplates();
+  }
+
+  void _reload() {
+    setState(() => _future = widget.getNotificationTemplates());
+  }
+
+  Future<void> _edit(NotificationTemplate template) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => _EditTemplateDialog(
+        template: template,
+        updateNotificationTemplate: widget.updateNotificationTemplate,
+      ),
+    );
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Plantilla actualizada.')),
+      );
+      _reload();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mensajes de notificación',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<List<NotificationTemplate>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'No se pudieron cargar las plantillas.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: _reload,
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'Reintentar',
+                      ),
+                    ],
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final templates = snapshot.data!;
+                if (templates.isEmpty) {
+                  return const EmptyNote('No hay plantillas configuradas.');
+                }
+                return Column(
+                  children: templates
+                      .map(
+                        (t) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.notifications_active_outlined,
+                            color: StatusColors.acknowledged,
+                          ),
+                          title: Text(t.displayName),
+                          subtitle: Text(
+                            t.body,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            onPressed: () => _edit(t),
+                            icon: const Icon(Icons.edit_outlined),
+                            tooltip: 'Editar mensaje',
+                          ),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Diálogo para editar el texto de una plantilla de notificación.
+/// Devuelve `true` al cerrarse si el guardado fue exitoso.
+class _EditTemplateDialog extends StatefulWidget {
+  const _EditTemplateDialog({
+    required this.template,
+    required this.updateNotificationTemplate,
+  });
+
+  final NotificationTemplate template;
+  final UpdateNotificationTemplate updateNotificationTemplate;
+
+  @override
+  State<_EditTemplateDialog> createState() => _EditTemplateDialogState();
+}
+
+class _EditTemplateDialogState extends State<_EditTemplateDialog> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.template.body);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Placeholders disponibles según el evento de la plantilla.
+  String get _placeholdersLegend {
+    const base = 'Puedes usar: {dispositivo}, {fechaCorte}';
+    return widget.template.eventType == 'power_restored'
+        ? '$base, {fechaRetorno}'
+        : base;
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      await widget.updateNotificationTemplate(
+        widget.template.eventType,
+        _controller.text,
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo guardar: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.template.displayName),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _controller,
+              minLines: 5,
+              maxLines: null,
+              enabled: !_saving,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _placeholdersLegend,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Guardar'),
+        ),
+      ],
     );
   }
 }
