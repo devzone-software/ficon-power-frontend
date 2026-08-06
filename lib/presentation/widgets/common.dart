@@ -26,10 +26,10 @@ String formatDurationSeconds(int? seconds) {
 class StatusColors {
   StatusColors._();
 
-  static const Color online = FiconColors.cyan;
-  static const Color offline = FiconColors.logoBlue;
-  static const Color acknowledged = FiconColors.cyanSoft;
-  static const Color resolved = FiconColors.deepAlt;
+  static const Color online = FiconColors.success;
+  static const Color offline = FiconColors.danger;
+  static const Color acknowledged = FiconColors.warning;
+  static const Color resolved = FiconColors.slate;
 }
 
 /// Etiqueta compacta con punto de color para estados.

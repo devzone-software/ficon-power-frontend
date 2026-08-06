@@ -95,6 +95,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
+/// Encabezado de resumen con el mismo lenguaje visual de las tarjetas KPI.
 class _FiconOverviewHeader extends StatelessWidget {
   const _FiconOverviewHeader({
     required this.online,
@@ -116,8 +117,8 @@ class _FiconOverviewHeader extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: FiconColors.cardBorder),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: FiconColors.cardBorderSoft),
         boxShadow: [
           BoxShadow(
             color: FiconColors.logoBlue.withValues(alpha: 0.08),
@@ -127,7 +128,7 @@ class _FiconOverviewHeader extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
             Positioned(
@@ -137,7 +138,7 @@ class _FiconOverviewHeader extends StatelessWidget {
               child: Container(width: 4, color: FiconColors.logoBlue),
             ),
             Padding(
-              padding: const EdgeInsets.all(22),
+              padding: const EdgeInsets.all(24),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final compact = constraints.maxWidth < 720;
@@ -148,10 +149,10 @@ class _FiconOverviewHeader extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const FiconBrandMark(
-                            height: 34,
+                            height: 36,
                             showPowerLabel: false,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Flexible(
                             child: Text(
                               'Panel de continuidad FICON',
@@ -167,7 +168,7 @@ class _FiconOverviewHeader extends StatelessWidget {
                       Text(
                         'Monitoreo eléctrico para mantener tu red estable, veloz y conectada.',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: FiconColors.deepAlt,
+                          color: FiconColors.slate,
                         ),
                       ),
                     ],
@@ -179,16 +180,16 @@ class _FiconOverviewHeader extends StatelessWidget {
                       _HeaderChip(
                         icon: Icons.wifi_tethering,
                         label: onlineText,
-                        color: FiconColors.cyan,
+                        accent: FiconColors.cyan,
                       ),
                       _HeaderChip(
                         icon: openIncidents == 0
                             ? Icons.verified_outlined
                             : Icons.bolt_outlined,
                         label: incidentText,
-                        color: openIncidents == 0
+                        accent: openIncidents == 0
                             ? FiconColors.cyan
-                            : FiconColors.cyanSoft,
+                            : FiconColors.warning,
                       ),
                     ],
                   );
@@ -197,7 +198,7 @@ class _FiconOverviewHeader extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         intro,
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                         chips,
                       ],
                     );
@@ -219,30 +220,31 @@ class _FiconOverviewHeader extends StatelessWidget {
   }
 }
 
+/// Chip compacto para el encabezado de resumen.
 class _HeaderChip extends StatelessWidget {
   const _HeaderChip({
     required this.icon,
     required this.label,
-    required this.color,
+    required this.accent,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: accent.withValues(alpha: 0.42)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 18),
+          Icon(icon, color: accent, size: 18),
           const SizedBox(width: 8),
           Text(
             label,
@@ -276,96 +278,106 @@ class _DashboardBody extends StatelessWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       children: [
-        _FiconOverviewHeader(
-          online: data.onlineCount,
-          total: data.devices.length,
-          openIncidents: data.openIncidents,
-        ),
-        const SizedBox(height: 20),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final cardWidth = width >= 900
-                ? (width - 3 * 16) / 4
-                : width >= 560
-                    ? (width - 16) / 2
-                    : width;
-            return Wrap(
-              spacing: 16,
-              runSpacing: 16,
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Column(
               children: [
-                _KpiCard(
-                  title: 'Sedes',
-                  value: '${data.sites.length}',
-                  icon: Icons.business,
-                  color: FiconColors.deep,
-                  width: cardWidth,
+                _FiconOverviewHeader(
+                  online: data.onlineCount,
+                  total: data.devices.length,
+                  openIncidents: data.openIncidents,
                 ),
-                _KpiCard(
-                  title: 'Dispositivos',
-                  value: '${data.devices.length}',
-                  icon: Icons.electrical_services,
-                  color: FiconColors.logoBlue,
-                  width: cardWidth,
+                const SizedBox(height: 24),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    final cardWidth = width >= 900
+                        ? (width - 3 * 16) / 4
+                        : width >= 560
+                            ? (width - 16) / 2
+                            : width;
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        _KpiCard(
+                          title: 'Sedes',
+                          value: '${data.sites.length}',
+                          icon: Icons.business,
+                          color: FiconColors.logoBlue,
+                          width: cardWidth,
+                        ),
+                        _KpiCard(
+                          title: 'Dispositivos',
+                          value: '${data.devices.length}',
+                          icon: Icons.electrical_services,
+                          color: FiconColors.cyanSoft,
+                          width: cardWidth,
+                        ),
+                        _KpiCard(
+                          title: 'En línea',
+                          value: '${data.onlineCount}',
+                          icon: Icons.check_circle_outline,
+                          color: StatusColors.online,
+                          width: cardWidth,
+                        ),
+                        _KpiCard(
+                          title: 'Incidentes activos',
+                          value: '${data.openIncidents}',
+                          icon: Icons.warning_amber,
+                          color: data.openIncidents > 0
+                              ? StatusColors.offline
+                              : StatusColors.online,
+                          width: cardWidth,
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                _KpiCard(
-                  title: 'En línea',
-                  value: '${data.onlineCount}',
-                  icon: Icons.check_circle_outline,
-                  color: StatusColors.online,
-                  width: cardWidth,
+                const SizedBox(height: 24),
+                _FleetHealthCard(
+                  online: data.onlineCount,
+                  total: data.devices.length,
                 ),
-                _KpiCard(
-                  title: 'Incidentes activos',
-                  value: '${data.openIncidents}',
-                  icon: Icons.warning_amber,
-                  color: data.openIncidents > 0
-                      ? StatusColors.offline
-                      : StatusColors.resolved,
-                  width: cardWidth,
+                const SizedBox(height: 24),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 900;
+                    final lists = [
+                      _OfflineDevicesCard(devices: offlineDevices),
+                      _RecentIncidentsCard(incidents: recentIncidents),
+                    ];
+                    if (!wide) {
+                      return Column(
+                        children: [
+                          lists[0],
+                          const SizedBox(height: 24),
+                          lists[1],
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: lists[0]),
+                        const SizedBox(width: 24),
+                        Expanded(child: lists[1]),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                _NotificationTemplatesCard(
+                  getNotificationTemplates: getNotificationTemplates,
+                  updateNotificationTemplate: updateNotificationTemplate,
                 ),
               ],
-            );
-          },
-        ),
-        const SizedBox(height: 20),
-        _FleetHealthCard(
-          online: data.onlineCount,
-          total: data.devices.length,
-        ),
-        const SizedBox(height: 20),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 900;
-            final lists = [
-              _OfflineDevicesCard(devices: offlineDevices),
-              _RecentIncidentsCard(incidents: recentIncidents),
-            ];
-            if (!wide) {
-              return Column(
-                children: [
-                  lists[0],
-                  const SizedBox(height: 20),
-                  lists[1],
-                ],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: lists[0]),
-                const SizedBox(width: 20),
-                Expanded(child: lists[1]),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 20),
-        _NotificationTemplatesCard(
-          getNotificationTemplates: getNotificationTemplates,
-          updateNotificationTemplate: updateNotificationTemplate,
+            ),
+          ),
         ),
       ],
     );
@@ -393,52 +405,33 @@ class _KpiCard extends StatelessWidget {
     return SizedBox(
       width: width,
       child: Card(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Stack(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: Container(width: 4, color: color),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 24),
               ),
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            color.withValues(alpha: 0.18),
-                            color.withValues(alpha: 0.06),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(icon, color: color, size: 26),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            value,
-                            style: textTheme.headlineSmall?.copyWith(
-                              color: FiconColors.ink,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(title, style: textTheme.bodyMedium),
-                        ],
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 16),
+              Text(
+                value,
+                style: textTheme.headlineMedium?.copyWith(
+                  color: FiconColors.ink,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: textTheme.bodySmall?.copyWith(
+                  color: FiconColors.slate,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -457,67 +450,162 @@ class _FleetHealthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ratio = total == 0 ? 0.0 : online / total;
+    final textTheme = Theme.of(context).textTheme;
+    final ratio = total == 0
+        ? 0.0
+        : (online / total).clamp(0.0, 1.0).toDouble();
     final percent = (ratio * 100).round();
+    final offline = total > online ? total - online : 0;
     final color = ratio >= 0.9
         ? StatusColors.online
         : ratio >= 0.5
             ? StatusColors.acknowledged
             : StatusColors.offline;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Disponibilidad de dispositivos',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        'Señal estable para la red monitoreada',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: FiconColors.deepAlt,
-                            ),
-                      ),
-                    ],
+                  child: _SectionHeader(
+                    icon: Icons.monitor_heart_outlined,
+                    color: FiconColors.logoBlue,
+                    title: 'Disponibilidad de dispositivos',
+                    subtitle: 'Señal estable para la red monitoreada',
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   '$percent %',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(color: color, fontWeight: FontWeight.w700),
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: ratio,
-                minHeight: 10,
-                color: color,
-                backgroundColor: FiconColors.cardBorder,
+              borderRadius: BorderRadius.circular(999),
+              child: SizedBox(
+                height: 12,
+                child: Stack(
+                  children: [
+                    Container(color: FiconColors.cardBorderSoft),
+                    FractionallySizedBox(
+                      widthFactor: ratio,
+                      child: Container(color: color),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '$online de $total dispositivos en línea',
-              style: Theme.of(context).textTheme.bodySmall,
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              children: [
+                _LegendDot(
+                  color: StatusColors.online,
+                  label: '$online en línea',
+                ),
+                _LegendDot(
+                  color: StatusColors.offline,
+                  label: '$offline fuera de línea',
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// Encabezado de sección reutilizable: ícono en recuadro teñido,
+/// título y subtítulo.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.icon,
+    required this.color,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  color: FiconColors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: FiconColors.slate,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing!,
+        ],
+      ],
     );
   }
 }
@@ -529,49 +617,49 @@ class _OfflineDevicesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visible = devices.take(6).toList();
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.router_outlined, color: FiconColors.logoBlue),
-                const SizedBox(width: 8),
-                Text(
-                  'Fuera de línea',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(width: 8),
-                if (devices.isNotEmpty)
-                  StatusChip(
-                    label: '${devices.length}',
-                    color: StatusColors.offline,
-                  ),
-              ],
+            _SectionHeader(
+              icon: Icons.router_outlined,
+              color: StatusColors.offline,
+              title: 'Fuera de línea',
+              subtitle: 'Dispositivos activos sin señal',
+              trailing: devices.isNotEmpty
+                  ? StatusChip(
+                      label: '${devices.length}',
+                      color: StatusColors.offline,
+                    )
+                  : null,
             ),
             const SizedBox(height: 8),
             if (devices.isEmpty)
               const EmptyNote('Todos los dispositivos están en línea.')
             else
-              ...devices.take(6).map(
-                    (d) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading:
-                          Icon(Icons.power_off, color: StatusColors.offline),
-                      title: Text(
-                        d.name.isNotEmpty ? d.name : d.externalId ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(d.siteName ?? 'Sin sede'),
-                      trailing: Text(
-                        formatDateTime(d.lastStatusChange),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
+              for (var i = 0; i < visible.length; i++) ...[
+                if (i > 0)
+                  const Divider(height: 1, color: FiconColors.cardBorderSoft),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.power_off, color: StatusColors.offline),
+                  title: Text(
+                    visible[i].name.isNotEmpty
+                        ? visible[i].name
+                        : visible[i].externalId ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  subtitle: Text(visible[i].siteName ?? 'Sin sede'),
+                  trailing: Text(
+                    formatDateTime(visible[i].lastStatusChange),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
           ],
         ),
       ),
@@ -588,47 +676,43 @@ class _RecentIncidentsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Incidentes recientes',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Historial de cortes y retornos reportados',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: FiconColors.deepAlt),
+            const _SectionHeader(
+              icon: Icons.history,
+              color: FiconColors.cyanSoft,
+              title: 'Incidentes recientes',
+              subtitle: 'Historial de cortes y retornos reportados',
             ),
             const SizedBox(height: 8),
             if (incidents.isEmpty)
               const EmptyNote('No hay incidentes registrados.')
             else
-              ...incidents.map(
-                (i) => ListTile(
+              for (var i = 0; i < incidents.length; i++) ...[
+                if (i > 0)
+                  const Divider(height: 1, color: FiconColors.cardBorderSoft),
+                ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
-                    i.isOpen ? Icons.error_outline : Icons.task_alt,
-                    color: i.isOpen
+                    incidents[i].isOpen ? Icons.error_outline : Icons.task_alt,
+                    color: incidents[i].isOpen
                         ? StatusColors.offline
-                        : StatusColors.resolved,
+                        : StatusColors.online,
                   ),
                   title: Text(
-                    i.deviceName ?? 'Dispositivo',
+                    incidents[i].deviceName ?? 'Dispositivo',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
-                    '${i.siteName ?? 'Sin sede'} · '
-                    '${formatDateTime(i.startTime)}',
+                    '${incidents[i].siteName ?? 'Sin sede'} · '
+                    '${formatDateTime(incidents[i].startTime)}',
                   ),
-                  trailing: IncidentStatusChip(status: i.status),
+                  trailing: IncidentStatusChip(status: incidents[i].status),
                 ),
-              ),
+              ],
           ],
         ),
       ),
@@ -686,30 +770,15 @@ class _NotificationTemplatesCardState
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.notifications_active_outlined,
-                  color: FiconColors.cyanSoft,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Mensajes de notificación',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Plantillas que se envían por WhatsApp ante corte o retorno',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: FiconColors.deepAlt),
+            const _SectionHeader(
+              icon: Icons.notifications_active_outlined,
+              color: FiconColors.cyanSoft,
+              title: 'Mensajes de notificación',
+              subtitle: 'Plantillas que se envían por WhatsApp ante corte o retorno',
             ),
             const SizedBox(height: 8),
             FutureBuilder<List<NotificationTemplate>>(
@@ -743,32 +812,37 @@ class _NotificationTemplatesCardState
                   return const EmptyNote('No hay plantillas configuradas.');
                 }
                 return Column(
-                  children: templates
-                      .map(
-                        (t) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(
-                            Icons.notifications_active_outlined,
-                            color: StatusColors.acknowledged,
-                          ),
-                          title: Text(t.displayName),
-                          subtitle: Text(
-                            t.body,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 12,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            onPressed: () => _edit(t),
-                            icon: const Icon(Icons.edit_outlined),
-                            tooltip: 'Editar mensaje',
+                  children: [
+                    for (var i = 0; i < templates.length; i++) ...[
+                      if (i > 0)
+                        const Divider(
+                          height: 1,
+                          color: FiconColors.cardBorderSoft,
+                        ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.notifications_active_outlined,
+                          color: StatusColors.acknowledged,
+                        ),
+                        title: Text(templates[i].displayName),
+                        subtitle: Text(
+                          templates[i].body,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
                           ),
                         ),
-                      )
-                      .toList(),
+                        trailing: IconButton(
+                          onPressed: () => _edit(templates[i]),
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Editar mensaje',
+                        ),
+                      ),
+                    ],
+                  ],
                 );
               },
             ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Identidad visual tomada de los assets oficiales de FICON:
-/// Logo.png y Fondo.jpeg.
+/// Identidad visual tomada del logo oficial de FICON.
 class FiconColors {
   FiconColors._();
 
@@ -11,8 +10,15 @@ class FiconColors {
   static const Color logoBlue = Color(0xFF1080C0);
   static const Color cyan = Color(0xFF20E0F0);
   static const Color cyanSoft = Color(0xFF20C0D0);
-  static const Color surface = Color(0xFFEAF7FA);
+  static const Color surface = Color(0xFFF2F7F9);
   static const Color cardBorder = Color(0xFF8FD8E2);
+  static const Color cardBorderSoft = Color(0xFFDCE9EF);
+
+  // Estados expresados con variaciones de la paleta del logo.
+  static const Color success = cyan;
+  static const Color warning = cyanSoft;
+  static const Color danger = logoBlue;
+  static const Color slate = deepAlt;
 }
 
 class FiconGradients {
@@ -48,7 +54,7 @@ ThemeData buildFiconTheme() {
     primary: FiconColors.logoBlue,
     secondary: FiconColors.cyan,
     tertiary: FiconColors.cyanSoft,
-    error: FiconColors.logoBlue,
+    error: FiconColors.danger,
     surface: FiconColors.surface,
     brightness: Brightness.light,
   );
@@ -71,8 +77,8 @@ ThemeData buildFiconTheme() {
       margin: EdgeInsets.zero,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: FiconColors.cardBorder),
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: FiconColors.cardBorderSoft),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
