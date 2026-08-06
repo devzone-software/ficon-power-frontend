@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/ficon_theme.dart';
+
 /// Rutas definidas en la aplicación.
 class AppRoutes {
   AppRoutes._();
@@ -52,7 +54,16 @@ class AdminScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FICON Power'),
+        toolbarHeight: 64,
+        titleSpacing: 20,
+        title: const FiconBrandMark(size: 38),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3),
+          child: Container(
+            height: 3,
+            decoration: const BoxDecoration(gradient: FiconGradients.signal),
+          ),
+        ),
         actions: [
           LayoutBuilder(
             builder: (context, constraints) {
@@ -111,18 +122,16 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: TextButton(
         onPressed: active ? null : onPressed,
         style: TextButton.styleFrom(
-          foregroundColor:
-              active ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          foregroundColor: active ? FiconColors.primary : FiconColors.ink,
           backgroundColor:
-              active ? colorScheme.primary.withValues(alpha: 0.10) : null,
+              active ? FiconColors.fiberBlue.withValues(alpha: 0.12) : null,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
         child: Text(

@@ -5,6 +5,7 @@ import 'presentation/pages/dashboard_page.dart';
 import 'presentation/pages/devices_page.dart';
 import 'presentation/pages/events_page.dart';
 import 'presentation/pages/incidents_page.dart';
+import 'presentation/theme/ficon_theme.dart';
 import 'presentation/widgets/admin_scaffold.dart';
 import 'usecase/create_site_service.dart';
 import 'usecase/get_devices_service.dart';
@@ -65,17 +66,7 @@ class FiconPowerApp extends StatelessWidget {
     return MaterialApp(
       title: 'FICON Power',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E5AA8)),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.blueGrey.shade100),
-          ),
-        ),
-      ),
+      theme: buildFiconTheme(),
       // La raíz redirige al resumen; cualquier ruta desconocida
       // también redirige al resumen (ver onUnknownRoute).
       initialRoute: AppRoutes.dashboard,

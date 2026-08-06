@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../theme/ficon_theme.dart';
+
 /// Formato de fecha/hora compartido por las vistas.
 final DateFormat appDateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
@@ -24,10 +26,10 @@ String formatDurationSeconds(int? seconds) {
 class StatusColors {
   StatusColors._();
 
-  static final Color online = Colors.green.shade700;
-  static final Color offline = Colors.red.shade700;
-  static final Color acknowledged = Colors.orange.shade800;
-  static final Color resolved = Colors.blueGrey.shade600;
+  static const Color online = FiconColors.signalGreen;
+  static const Color offline = FiconColors.danger;
+  static const Color acknowledged = FiconColors.energy;
+  static const Color resolved = FiconColors.resolved;
 }
 
 /// Etiqueta compacta con punto de color para estados.
