@@ -40,7 +40,6 @@ class FiconAssets {
   FiconAssets._();
 
   static const String logo = 'assets/brand/logo.png';
-  static const String background = 'assets/brand/fondo.jpeg';
 }
 
 ThemeData buildFiconTheme() {

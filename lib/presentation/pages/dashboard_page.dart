@@ -117,11 +117,7 @@ class _FiconOverviewHeader extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        image: const DecorationImage(
-          image: AssetImage(FiconAssets.background),
-          fit: BoxFit.cover,
-          opacity: 0.00 ,
-        ),
+        gradient: FiconGradients.brand,
         boxShadow: [
           BoxShadow(
             color: FiconColors.ink.withValues(alpha: 0.24),

@@ -104,17 +104,7 @@ class AdminScaffold extends StatelessWidget {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(FiconAssets.background, fit: BoxFit.cover),
-          ),
-          Positioned.fill(
-            child: Container(color: FiconColors.ink.withValues(alpha: 0.78)),
-          ),
-          body,
-        ],
-      ),
+      body: body,
     );
   }
 }
