@@ -116,11 +116,15 @@ class _FiconOverviewHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: FiconGradients.brand,
         borderRadius: BorderRadius.circular(8),
+        image: const DecorationImage(
+          image: AssetImage(FiconAssets.background),
+          fit: BoxFit.cover,
+          opacity: 0.95,
+        ),
         boxShadow: [
           BoxShadow(
-            color: FiconColors.primary.withValues(alpha: 0.16),
+            color: FiconColors.ink.withValues(alpha: 0.24),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -135,7 +139,7 @@ class _FiconOverviewHeader extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const FiconBrandMark(size: 34, compact: true),
+                  const FiconBrandMark(height: 34, showPowerLabel: false),
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
@@ -164,7 +168,7 @@ class _FiconOverviewHeader extends StatelessWidget {
               _HeaderChip(
                 icon: Icons.wifi_tethering,
                 label: onlineText,
-                color: FiconColors.lime,
+                color: FiconColors.cyan,
               ),
               _HeaderChip(
                 icon: openIncidents == 0
@@ -172,8 +176,8 @@ class _FiconOverviewHeader extends StatelessWidget {
                     : Icons.bolt_outlined,
                 label: incidentText,
                 color: openIncidents == 0
-                    ? FiconColors.signalGreen
-                    : FiconColors.energy,
+                    ? FiconColors.cyan
+                    : FiconColors.cyanSoft,
               ),
             ],
           );
@@ -281,14 +285,14 @@ class _DashboardBody extends StatelessWidget {
                   title: 'Sedes',
                   value: '${data.sites.length}',
                   icon: Icons.business,
-                  color: FiconColors.primary,
+                  color: FiconColors.deep,
                   width: cardWidth,
                 ),
                 _KpiCard(
                   title: 'Dispositivos',
                   value: '${data.devices.length}',
                   icon: Icons.electrical_services,
-                  color: FiconColors.fiberBlue,
+                  color: FiconColors.logoBlue,
                   width: cardWidth,
                 ),
                 _KpiCard(
@@ -465,7 +469,7 @@ class _FleetHealthCard extends StatelessWidget {
                       Text(
                         'Señal estable para la red monitoreada',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: FiconColors.resolved,
+                              color: FiconColors.deepAlt,
                             ),
                       ),
                     ],
@@ -518,7 +522,7 @@ class _OfflineDevicesCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.router_outlined, color: FiconColors.primary),
+                Icon(Icons.router_outlined, color: FiconColors.logoBlue),
                 const SizedBox(width: 8),
                 Text(
                   'Fuera de línea',
@@ -583,7 +587,7 @@ class _RecentIncidentsCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: FiconColors.resolved),
+                  ?.copyWith(color: FiconColors.deepAlt),
             ),
             const SizedBox(height: 8),
             if (incidents.isEmpty)
@@ -675,7 +679,7 @@ class _NotificationTemplatesCardState
               children: [
                 Icon(
                   Icons.notifications_active_outlined,
-                  color: FiconColors.energy,
+                  color: FiconColors.cyanSoft,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -690,7 +694,7 @@ class _NotificationTemplatesCardState
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
-                  ?.copyWith(color: FiconColors.resolved),
+                  ?.copyWith(color: FiconColors.deepAlt),
             ),
             const SizedBox(height: 8),
             FutureBuilder<List<NotificationTemplate>>(

@@ -56,7 +56,7 @@ class AdminScaffold extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: 64,
         titleSpacing: 20,
-        title: const FiconBrandMark(size: 38),
+        title: const FiconBrandMark(height: 40),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
           child: Container(
@@ -104,7 +104,17 @@ class AdminScaffold extends StatelessWidget {
           ),
         ],
       ),
-      body: body,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(FiconAssets.background, fit: BoxFit.cover),
+          ),
+          Positioned.fill(
+            child: Container(color: FiconColors.ink.withValues(alpha: 0.78)),
+          ),
+          body,
+        ],
+      ),
     );
   }
 }
@@ -127,9 +137,9 @@ class _NavButton extends StatelessWidget {
       child: TextButton(
         onPressed: active ? null : onPressed,
         style: TextButton.styleFrom(
-          foregroundColor: active ? FiconColors.primary : FiconColors.ink,
+          foregroundColor: active ? FiconColors.ink : Colors.white,
           backgroundColor:
-              active ? FiconColors.fiberBlue.withValues(alpha: 0.12) : null,
+              active ? FiconColors.cyan.withValues(alpha: 0.86) : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
