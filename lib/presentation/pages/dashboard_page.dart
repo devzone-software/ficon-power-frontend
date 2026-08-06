@@ -114,87 +114,106 @@ class _FiconOverviewHeader extends StatelessWidget {
         openIncidents == 0 ? 'Operación estable' : '$openIncidents incidentes';
 
     return Container(
-      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        gradient: FiconGradients.brand,
+        border: Border.all(color: FiconColors.cardBorder),
         boxShadow: [
           BoxShadow(
-            color: FiconColors.ink.withValues(alpha: 0.24),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: FiconColors.logoBlue.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 720;
-          final intro = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const FiconBrandMark(height: 34, showPowerLabel: false),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      'Panel de continuidad FICON',
-                      style: textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(width: 4, color: FiconColors.logoBlue),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 720;
+                  final intro = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const FiconBrandMark(
+                            height: 34,
+                            showPowerLabel: false,
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Panel de continuidad FICON',
+                              style: textTheme.titleLarge?.copyWith(
+                                color: FiconColors.ink,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ],
+                      const SizedBox(height: 10),
+                      Text(
+                        'Monitoreo eléctrico para mantener tu red estable, veloz y conectada.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: FiconColors.deepAlt,
+                        ),
+                      ),
+                    ],
+                  );
+                  final chips = Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _HeaderChip(
+                        icon: Icons.wifi_tethering,
+                        label: onlineText,
+                        color: FiconColors.cyan,
+                      ),
+                      _HeaderChip(
+                        icon: openIncidents == 0
+                            ? Icons.verified_outlined
+                            : Icons.bolt_outlined,
+                        label: incidentText,
+                        color: openIncidents == 0
+                            ? FiconColors.cyan
+                            : FiconColors.cyanSoft,
+                      ),
+                    ],
+                  );
+                  if (compact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        intro,
+                        const SizedBox(height: 16),
+                        chips,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: intro),
+                      const SizedBox(width: 16),
+                      chips,
+                    ],
+                  );
+                },
               ),
-              const SizedBox(height: 10),
-              Text(
-                'Monitoreo eléctrico para mantener tu red estable, veloz y conectada.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.82),
-                ),
-              ),
-            ],
-          );
-          final chips = Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeaderChip(
-                icon: Icons.wifi_tethering,
-                label: onlineText,
-                color: FiconColors.cyan,
-              ),
-              _HeaderChip(
-                icon: openIncidents == 0
-                    ? Icons.verified_outlined
-                    : Icons.bolt_outlined,
-                label: incidentText,
-                color: openIncidents == 0
-                    ? FiconColors.cyan
-                    : FiconColors.cyanSoft,
-              ),
-            ],
-          );
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                intro,
-                const SizedBox(height: 16),
-                chips,
-              ],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: intro),
-              const SizedBox(width: 16),
-              chips,
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -216,9 +235,9 @@ class _HeaderChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -228,7 +247,7 @@ class _HeaderChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white,
+                  color: FiconColors.ink,
                   fontWeight: FontWeight.w700,
                 ),
           ),
