@@ -120,7 +120,7 @@ class _FiconOverviewHeader extends StatelessWidget {
         image: const DecorationImage(
           image: AssetImage(FiconAssets.background),
           fit: BoxFit.cover,
-          opacity: 0.95,
+          opacity: 0.00 ,
         ),
         boxShadow: [
           BoxShadow(
