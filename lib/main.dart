@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'adapters/http/ficon_monitoring_repository.dart';
 import 'config/auth_session.dart';
+import 'presentation/pages/admin_page.dart';
 import 'presentation/pages/dashboard_page.dart';
 import 'presentation/pages/devices_page.dart';
 import 'presentation/pages/events_page.dart';
@@ -111,6 +112,13 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
                   onLogout: _logout,
                 ),
               ),
+          AppRoutes.admin: (_) => _superadminOnly(
+                () => AdminPage(
+                  repository: widget.repository,
+                  currentUser: widget.session.user!,
+                  onLogout: _logout,
+                ),
+              ),
         },
         onUnknownRoute: (_) => MaterialPageRoute(
           builder: (_) => widget.session.isAuthenticated
@@ -123,6 +131,15 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
 
   Widget _protected(Widget Function() pageBuilder) {
     if (widget.session.isAuthenticated) return pageBuilder();
+    return LoginPage(repository: widget.repository, session: widget.session);
+  }
+
+  Widget _superadminOnly(Widget Function() pageBuilder) {
+    final user = widget.session.user;
+    if (widget.session.isAuthenticated && user != null && user.canManageUsers) {
+      return pageBuilder();
+    }
+    if (widget.session.isAuthenticated) return _dashboardPage();
     return LoginPage(repository: widget.repository, session: widget.session);
   }
 
