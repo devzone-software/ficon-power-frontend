@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
@@ -24,12 +26,29 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  late Future<_AdminData> _future;
+  static const _liveRefreshInterval = Duration(seconds: 5);
+
+  _AdminData? _data;
+  Object? _error;
+  DateTime? _lastUpdated;
+  Timer? _liveRefreshTimer;
+  bool _loading = true;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _refresh(showLoading: true);
+    _liveRefreshTimer = Timer.periodic(
+      _liveRefreshInterval,
+      (_) => _refresh(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _liveRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<_AdminData> _load() async {
@@ -47,9 +66,33 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+  Future<void> _refresh({bool showLoading = false}) async {
+    if (_refreshing) return;
+    _refreshing = true;
+    if (showLoading && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final data = await _load();
+      if (!mounted) return;
+      setState(() {
+        _data = data;
+        _lastUpdated = DateTime.now();
+        _error = null;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
+    } finally {
+      _refreshing = false;
+    }
   }
 
   Future<void> _openUserDialog([ManagedUser? user]) async {
@@ -72,55 +115,120 @@ class _AdminPageState extends State<AdminPage> {
       title: 'Administración',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
-      body: FutureBuilder<_AdminData>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return ErrorView(error: snapshot.error, onRetry: _refresh);
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final data = snapshot.data!;
-          return DefaultTabController(
-            length: 4,
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading && _data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _data == null) {
+      return ErrorView(error: _error, onRetry: () => _refresh(showLoading: true));
+    }
+
+    final data = _data!;
+    return DefaultTabController(
+      length: 4,
+      child: Column(
+        children: [
+          Material(
+            color: Colors.white,
             child: Column(
               children: [
-                Material(
-                  color: Colors.white,
-                  child: TabBar(
-                    labelColor: FiconColors.logoBlue,
-                    unselectedLabelColor: FiconColors.deepAlt,
-                    tabs: const [
-                      Tab(text: 'Usuarios'),
-                      Tab(text: 'Audit logs'),
-                      Tab(text: 'Logins'),
-                      Tab(text: 'Sesiones'),
-                    ],
-                  ),
+                _LiveStatusBar(
+                  refreshing: _refreshing,
+                  lastUpdated: _lastUpdated,
+                  error: _error,
+                  onRefresh: () => _refresh(showLoading: true),
                 ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _UsersTab(
-                        users: data.users,
-                        onCreate: () => _openUserDialog(),
-                        onEdit: _openUserDialog,
-                        onRefresh: _refresh,
-                      ),
-                      _AuditTab(logs: data.auditLogs, onRefresh: _refresh),
-                      _LoginAttemptsTab(
-                        attempts: data.loginAttempts,
-                        onRefresh: _refresh,
-                      ),
-                      _SessionsTab(sessions: data.sessions, onRefresh: _refresh),
-                    ],
-                  ),
+                TabBar(
+                  labelColor: FiconColors.logoBlue,
+                  unselectedLabelColor: FiconColors.deepAlt,
+                  tabs: const [
+                    Tab(text: 'Usuarios'),
+                    Tab(text: 'Audit logs'),
+                    Tab(text: 'Logins'),
+                    Tab(text: 'Sesiones'),
+                  ],
                 ),
               ],
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _UsersTab(
+                  users: data.users,
+                  onCreate: () => _openUserDialog(),
+                  onEdit: _openUserDialog,
+                  onRefresh: _refresh,
+                ),
+                _AuditTab(logs: data.auditLogs, onRefresh: _refresh),
+                _LoginAttemptsTab(
+                  attempts: data.loginAttempts,
+                  onRefresh: _refresh,
+                ),
+                _SessionsTab(sessions: data.sessions, onRefresh: _refresh),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveStatusBar extends StatelessWidget {
+  const _LiveStatusBar({
+    required this.refreshing,
+    required this.lastUpdated,
+    required this.error,
+    required this.onRefresh,
+  });
+
+  final bool refreshing;
+  final DateTime? lastUpdated;
+  final Object? error;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasError = error != null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 4),
+      child: Row(
+        children: [
+          StatusChip(
+            label: refreshing
+                ? 'Actualizando'
+                : hasError
+                    ? 'Sincronización con error'
+                    : 'En vivo',
+            color: hasError ? FiconColors.logoBlue : FiconColors.cyan,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              hasError
+                  ? 'No se pudo refrescar en segundo plano. Se mantienen los últimos datos.'
+                  : 'Audits, logins, sesiones y cambios de usuarios se actualizan cada 5 segundos.'
+                    '${lastUpdated == null ? '' : ' Última actualización: ${appDateFormat.format(lastUpdated!.toLocal())}.'}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Actualizar ahora',
+            onPressed: refreshing ? null : onRefresh,
+            icon: refreshing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+          ),
+        ],
       ),
     );
   }
