@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../adapters/http/ficon_monitoring_repository.dart';
 import '../../config/auth_session.dart';
 import '../theme/ficon_theme.dart';
+import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
 class LoginPage extends StatefulWidget {
@@ -44,6 +45,13 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
       widget.session.start(token: result.token, user: result.user);
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.dashboard,
+          (route) => false,
+        );
+      }
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _error = switch (e.statusCode) {

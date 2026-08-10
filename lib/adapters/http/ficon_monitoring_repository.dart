@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
+import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/event.dart';
@@ -88,6 +89,57 @@ class FiconMonitoringRepository
     } catch (_) {
       // El cierre local de sesión no debe bloquearse por red.
     }
+  }
+
+  Future<List<ManagedUser>> fetchUsers() async {
+    final data = await _getList('/api/users');
+    return data.map(ManagedUser.fromJson).toList();
+  }
+
+  Future<ManagedUser> createUser({
+    required String username,
+    required String password,
+    required String role,
+    required String displayName,
+  }) async {
+    final data = await _postJson('/api/users', {
+      'username': username,
+      'password': password,
+      'role': role,
+      'displayName': displayName,
+    });
+    return ManagedUser.fromJson(data);
+  }
+
+  Future<ManagedUser> updateUser(
+    String id, {
+    required String role,
+    required String displayName,
+    required bool active,
+    String? password,
+  }) async {
+    final data = await _putJson('/api/users/$id', {
+      'role': role,
+      'displayName': displayName,
+      'active': active,
+      if (password != null && password.isNotEmpty) 'password': password,
+    });
+    return ManagedUser.fromJson(data);
+  }
+
+  Future<List<AuditLogEntry>> fetchAuditLogs({int limit = 100}) async {
+    final data = await _getList('/api/admin/audit-logs?limit=$limit');
+    return data.map(AuditLogEntry.fromJson).toList();
+  }
+
+  Future<List<LoginAttempt>> fetchLoginAttempts({int limit = 100}) async {
+    final data = await _getList('/api/admin/login-attempts?limit=$limit');
+    return data.map(LoginAttempt.fromJson).toList();
+  }
+
+  Future<List<AdminSession>> fetchAdminSessions({int limit = 100}) async {
+    final data = await _getList('/api/admin/sessions?limit=$limit');
+    return data.map(AdminSession.fromJson).toList();
   }
 
   @override

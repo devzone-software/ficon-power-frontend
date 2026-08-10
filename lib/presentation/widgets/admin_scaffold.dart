@@ -8,9 +8,11 @@ class AppRoutes {
   AppRoutes._();
 
   static const dashboard = '/dashboard';
+  static const login = '/login';
   static const devices = '/dispositivos';
   static const incidents = '/incidentes';
   static const events = '/eventos';
+  static const admin = '/admin';
 
   /// Ruta a la que se redirige cualquier ruta desconocida.
   static const fallback = dashboard;
@@ -18,10 +20,15 @@ class AppRoutes {
 
 /// Sección del menú de navegación del encabezado.
 class NavItem {
-  const NavItem({required this.route, required this.label});
+  const NavItem({
+    required this.route,
+    required this.label,
+    this.superadminOnly = false,
+  });
 
   final String route;
   final String label;
+  final bool superadminOnly;
 }
 
 const navItems = [
@@ -29,6 +36,7 @@ const navItems = [
   NavItem(route: AppRoutes.devices, label: 'Dispositivos'),
   NavItem(route: AppRoutes.incidents, label: 'Incidentes'),
   NavItem(route: AppRoutes.events, label: 'Eventos'),
+  NavItem(route: AppRoutes.admin, label: 'Admin', superadminOnly: true),
 ];
 
 /// Scaffold común con el encabezado de navegación entre rutas.
@@ -73,13 +81,16 @@ class AdminScaffold extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final wide = MediaQuery.of(context).size.width >= 720;
+              final visibleItems = navItems
+                  .where((item) => !item.superadminOnly || currentUser.canManageUsers)
+                  .toList();
               if (!wide) {
                 return PopupMenuButton<String>(
                   icon: const Icon(Icons.menu),
                   tooltip: 'Secciones',
                   onSelected: (route) => _goTo(context, route),
                   itemBuilder: (context) => [
-                    for (final item in navItems)
+                    for (final item in visibleItems)
                       PopupMenuItem(
                         value: item.route,
                         child: Text(
@@ -96,7 +107,7 @@ class AdminScaffold extends StatelessWidget {
               }
               return Row(
                 children: [
-                  for (final item in navItems)
+                  for (final item in visibleItems)
                     _NavButton(
                       label: item.label,
                       active: item.route == currentRoute,
