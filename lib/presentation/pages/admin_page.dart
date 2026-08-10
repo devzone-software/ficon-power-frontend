@@ -30,7 +30,6 @@ class _AdminPageState extends State<AdminPage> {
 
   _AdminData? _data;
   Object? _error;
-  DateTime? _lastUpdated;
   Timer? _liveRefreshTimer;
   bool _loading = true;
   bool _refreshing = false;
@@ -82,7 +81,6 @@ class _AdminPageState extends State<AdminPage> {
       if (!mounted) return;
       setState(() {
         _data = data;
-        _lastUpdated = DateTime.now();
         _error = null;
         _loading = false;
       });
@@ -175,12 +173,6 @@ class _AdminPageState extends State<AdminPage> {
             color: Colors.white,
             child: Column(
               children: [
-                _LiveStatusBar(
-                  refreshing: _refreshing,
-                  lastUpdated: _lastUpdated,
-                  error: _error,
-                  onRefresh: () => _refresh(showLoading: true),
-                ),
                 TabBar(
                   labelColor: FiconColors.logoBlue,
                   unselectedLabelColor: FiconColors.deepAlt,
@@ -217,61 +209,6 @@ class _AdminPageState extends State<AdminPage> {
                 _SessionsTab(sessions: data.sessions, onRefresh: _refresh),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LiveStatusBar extends StatelessWidget {
-  const _LiveStatusBar({
-    required this.refreshing,
-    required this.lastUpdated,
-    required this.error,
-    required this.onRefresh,
-  });
-
-  final bool refreshing;
-  final DateTime? lastUpdated;
-  final Object? error;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasError = error != null;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 10, 24, 4),
-      child: Row(
-        children: [
-          StatusChip(
-            label: refreshing
-                ? 'Actualizando'
-                : hasError
-                    ? 'Sincronización con error'
-                    : 'En vivo',
-            color: hasError ? FiconColors.logoBlue : FiconColors.cyan,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              hasError
-                  ? 'No se pudo refrescar en segundo plano. Se mantienen los últimos datos.'
-                  : 'Bloqueos, audits, logins, sesiones y cambios de usuarios se actualizan cada 5 segundos.'
-                    '${lastUpdated == null ? '' : ' Última actualización: ${appDateFormat.format(lastUpdated!.toLocal())}.'}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Actualizar ahora',
-            onPressed: refreshing ? null : onRefresh,
-            icon: refreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh),
           ),
         ],
       ),
