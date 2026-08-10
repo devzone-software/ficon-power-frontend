@@ -33,6 +33,11 @@ class _AdminPageState extends State<AdminPage> {
   Timer? _liveRefreshTimer;
   bool _loading = true;
   bool _refreshing = false;
+  String _usersFilter = '';
+  String _blockedUsersFilter = '';
+  String _auditLogsFilter = '';
+  String _loginAttemptsFilter = '';
+  String _sessionsFilter = '';
 
   @override
   void initState() {
@@ -165,6 +170,20 @@ class _AdminPageState extends State<AdminPage> {
     }
 
     final data = _data!;
+    final users = _filterRows(data.users, _usersFilter, _userSearchValues);
+    final blockedUsers = _filterRows(
+      data.blockedUsers,
+      _blockedUsersFilter,
+      _blockedUserSearchValues,
+    );
+    final auditLogs = _filterRows(data.auditLogs, _auditLogsFilter, _auditLogSearchValues);
+    final loginAttempts = _filterRows(
+      data.loginAttempts,
+      _loginAttemptsFilter,
+      _loginAttemptSearchValues,
+    );
+    final sessions = _filterRows(data.sessions, _sessionsFilter, _sessionSearchValues);
+
     return DefaultTabController(
       length: 5,
       child: Column(
@@ -191,22 +210,43 @@ class _AdminPageState extends State<AdminPage> {
             child: TabBarView(
               children: [
                 _UsersTab(
-                  users: data.users,
+                  users: users,
                   onCreate: () => _openUserDialog(),
                   onEdit: _openUserDialog,
                   onRefresh: _refresh,
+                  filterValue: _usersFilter,
+                  filterOptions: _uniqueOptions(data.users, _userSearchValues),
+                  onFilterChanged: (value) => setState(() => _usersFilter = value),
                 ),
                 _BlockedUsersTab(
-                  blockedUsers: data.blockedUsers,
+                  blockedUsers: blockedUsers,
                   onUnblock: _unblockUser,
                   onRefresh: _refresh,
+                  filterValue: _blockedUsersFilter,
+                  filterOptions: _uniqueOptions(data.blockedUsers, _blockedUserSearchValues),
+                  onFilterChanged: (value) => setState(() => _blockedUsersFilter = value),
                 ),
-                _AuditTab(logs: data.auditLogs, onRefresh: _refresh),
-                _LoginAttemptsTab(
-                  attempts: data.loginAttempts,
+                _AuditTab(
+                  logs: auditLogs,
                   onRefresh: _refresh,
+                  filterValue: _auditLogsFilter,
+                  filterOptions: _uniqueOptions(data.auditLogs, _auditLogSearchValues),
+                  onFilterChanged: (value) => setState(() => _auditLogsFilter = value),
                 ),
-                _SessionsTab(sessions: data.sessions, onRefresh: _refresh),
+                _LoginAttemptsTab(
+                  attempts: loginAttempts,
+                  onRefresh: _refresh,
+                  filterValue: _loginAttemptsFilter,
+                  filterOptions: _uniqueOptions(data.loginAttempts, _loginAttemptSearchValues),
+                  onFilterChanged: (value) => setState(() => _loginAttemptsFilter = value),
+                ),
+                _SessionsTab(
+                  sessions: sessions,
+                  onRefresh: _refresh,
+                  filterValue: _sessionsFilter,
+                  filterOptions: _uniqueOptions(data.sessions, _sessionSearchValues),
+                  onFilterChanged: (value) => setState(() => _sessionsFilter = value),
+                ),
               ],
             ),
           ),
@@ -214,6 +254,85 @@ class _AdminPageState extends State<AdminPage> {
       ),
     );
   }
+
+  List<T> _filterRows<T>(
+    List<T> rows,
+    String query,
+    List<String?> Function(T row) valuesForRow,
+  ) {
+    final normalizedQuery = _normalize(query);
+    if (normalizedQuery.isEmpty) return rows;
+    return [
+      for (final row in rows)
+        if (valuesForRow(row).any((value) => _normalize(value ?? '').contains(normalizedQuery))) row,
+    ];
+  }
+
+  List<String> _uniqueOptions<T>(
+    List<T> rows,
+    List<String?> Function(T row) valuesForRow,
+  ) {
+    final byNormalizedValue = <String, String>{};
+    for (final row in rows) {
+      for (final value in valuesForRow(row)) {
+        final cleanValue = value?.trim();
+        if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') continue;
+        byNormalizedValue.putIfAbsent(_normalize(cleanValue), () => cleanValue);
+      }
+    }
+    final options = byNormalizedValue.values.toList()
+      ..sort((a, b) => _normalize(a).compareTo(_normalize(b)));
+    return options;
+  }
+
+  List<String?> _userSearchValues(ManagedUser user) => [
+        user.username,
+        user.displayName,
+        user.role,
+        user.active ? 'Activo' : 'Revocado',
+      ];
+
+  List<String?> _blockedUserSearchValues(BlockedLoginUser blockedUser) => [
+        blockedUser.username,
+        blockedUser.displayName,
+        blockedUser.ipAddress,
+        '${blockedUser.failedAttempts}',
+        blockedUser.active ? 'Bloqueado' : 'Liberado/expirado',
+        formatDateTime(blockedUser.blockedAt),
+        formatDateTime(blockedUser.expiresAt),
+        blockedUser.unblockedByUsername,
+      ];
+
+  List<String?> _auditLogSearchValues(AuditLogEntry log) => [
+        formatDateTime(log.createdAt),
+        log.actorUsername,
+        log.actorRole,
+        log.action,
+        log.entityType,
+        log.entityId,
+        log.ipAddress,
+        log.userAgent,
+        log.metadata,
+      ];
+
+  List<String?> _loginAttemptSearchValues(LoginAttempt attempt) => [
+        formatDateTime(attempt.createdAt),
+        attempt.username,
+        attempt.success ? 'Correcto' : 'Fallido',
+        attempt.reason,
+        attempt.ipAddress,
+        attempt.userAgent,
+      ];
+
+  List<String?> _sessionSearchValues(AdminSession session) => [
+        formatDateTime(session.createdAt),
+        session.username,
+        session.role,
+        session.active ? 'Activa' : 'Cerrada/expirada',
+        formatDateTime(session.expiresAt),
+        session.ipAddress,
+        session.userAgent,
+      ];
 }
 
 class _AdminData {
@@ -238,17 +357,27 @@ class _UsersTab extends StatelessWidget {
     required this.onCreate,
     required this.onEdit,
     required this.onRefresh,
+    required this.filterValue,
+    required this.filterOptions,
+    required this.onFilterChanged,
   });
 
   final List<ManagedUser> users;
   final VoidCallback onCreate;
   final ValueChanged<ManagedUser> onEdit;
   final Future<void> Function() onRefresh;
+  final String filterValue;
+  final List<String> filterOptions;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
+      filterLabel: 'Filtrar usuarios',
+      filterValue: filterValue,
+      filterOptions: filterOptions,
+      onFilterChanged: onFilterChanged,
       action: FilledButton.icon(
         onPressed: onCreate,
         icon: const Icon(Icons.person_add_alt_1),
@@ -295,30 +424,26 @@ class _BlockedUsersTab extends StatelessWidget {
     required this.blockedUsers,
     required this.onUnblock,
     required this.onRefresh,
+    required this.filterValue,
+    required this.filterOptions,
+    required this.onFilterChanged,
   });
 
   final List<BlockedLoginUser> blockedUsers;
   final ValueChanged<BlockedLoginUser> onUnblock;
   final Future<void> Function() onRefresh;
+  final String filterValue;
+  final List<String> filterOptions;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (blockedUsers.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        child: const SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: 360,
-            child: Center(
-              child: EmptyNote('No hay usuarios bloqueados registrados.'),
-            ),
-          ),
-        ),
-      );
-    }
     return _TableShell(
       onRefresh: onRefresh,
+      filterLabel: 'Filtrar bloqueados',
+      filterValue: filterValue,
+      filterOptions: filterOptions,
+      onFilterChanged: onFilterChanged,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Usuario')),
@@ -364,15 +489,28 @@ class _BlockedUsersTab extends StatelessWidget {
 }
 
 class _AuditTab extends StatelessWidget {
-  const _AuditTab({required this.logs, required this.onRefresh});
+  const _AuditTab({
+    required this.logs,
+    required this.onRefresh,
+    required this.filterValue,
+    required this.filterOptions,
+    required this.onFilterChanged,
+  });
 
   final List<AuditLogEntry> logs;
   final Future<void> Function() onRefresh;
+  final String filterValue;
+  final List<String> filterOptions;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
+      filterLabel: 'Filtrar audit logs',
+      filterValue: filterValue,
+      filterOptions: filterOptions,
+      onFilterChanged: onFilterChanged,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Fecha')),
@@ -401,15 +539,28 @@ class _AuditTab extends StatelessWidget {
 }
 
 class _LoginAttemptsTab extends StatelessWidget {
-  const _LoginAttemptsTab({required this.attempts, required this.onRefresh});
+  const _LoginAttemptsTab({
+    required this.attempts,
+    required this.onRefresh,
+    required this.filterValue,
+    required this.filterOptions,
+    required this.onFilterChanged,
+  });
 
   final List<LoginAttempt> attempts;
   final Future<void> Function() onRefresh;
+  final String filterValue;
+  final List<String> filterOptions;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
+      filterLabel: 'Filtrar inicios de sesión',
+      filterValue: filterValue,
+      filterOptions: filterOptions,
+      onFilterChanged: onFilterChanged,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Fecha')),
@@ -443,15 +594,28 @@ class _LoginAttemptsTab extends StatelessWidget {
 }
 
 class _SessionsTab extends StatelessWidget {
-  const _SessionsTab({required this.sessions, required this.onRefresh});
+  const _SessionsTab({
+    required this.sessions,
+    required this.onRefresh,
+    required this.filterValue,
+    required this.filterOptions,
+    required this.onFilterChanged,
+  });
 
   final List<AdminSession> sessions;
   final Future<void> Function() onRefresh;
+  final String filterValue;
+  final List<String> filterOptions;
+  final ValueChanged<String> onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
+      filterLabel: 'Filtrar sesiones',
+      filterValue: filterValue,
+      filterOptions: filterOptions,
+      onFilterChanged: onFilterChanged,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Creada')),
@@ -487,14 +651,28 @@ class _SessionsTab extends StatelessWidget {
 }
 
 class _TableShell extends StatelessWidget {
-  const _TableShell({required this.child, required this.onRefresh, this.action});
+  const _TableShell({
+    required this.child,
+    required this.onRefresh,
+    this.action,
+    this.filterLabel,
+    this.filterValue,
+    this.filterOptions,
+    this.onFilterChanged,
+  });
 
   final Widget child;
   final Future<void> Function() onRefresh;
   final Widget? action;
+  final String? filterLabel;
+  final String? filterValue;
+  final List<String>? filterOptions;
+  final ValueChanged<String>? onFilterChanged;
 
   @override
   Widget build(BuildContext context) {
+    final canFilter =
+        filterLabel != null && filterValue != null && filterOptions != null && onFilterChanged != null;
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: SingleChildScrollView(
@@ -506,8 +684,26 @@ class _TableShell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (action != null) ...[
-                  Align(alignment: Alignment.centerRight, child: action),
+                if (canFilter || action != null) ...[
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.spaceBetween,
+                    children: [
+                      if (canFilter)
+                        SizedBox(
+                          width: 360,
+                          child: _SearchableTableFilter(
+                            label: filterLabel!,
+                            value: filterValue!,
+                            options: filterOptions!,
+                            onChanged: onFilterChanged!,
+                          ),
+                        ),
+                      if (action != null) action!,
+                    ],
+                  ),
                   const SizedBox(height: 12),
                 ],
                 SingleChildScrollView(scrollDirection: Axis.horizontal, child: child),
@@ -519,6 +715,161 @@ class _TableShell extends StatelessWidget {
     );
   }
 }
+
+class _SearchableTableFilter extends StatefulWidget {
+  const _SearchableTableFilter({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final List<String> options;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_SearchableTableFilter> createState() => _SearchableTableFilterState();
+}
+
+class _SearchableTableFilterState extends State<_SearchableTableFilter> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SearchableTableFilter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != _controller.text) {
+      _controller.text = widget.value;
+      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RawAutocomplete<String>(
+      textEditingController: _controller,
+      focusNode: _focusNode,
+      optionsBuilder: (textEditingValue) {
+        return _rankedMatches(widget.options, textEditingValue.text);
+      },
+      onSelected: (selected) {
+        _controller.text = selected;
+        _controller.selection = TextSelection.collapsed(offset: selected.length);
+        widget.onChanged(selected);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                labelText: widget.label,
+                hintText: 'Escribe o selecciona un valor',
+                prefixIcon: const Icon(Icons.filter_alt_outlined),
+                suffixIcon: controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Limpiar filtro',
+                        onPressed: () {
+                          controller.clear();
+                          widget.onChanged('');
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+              ),
+              onChanged: widget.onChanged,
+              onSubmitted: (_) => onFieldSubmitted(),
+            );
+          },
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final visibleOptions = options.toList();
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 6,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280, maxWidth: 360),
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: visibleOptions.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final option = visibleOptions[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(option, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+Iterable<String> _rankedMatches(List<String> options, String query) {
+  final normalizedQuery = _normalize(query);
+  if (normalizedQuery.isEmpty) return options.take(30);
+
+  final prefixMatches = <String>[];
+  final start = _lowerBoundByNormalized(options, normalizedQuery);
+  for (var index = start; index < options.length && prefixMatches.length < 20; index++) {
+    final option = options[index];
+    if (!_normalize(option).startsWith(normalizedQuery)) break;
+    prefixMatches.add(option);
+  }
+
+  final seen = prefixMatches.toSet();
+  final containsMatches = <String>[];
+  for (final option in options) {
+    if (prefixMatches.length + containsMatches.length >= 30) break;
+    if (seen.contains(option)) continue;
+    if (_normalize(option).contains(normalizedQuery)) containsMatches.add(option);
+  }
+
+  return [...prefixMatches, ...containsMatches];
+}
+
+int _lowerBoundByNormalized(List<String> options, String query) {
+  var low = 0;
+  var high = options.length;
+  while (low < high) {
+    final middle = low + ((high - low) >> 1);
+    if (_normalize(options[middle]).compareTo(query) < 0) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+String _normalize(String value) => value.trim().toLowerCase();
 
 class _UserDialog extends StatefulWidget {
   const _UserDialog({required this.repository, this.user});
