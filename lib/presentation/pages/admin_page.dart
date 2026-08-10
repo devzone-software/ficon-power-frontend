@@ -57,12 +57,14 @@ class _AdminPageState extends State<AdminPage> {
       widget.repository.fetchAuditLogs(),
       widget.repository.fetchLoginAttempts(),
       widget.repository.fetchAdminSessions(),
+      widget.repository.fetchBlockedUsers(),
     ]);
     return _AdminData(
       users: results[0] as List<ManagedUser>,
       auditLogs: results[1] as List<AuditLogEntry>,
       loginAttempts: results[2] as List<LoginAttempt>,
       sessions: results[3] as List<AdminSession>,
+      blockedUsers: results[4] as List<BlockedLoginUser>,
     );
   }
 
@@ -108,6 +110,43 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
+  Future<void> _unblockUser(BlockedLoginUser blockedUser) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Desbloquear usuario'),
+        content: Text(
+          '¿Permitir nuevamente el inicio de sesión de '
+          '${blockedUser.username} desde ${blockedUser.ipAddress ?? 'esta IP'}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Desbloquear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.repository.unblockBlockedUser(blockedUser.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${blockedUser.username} desbloqueado.')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo desbloquear: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
@@ -129,7 +168,7 @@ class _AdminPageState extends State<AdminPage> {
 
     final data = _data!;
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Column(
         children: [
           Material(
@@ -147,6 +186,7 @@ class _AdminPageState extends State<AdminPage> {
                   unselectedLabelColor: FiconColors.deepAlt,
                   tabs: const [
                     Tab(text: 'Usuarios'),
+                    Tab(text: 'Bloqueados'),
                     Tab(text: 'Audit logs'),
                     Tab(text: 'Logins'),
                     Tab(text: 'Sesiones'),
@@ -162,6 +202,11 @@ class _AdminPageState extends State<AdminPage> {
                   users: data.users,
                   onCreate: () => _openUserDialog(),
                   onEdit: _openUserDialog,
+                  onRefresh: _refresh,
+                ),
+                _BlockedUsersTab(
+                  blockedUsers: data.blockedUsers,
+                  onUnblock: _unblockUser,
                   onRefresh: _refresh,
                 ),
                 _AuditTab(logs: data.auditLogs, onRefresh: _refresh),
@@ -212,7 +257,7 @@ class _LiveStatusBar extends StatelessWidget {
             child: Text(
               hasError
                   ? 'No se pudo refrescar en segundo plano. Se mantienen los últimos datos.'
-                  : 'Audits, logins, sesiones y cambios de usuarios se actualizan cada 5 segundos.'
+                  : 'Bloqueos, audits, logins, sesiones y cambios de usuarios se actualizan cada 5 segundos.'
                     '${lastUpdated == null ? '' : ' Última actualización: ${appDateFormat.format(lastUpdated!.toLocal())}.'}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -240,12 +285,14 @@ class _AdminData {
     required this.auditLogs,
     required this.loginAttempts,
     required this.sessions,
+    required this.blockedUsers,
   });
 
   final List<ManagedUser> users;
   final List<AuditLogEntry> auditLogs;
   final List<LoginAttempt> loginAttempts;
   final List<AdminSession> sessions;
+  final List<BlockedLoginUser> blockedUsers;
 }
 
 class _UsersTab extends StatelessWidget {
@@ -296,6 +343,79 @@ class _UsersTab extends StatelessWidget {
                     tooltip: 'Editar rol, estado o contraseña',
                     onPressed: () => onEdit(user),
                     icon: const Icon(Icons.manage_accounts_outlined),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BlockedUsersTab extends StatelessWidget {
+  const _BlockedUsersTab({
+    required this.blockedUsers,
+    required this.onUnblock,
+    required this.onRefresh,
+  });
+
+  final List<BlockedLoginUser> blockedUsers;
+  final ValueChanged<BlockedLoginUser> onUnblock;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    if (blockedUsers.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: const SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: 360,
+            child: Center(
+              child: EmptyNote('No hay usuarios bloqueados registrados.'),
+            ),
+          ),
+        ),
+      );
+    }
+    return _TableShell(
+      onRefresh: onRefresh,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Usuario')),
+          DataColumn(label: Text('Nombre')),
+          DataColumn(label: Text('IP')),
+          DataColumn(label: Text('Fallos'), numeric: true),
+          DataColumn(label: Text('Estado')),
+          DataColumn(label: Text('Bloqueado')),
+          DataColumn(label: Text('Expira')),
+          DataColumn(label: Text('Desbloqueado por')),
+          DataColumn(label: Text('Acciones')),
+        ],
+        rows: [
+          for (final blocked in blockedUsers)
+            DataRow(
+              cells: [
+                DataCell(Text(blocked.username)),
+                DataCell(Text(blocked.displayName ?? '—')),
+                DataCell(Text(blocked.ipAddress ?? '—')),
+                DataCell(Text('${blocked.failedAttempts}')),
+                DataCell(
+                  StatusChip(
+                    label: blocked.active ? 'Bloqueado' : 'Liberado/expirado',
+                    color: blocked.active ? FiconColors.logoBlue : FiconColors.deepAlt,
+                  ),
+                ),
+                DataCell(Text(formatDateTime(blocked.blockedAt))),
+                DataCell(Text(formatDateTime(blocked.expiresAt))),
+                DataCell(Text(blocked.unblockedByUsername ?? '—')),
+                DataCell(
+                  FilledButton.tonalIcon(
+                    onPressed: blocked.active ? () => onUnblock(blocked) : null,
+                    icon: const Icon(Icons.lock_open_outlined),
+                    label: const Text('Desbloquear'),
                   ),
                 ),
               ],
