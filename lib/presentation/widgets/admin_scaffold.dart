@@ -8,6 +8,7 @@ class AppRoutes {
   AppRoutes._();
 
   static const dashboard = '/dashboard';
+  static const login = '/login';
   static const devices = '/dispositivos';
   static const incidents = '/incidentes';
   static const events = '/eventos';

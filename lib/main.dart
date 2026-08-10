@@ -39,6 +39,7 @@ class FiconPowerApp extends StatefulWidget {
 }
 
 class _FiconPowerAppState extends State<FiconPowerApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
   late final GetMonitoringOverviewService getOverview;
   late final GetDevicesService getDevices;
   late final GetIncidentsService getIncidents;
@@ -68,51 +69,78 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
     return AnimatedBuilder(
       animation: widget.session,
       builder: (context, _) => MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'FICON Power',
         debugShowCheckedModeBanner: false,
         theme: buildFiconTheme(),
-        home: widget.session.isAuthenticated
-            ? DashboardPage(
-                getOverview: getOverview,
-                getNotificationTemplates: getNotificationTemplates,
-                currentUser: widget.session.user!,
-                onLogout: _logout,
-              )
-            : LoginPage(repository: widget.repository, session: widget.session),
-        routes: widget.session.isAuthenticated
-            ? {
-                AppRoutes.dashboard: (_) => DashboardPage(
-                      getOverview: getOverview,
-                      getNotificationTemplates: getNotificationTemplates,
-                      currentUser: widget.session.user!,
-                      onLogout: _logout,
-                    ),
-                AppRoutes.devices: (_) => DevicesPage(
-                      getDevices: getDevices,
-                      getSites: getSites,
-                      updateDeviceDetails: updateDeviceDetails,
-                      createSite: createSite,
-                      currentUser: widget.session.user!,
-                      onLogout: _logout,
-                    ),
-                AppRoutes.incidents: (_) => IncidentsPage(
-                      getIncidents: getIncidents,
-                      currentUser: widget.session.user!,
-                      onLogout: _logout,
-                    ),
-                AppRoutes.events: (_) => EventsPage(
-                      getEvents: getEvents,
-                      currentUser: widget.session.user!,
-                      onLogout: _logout,
-                    ),
-              }
-            : const {},
+        initialRoute: widget.session.isAuthenticated
+            ? AppRoutes.dashboard
+            : AppRoutes.login,
+        routes: {
+          AppRoutes.login: (_) =>
+              LoginPage(repository: widget.repository, session: widget.session),
+          AppRoutes.dashboard: (_) => _protected(
+                () => DashboardPage(
+                  getOverview: getOverview,
+                  getNotificationTemplates: getNotificationTemplates,
+                  currentUser: widget.session.user!,
+                  onLogout: _logout,
+                ),
+              ),
+          AppRoutes.devices: (_) => _protected(
+                () => DevicesPage(
+                  getDevices: getDevices,
+                  getSites: getSites,
+                  updateDeviceDetails: updateDeviceDetails,
+                  createSite: createSite,
+                  currentUser: widget.session.user!,
+                  onLogout: _logout,
+                ),
+              ),
+          AppRoutes.incidents: (_) => _protected(
+                () => IncidentsPage(
+                  getIncidents: getIncidents,
+                  currentUser: widget.session.user!,
+                  onLogout: _logout,
+                ),
+              ),
+          AppRoutes.events: (_) => _protected(
+                () => EventsPage(
+                  getEvents: getEvents,
+                  currentUser: widget.session.user!,
+                  onLogout: _logout,
+                ),
+              ),
+        },
+        onUnknownRoute: (_) => MaterialPageRoute(
+          builder: (_) => widget.session.isAuthenticated
+              ? _dashboardPage()
+              : LoginPage(repository: widget.repository, session: widget.session),
+        ),
       ),
+    );
+  }
+
+  Widget _protected(Widget Function() pageBuilder) {
+    if (widget.session.isAuthenticated) return pageBuilder();
+    return LoginPage(repository: widget.repository, session: widget.session);
+  }
+
+  DashboardPage _dashboardPage() {
+    return DashboardPage(
+      getOverview: getOverview,
+      getNotificationTemplates: getNotificationTemplates,
+      currentUser: widget.session.user!,
+      onLogout: _logout,
     );
   }
 
   Future<void> _logout() async {
     await widget.repository.logout();
     widget.session.clear();
+    _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      AppRoutes.login,
+      (route) => false,
+    );
   }
 }
