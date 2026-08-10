@@ -4,9 +4,4 @@ import '../../domain/notification_template.dart';
 /// Espejo de `NotificationTemplateRepository` del backend.
 abstract interface class NotificationTemplateRepository {
   Future<List<NotificationTemplate>> fetchNotificationTemplates();
-
-  Future<NotificationTemplate> updateNotificationTemplate(
-    String eventType,
-    String body,
-  );
 }

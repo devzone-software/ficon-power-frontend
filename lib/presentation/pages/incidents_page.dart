@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../ports/input/get_incidents.dart';
 import '../widgets/admin_scaffold.dart';
@@ -9,9 +10,16 @@ import '../widgets/common.dart';
 
 /// Tabla de incidentes de corte de energía.
 class IncidentsPage extends StatefulWidget {
-  const IncidentsPage({super.key, required this.getIncidents});
+  const IncidentsPage({
+    super.key,
+    required this.getIncidents,
+    required this.currentUser,
+    required this.onLogout,
+  });
 
   final GetIncidents getIncidents;
+  final AuthUser currentUser;
+  final VoidCallback onLogout;
 
   @override
   State<IncidentsPage> createState() => _IncidentsPageState();
@@ -58,6 +66,8 @@ class _IncidentsPageState extends State<IncidentsPage> {
     return AdminScaffold(
       currentRoute: AppRoutes.incidents,
       title: 'Incidentes',
+      currentUser: widget.currentUser,
+      onLogout: widget.onLogout,
       body: FutureBuilder<List<Incident>>(
         future: _future,
         builder: (context, snapshot) {

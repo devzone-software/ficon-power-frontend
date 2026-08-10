@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../domain/auth_user.dart';
 import '../../domain/event.dart';
 import '../../ports/input/get_events.dart';
 import '../widgets/admin_scaffold.dart';
@@ -9,9 +10,16 @@ import '../widgets/common.dart';
 
 /// Tabla de eventos Tuya recibidos por el backend.
 class EventsPage extends StatefulWidget {
-  const EventsPage({super.key, required this.getEvents});
+  const EventsPage({
+    super.key,
+    required this.getEvents,
+    required this.currentUser,
+    required this.onLogout,
+  });
 
   final GetEvents getEvents;
+  final AuthUser currentUser;
+  final VoidCallback onLogout;
 
   @override
   State<EventsPage> createState() => _EventsPageState();
@@ -58,6 +66,8 @@ class _EventsPageState extends State<EventsPage> {
     return AdminScaffold(
       currentRoute: AppRoutes.events,
       title: 'Eventos',
+      currentUser: widget.currentUser,
+      onLogout: widget.onLogout,
       body: FutureBuilder<List<Event>>(
         future: _future,
         builder: (context, snapshot) {

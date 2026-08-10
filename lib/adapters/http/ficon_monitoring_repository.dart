@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
+import '../../config/auth_session.dart';
+import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
@@ -15,14 +17,22 @@ import '../../ports/output/site_repository.dart';
 
 /// Error de comunicación con la API de FICON Power.
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.details});
 
   final String message;
   final int? statusCode;
+  final String? details;
 
   @override
   String toString() =>
       'ApiException(${statusCode ?? 'sin respuesta'}): $message';
+}
+
+class LoginResult {
+  const LoginResult({required this.token, required this.user});
+
+  final String token;
+  final AuthUser user;
 }
 
 /// Adaptador HTTP: implementa los puertos de salida
@@ -34,17 +44,51 @@ class FiconMonitoringRepository
         NotificationTemplateRepository,
         DeviceRepository,
         SiteRepository {
-  FiconMonitoringRepository({http.Client? client, String? baseUrl})
+  FiconMonitoringRepository({
+    http.Client? client,
+    String? baseUrl,
+    AuthSession? session,
+  })
       : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+        _session = session;
 
   final http.Client _client;
   final String _baseUrl;
+  final AuthSession? _session;
 
   Map<String, String> get _headers => {
         'Accept': 'application/json',
+        if (_session?.token != null) 'Authorization': 'Bearer ${_session!.token}',
         if (AppConfig.apiKey.isNotEmpty) 'X-API-Key': AppConfig.apiKey,
       };
+
+  Future<LoginResult> login({
+    required String username,
+    required String password,
+  }) async {
+    final data = await _sendJson(
+      'POST',
+      '/api/auth/login',
+      {'username': username, 'password': password},
+      authenticated: false,
+    );
+    return LoginResult(
+      token: data['token'] as String? ?? '',
+      user: AuthUser.fromJson(
+        (data['user'] as Map<dynamic, dynamic>? ?? const {})
+            .cast<String, dynamic>(),
+      ),
+    );
+  }
+
+  Future<void> logout() async {
+    try {
+      await _sendJson('POST', '/api/auth/logout', const {});
+    } catch (_) {
+      // El cierre local de sesión no debe bloquearse por red.
+    }
+  }
 
   @override
   Future<List<Site>> fetchSites() async {
@@ -74,16 +118,6 @@ class FiconMonitoringRepository
   Future<List<NotificationTemplate>> fetchNotificationTemplates() async {
     final data = await _getList('/api/notification-templates');
     return data.map(NotificationTemplate.fromJson).toList();
-  }
-
-  @override
-  Future<NotificationTemplate> updateNotificationTemplate(
-    String eventType,
-    String body,
-  ) async {
-    final data =
-        await _putJson('/api/notification-templates/$eventType', {'body': body});
-    return NotificationTemplate.fromJson(data);
   }
 
   @override
@@ -124,8 +158,9 @@ class FiconMonitoringRepository
     }
     if (response.statusCode != 200) {
       throw ApiException(
-        'El backend respondió con un error en $path',
+        _errorMessage(response, path),
         statusCode: response.statusCode,
+        details: utf8.decode(response.bodyBytes),
       );
     }
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
@@ -151,9 +186,14 @@ class FiconMonitoringRepository
     String method,
     String path,
     Map<String, dynamic> payload,
-  ) async {
+    {
+    bool authenticated = true,
+  }) async {
     final uri = Uri.parse('$_baseUrl$path');
-    final headers = {..._headers, 'Content-Type': 'application/json'};
+    final headers = {
+      if (authenticated) ..._headers else 'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
     final body = jsonEncode(payload);
     final http.Response response;
     try {
@@ -166,8 +206,9 @@ class FiconMonitoringRepository
     }
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw ApiException(
-        'El backend respondió con un error en $path',
+        _errorMessage(response, path),
         statusCode: response.statusCode,
+        details: utf8.decode(response.bodyBytes),
       );
     }
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
@@ -178,4 +219,18 @@ class FiconMonitoringRepository
   }
 
   void dispose() => _client.close();
+
+  String _errorMessage(http.Response response, String path) {
+    final body = utf8.decode(response.bodyBytes);
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final error = decoded['error'] ?? decoded['message'];
+        if (error is String && error.isNotEmpty) return error;
+      }
+    } catch (_) {
+      // Si no es JSON, cae al mensaje genérico.
+    }
+    return 'El backend respondió con un error en $path';
+  }
 }
