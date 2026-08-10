@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'adapters/http/ficon_monitoring_repository.dart';
+import 'config/auth_session.dart';
 import 'presentation/pages/dashboard_page.dart';
 import 'presentation/pages/devices_page.dart';
 import 'presentation/pages/events_page.dart';
 import 'presentation/pages/incidents_page.dart';
+import 'presentation/pages/login_page.dart';
+import 'presentation/theme/ficon_theme.dart';
 import 'presentation/widgets/admin_scaffold.dart';
 import 'usecase/create_site_service.dart';
 import 'usecase/get_devices_service.dart';
@@ -14,99 +17,102 @@ import 'usecase/get_monitoring_overview_service.dart';
 import 'usecase/get_notification_templates_service.dart';
 import 'usecase/get_sites_service.dart';
 import 'usecase/update_device_details_service.dart';
-import 'usecase/update_notification_template_service.dart';
 
 void main() {
-  // Ensamblaje de la arquitectura hexagonal: el adaptador HTTP
-  // implementa el puerto de salida y los casos de uso exponen los
-  // puertos de entrada que consume la presentación.
-  final repository = FiconMonitoringRepository();
-  runApp(
-    FiconPowerApp(
-      getOverview: GetMonitoringOverviewService(repository),
-      getDevices: GetDevicesService(repository),
-      getIncidents: GetIncidentsService(repository),
-      getEvents: GetEventsService(repository),
-      getNotificationTemplates: GetNotificationTemplatesService(repository),
-      updateNotificationTemplate: UpdateNotificationTemplateService(repository),
-      getSites: GetSitesService(repository),
-      updateDeviceDetails: UpdateDeviceDetailsService(repository),
-      createSite: CreateSiteService(repository),
-    ),
-  );
+  final session = AuthSession();
+  final repository = FiconMonitoringRepository(session: session);
+  runApp(FiconPowerApp(repository: repository, session: session));
 }
 
-class FiconPowerApp extends StatelessWidget {
+class FiconPowerApp extends StatefulWidget {
   const FiconPowerApp({
     super.key,
-    required this.getOverview,
-    required this.getDevices,
-    required this.getIncidents,
-    required this.getEvents,
-    required this.getNotificationTemplates,
-    required this.updateNotificationTemplate,
-    required this.getSites,
-    required this.updateDeviceDetails,
-    required this.createSite,
+    required this.repository,
+    required this.session,
   });
 
-  final GetMonitoringOverviewService getOverview;
-  final GetDevicesService getDevices;
-  final GetIncidentsService getIncidents;
-  final GetEventsService getEvents;
-  final GetNotificationTemplatesService getNotificationTemplates;
-  final UpdateNotificationTemplateService updateNotificationTemplate;
-  final GetSitesService getSites;
-  final UpdateDeviceDetailsService updateDeviceDetails;
-  final CreateSiteService createSite;
+  final FiconMonitoringRepository repository;
+  final AuthSession session;
+
+  @override
+  State<FiconPowerApp> createState() => _FiconPowerAppState();
+}
+
+class _FiconPowerAppState extends State<FiconPowerApp> {
+  late final GetMonitoringOverviewService getOverview;
+  late final GetDevicesService getDevices;
+  late final GetIncidentsService getIncidents;
+  late final GetEventsService getEvents;
+  late final GetNotificationTemplatesService getNotificationTemplates;
+  late final GetSitesService getSites;
+  late final UpdateDeviceDetailsService updateDeviceDetails;
+  late final CreateSiteService createSite;
+
+  @override
+  void initState() {
+    super.initState();
+    getOverview = GetMonitoringOverviewService(widget.repository);
+    getDevices = GetDevicesService(widget.repository);
+    getIncidents = GetIncidentsService(widget.repository);
+    getEvents = GetEventsService(widget.repository);
+    getNotificationTemplates = GetNotificationTemplatesService(
+      widget.repository,
+    );
+    getSites = GetSitesService(widget.repository);
+    updateDeviceDetails = UpdateDeviceDetailsService(widget.repository);
+    createSite = CreateSiteService(widget.repository);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FICON Power',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E5AA8)),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.blueGrey.shade100),
-          ),
-        ),
-      ),
-      // La raíz redirige al resumen; cualquier ruta desconocida
-      // también redirige al resumen (ver onUnknownRoute).
-      initialRoute: AppRoutes.dashboard,
-      routes: {
-        '/': (_) => DashboardPage(
-          getOverview: getOverview,
-          getNotificationTemplates: getNotificationTemplates,
-          updateNotificationTemplate: updateNotificationTemplate,
-        ),
-        AppRoutes.dashboard: (_) => DashboardPage(
-          getOverview: getOverview,
-          getNotificationTemplates: getNotificationTemplates,
-          updateNotificationTemplate: updateNotificationTemplate,
-        ),
-        AppRoutes.devices: (_) => DevicesPage(
-          getDevices: getDevices,
-          getSites: getSites,
-          updateDeviceDetails: updateDeviceDetails,
-          createSite: createSite,
-        ),
-        AppRoutes.incidents: (_) => IncidentsPage(getIncidents: getIncidents),
-        AppRoutes.events: (_) => EventsPage(getEvents: getEvents),
-      },
-      onUnknownRoute: (_) => MaterialPageRoute(
-        builder: (_) => DashboardPage(
-          getOverview: getOverview,
-          getNotificationTemplates: getNotificationTemplates,
-          updateNotificationTemplate: updateNotificationTemplate,
-        ),
-        settings: const RouteSettings(name: AppRoutes.fallback),
+    return AnimatedBuilder(
+      animation: widget.session,
+      builder: (context, _) => MaterialApp(
+        title: 'FICON Power',
+        debugShowCheckedModeBanner: false,
+        theme: buildFiconTheme(),
+        home: widget.session.isAuthenticated
+            ? DashboardPage(
+                getOverview: getOverview,
+                getNotificationTemplates: getNotificationTemplates,
+                currentUser: widget.session.user!,
+                onLogout: _logout,
+              )
+            : LoginPage(repository: widget.repository, session: widget.session),
+        routes: widget.session.isAuthenticated
+            ? {
+                AppRoutes.dashboard: (_) => DashboardPage(
+                      getOverview: getOverview,
+                      getNotificationTemplates: getNotificationTemplates,
+                      currentUser: widget.session.user!,
+                      onLogout: _logout,
+                    ),
+                AppRoutes.devices: (_) => DevicesPage(
+                      getDevices: getDevices,
+                      getSites: getSites,
+                      updateDeviceDetails: updateDeviceDetails,
+                      createSite: createSite,
+                      currentUser: widget.session.user!,
+                      onLogout: _logout,
+                    ),
+                AppRoutes.incidents: (_) => IncidentsPage(
+                      getIncidents: getIncidents,
+                      currentUser: widget.session.user!,
+                      onLogout: _logout,
+                    ),
+                AppRoutes.events: (_) => EventsPage(
+                      getEvents: getEvents,
+                      currentUser: widget.session.user!,
+                      onLogout: _logout,
+                    ),
+              }
+            : const {},
       ),
     );
+  }
+
+  Future<void> _logout() async {
+    await widget.repository.logout();
+    widget.session.clear();
   }
 }

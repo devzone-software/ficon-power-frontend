@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/site.dart';
 import '../../ports/input/create_site.dart';
@@ -20,12 +21,16 @@ class DevicesPage extends StatefulWidget {
     required this.getSites,
     required this.updateDeviceDetails,
     required this.createSite,
+    required this.currentUser,
+    required this.onLogout,
   });
 
   final GetDevices getDevices;
   final GetSites getSites;
   final UpdateDeviceDetails updateDeviceDetails;
   final CreateSite createSite;
+  final AuthUser currentUser;
+  final VoidCallback onLogout;
 
   @override
   State<DevicesPage> createState() => _DevicesPageState();
@@ -90,6 +95,8 @@ class _DevicesPageState extends State<DevicesPage> {
     return AdminScaffold(
       currentRoute: AppRoutes.devices,
       title: 'Dispositivos',
+      currentUser: widget.currentUser,
+      onLogout: widget.onLogout,
       body: FutureBuilder<List<Device>>(
         future: _future,
         builder: (context, snapshot) {
@@ -115,7 +122,11 @@ class _DevicesPageState extends State<DevicesPage> {
                   child: ConstrainedBox(
                     constraints:
                         BoxConstraints(minWidth: constraints.maxWidth),
-                    child: _DevicesTable(devices: devices, onEdit: _edit),
+                    child: _DevicesTable(
+                      devices: devices,
+                      onEdit: _edit,
+                      canEdit: widget.currentUser.canEditDevices,
+                    ),
                   ),
                 ),
               ),
@@ -128,10 +139,15 @@ class _DevicesPageState extends State<DevicesPage> {
 }
 
 class _DevicesTable extends StatelessWidget {
-  const _DevicesTable({required this.devices, required this.onEdit});
+  const _DevicesTable({
+    required this.devices,
+    required this.onEdit,
+    required this.canEdit,
+  });
 
   final List<Device> devices;
   final ValueChanged<Device> onEdit;
+  final bool canEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -165,9 +181,11 @@ class _DevicesTable extends StatelessWidget {
               ),
               DataCell(
                 IconButton(
-                  onPressed: () => onEdit(device),
+                  onPressed: canEdit ? () => onEdit(device) : null,
                   icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Editar dispositivo',
+                  tooltip: canEdit
+                      ? 'Editar dispositivo'
+                      : 'Solo admin o superadmin pueden editar',
                 ),
               ),
             ],

@@ -53,7 +53,14 @@ Los valores se inyectan en tiempo de compilación con `--dart-define`:
 | Variable       | Descripción                                  | Valor por defecto        |
 |----------------|----------------------------------------------|--------------------------|
 | `API_BASE_URL` | URL base del backend FICON Power             | `http://localhost:8080`  |
-| `API_KEY`      | Clave para el header `X-API-Key` (opcional)  | vacío                    |
+| `API_KEY`      | Clave para el header `X-API-Key` en integraciones; el dashboard usa login Bearer | vacío |
+
+El dashboard solicita login contra el backend. Usuarios iniciales de pruebas locales:
+
+- Las credenciales locales fuertes se documentan en el backend, dentro de `.local/credentials.local.md`.
+- Ese archivo está ignorado por Git y no debe publicarse.
+
+En la tarjeta “Plantillas Meta de WhatsApp”, la UI muestra nombre, idioma y variables usadas por WhatsApp. Los mensajes ya no se editan desde el dashboard; el texto aprobado se administra en Meta Business.
 
 ## Ejecución
 
@@ -109,5 +116,7 @@ flutter test
 - `GET /api/sites` — sedes, ubicación y cantidad de dispositivos.
 - `GET /api/devices` — catálogo de dispositivos, estado e indisponibilidad acumulada.
 - `GET /api/incidents?limit=100` — cortes de energía, duración, dispositivo y sede.
+- `GET /api/notification-templates` — configuración de plantillas Meta de WhatsApp.
+- `POST /api/auth/login` — inicio de sesión y emisión de token Bearer.
 
 Las fechas llegan como ISO-8601 con el offset de Perú (`-05:00`) y se muestran en hora local.

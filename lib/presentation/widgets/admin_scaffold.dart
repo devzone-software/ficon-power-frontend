@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/auth_user.dart';
+import '../theme/ficon_theme.dart';
+
 /// Rutas definidas en la aplicación.
 class AppRoutes {
   AppRoutes._();
@@ -37,11 +40,15 @@ class AdminScaffold extends StatelessWidget {
     required this.currentRoute,
     required this.title,
     required this.body,
+    required this.currentUser,
+    required this.onLogout,
   });
 
   final String currentRoute;
   final String title;
   final Widget body;
+  final AuthUser currentUser;
+  final VoidCallback onLogout;
 
   void _goTo(BuildContext context, String route) {
     if (route == currentRoute) return;
@@ -52,7 +59,16 @@ class AdminScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FICON Power'),
+        toolbarHeight: 64,
+        titleSpacing: 20,
+        title: const FiconBrandMark(height: 40),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3),
+          child: Container(
+            height: 3,
+            decoration: const BoxDecoration(gradient: FiconGradients.signal),
+          ),
+        ),
         actions: [
           LayoutBuilder(
             builder: (context, constraints) {
@@ -86,6 +102,7 @@ class AdminScaffold extends StatelessWidget {
                       active: item.route == currentRoute,
                       onPressed: () => _goTo(context, item.route),
                     ),
+                  _UserMenu(user: currentUser, onLogout: onLogout),
                   const SizedBox(width: 12),
                 ],
               );
@@ -94,6 +111,42 @@ class AdminScaffold extends StatelessWidget {
         ],
       ),
       body: body,
+    );
+  }
+}
+
+class _UserMenu extends StatelessWidget {
+  const _UserMenu({required this.user, required this.onLogout});
+
+  final AuthUser user;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Sesión',
+      onSelected: (value) {
+        if (value == 'logout') onLogout();
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          enabled: false,
+          child: Text('${user.displayName} · ${user.role}'),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: CircleAvatar(
+          radius: 16,
+          backgroundColor: FiconColors.cyan.withValues(alpha: 0.18),
+          child: Text(
+            user.username.isEmpty ? '?' : user.username[0].toUpperCase(),
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -111,18 +164,16 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: TextButton(
         onPressed: active ? null : onPressed,
         style: TextButton.styleFrom(
-          foregroundColor:
-              active ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          foregroundColor: active ? FiconColors.ink : Colors.white,
           backgroundColor:
-              active ? colorScheme.primary.withValues(alpha: 0.10) : null,
+              active ? FiconColors.cyan.withValues(alpha: 0.86) : null,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
         child: Text(
