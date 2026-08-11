@@ -633,22 +633,12 @@ class _DashboardAnalyticsSection extends StatelessWidget {
                 )
                 .toList(),
           ),
-          _RankingBarsCard(
-            title: 'Sedes con más apagados',
-            subtitle: 'Agrupado por sede para comparar zonas o locales',
-            icon: Icons.location_city_outlined,
+          _FrequencyBarChart(
+            title: 'Apagados por horario',
+            subtitle: 'En qué momento del día se concentran los cortes',
+            icon: Icons.schedule_outlined,
             color: FiconColors.logoBlue,
-            emptyMessage: 'Aún no hay actividad por sede.',
-            items: stats.siteRankings
-                .map(
-                  (site) => _RankingBarItem(
-                    label: site.label,
-                    value: site.incidents,
-                    detail:
-                        '${site.devices} disp. · ${_formatDurationCompact(site.downtimeSeconds)} fuera',
-                  ),
-                )
-                .toList(),
+            points: stats.timeOfDayIncidents,
           ),
         ];
 
@@ -878,7 +868,7 @@ class _VerticalBar extends StatelessWidget {
                   color: value == 0
                       ? FiconColors.cardBorderSoft
                       : color.withValues(alpha: 0.82),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
             ),
@@ -983,7 +973,7 @@ class _HorizontalBar extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         ClipRRect(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(4),
           child: SizedBox(
             height: 9,
             child: Stack(
@@ -1016,7 +1006,7 @@ class _DashboardStats {
     required this.weeklyIncidents,
     required this.monthlyIncidents,
     required this.weekdayIncidents,
-    required this.siteRankings,
+    required this.timeOfDayIncidents,
     required this.deviceRankings,
   });
 
@@ -1027,7 +1017,7 @@ class _DashboardStats {
   final List<_FrequencyPoint> weeklyIncidents;
   final List<_FrequencyPoint> monthlyIncidents;
   final List<_FrequencyPoint> weekdayIncidents;
-  final List<_ImpactRankingStat> siteRankings;
+  final List<_FrequencyPoint> timeOfDayIncidents;
   final List<_ImpactRankingStat> deviceRankings;
 
   String get weeklyAverageText {
@@ -1060,7 +1050,7 @@ class _DashboardStats {
       weeklyIncidents: _weeklyFrequencyStats(data.incidents),
       monthlyIncidents: _monthlyFrequencyStats(data.incidents),
       weekdayIncidents: _weekdayFrequencyStats(data.incidents),
-      siteRankings: _siteRankingStats(data),
+      timeOfDayIncidents: _timeOfDayFrequencyStats(data.incidents),
       deviceRankings: _deviceRankingStats(data.devices),
     );
   }
@@ -1150,40 +1140,28 @@ class _DashboardStats {
     ];
   }
 
-  static List<_ImpactRankingStat> _siteRankingStats(MonitoringOverview data) {
-    final bySite = <String, _ImpactRankingBuilder>{};
-    for (final site in data.sites) {
-      bySite[site.id] = _ImpactRankingBuilder(
-        label: site.name.isEmpty ? 'Sede sin nombre' : site.name,
-      );
+  static List<_FrequencyPoint> _timeOfDayFrequencyStats(List<Incident> incidents) {
+    final counts = List<int>.filled(4, 0);
+    for (final incident in incidents) {
+      final start = incident.startTime;
+      if (start == null) continue;
+      final hour = start.hour;
+      if (hour < 6) {
+        counts[0]++;
+      } else if (hour < 12) {
+        counts[1]++;
+      } else if (hour < 18) {
+        counts[2]++;
+      } else {
+        counts[3]++;
+      }
     }
-    for (final device in data.devices) {
-      final key = device.siteId ?? device.siteName ?? 'Sin sede';
-      final builder = bySite.putIfAbsent(
-        key,
-        () => _ImpactRankingBuilder(label: device.siteName ?? 'Sin sede'),
-      );
-      builder.devices++;
-      builder.incidents += device.incidentCount;
-      builder.downtimeSeconds += device.totalDowntimeSeconds;
-    }
-    final rankings = bySite.values
-        .map(
-          (builder) => _ImpactRankingStat(
-            label: builder.label,
-            devices: builder.devices,
-            incidents: builder.incidents,
-            downtimeSeconds: builder.downtimeSeconds,
-          ),
-        )
-        .where((stat) => stat.incidents > 0 || stat.downtimeSeconds > 0)
-        .toList()
-      ..sort((a, b) {
-        final incidentCompare = b.incidents.compareTo(a.incidents);
-        if (incidentCompare != 0) return incidentCompare;
-        return b.downtimeSeconds.compareTo(a.downtimeSeconds);
-      });
-    return rankings.take(5).toList();
+    return [
+      _FrequencyPoint(label: '00-06', count: counts[0]),
+      _FrequencyPoint(label: '06-12', count: counts[1]),
+      _FrequencyPoint(label: '12-18', count: counts[2]),
+      _FrequencyPoint(label: '18-24', count: counts[3]),
+    ];
   }
 
   static List<_ImpactRankingStat> _deviceRankingStats(List<Device> devices) {
@@ -1201,17 +1179,8 @@ class _DashboardStats {
         if (incidentCompare != 0) return incidentCompare;
         return b.downtimeSeconds.compareTo(a.downtimeSeconds);
       });
-    return rankings.take(5).toList();
+    return rankings.take(10).toList();
   }
-}
-
-class _ImpactRankingBuilder {
-  _ImpactRankingBuilder({required this.label});
-
-  final String label;
-  int devices = 0;
-  int incidents = 0;
-  int downtimeSeconds = 0;
 }
 
 class _ImpactRankingStat {
