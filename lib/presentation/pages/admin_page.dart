@@ -100,7 +100,11 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> _openUserDialog([ManagedUser? user]) async {
     final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => _UserDialog(repository: widget.repository, user: user),
+      builder: (_) => _UserDialog(
+        repository: widget.repository,
+        currentUser: widget.currentUser,
+        user: user,
+      ),
     );
     if (saved == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1163,9 +1167,14 @@ String _formatDateOnly(DateTime value) {
 }
 
 class _UserDialog extends StatefulWidget {
-  const _UserDialog({required this.repository, this.user});
+  const _UserDialog({
+    required this.repository,
+    required this.currentUser,
+    this.user,
+  });
 
   final FiconMonitoringRepository repository;
+  final AuthUser currentUser;
   final ManagedUser? user;
 
   @override
@@ -1183,6 +1192,10 @@ class _UserDialogState extends State<_UserDialog> {
   String? _error;
 
   bool get _isEdit => widget.user != null;
+  bool get _editingSuperadmin => widget.user?.role == 'SUPERADMIN';
+  bool get _canAssignAdmin => widget.currentUser.role == 'SUPERADMIN';
+  bool get _canEditActive => !_editingSuperadmin;
+  List<String> get _assignableRoles => _canAssignAdmin ? const ['USER', 'ADMIN'] : const ['USER'];
 
   @override
   void initState() {
@@ -1190,7 +1203,8 @@ class _UserDialogState extends State<_UserDialog> {
     _username = TextEditingController(text: widget.user?.username ?? '');
     _displayName = TextEditingController(text: widget.user?.displayName ?? '');
     _password = TextEditingController();
-    _role = widget.user?.role ?? 'USER';
+    final initialRole = widget.user?.role ?? 'USER';
+    _role = _assignableRoles.contains(initialRole) ? initialRole : _assignableRoles.first;
     _active = widget.user?.active ?? true;
   }
 
@@ -1208,10 +1222,11 @@ class _UserDialogState extends State<_UserDialog> {
       _error = null;
     });
     try {
+      final roleToSave = _editingSuperadmin ? widget.user!.role : _role;
       if (_isEdit) {
         await widget.repository.updateUser(
           widget.user!.id,
-          role: _role,
+          role: roleToSave,
           displayName: _displayName.text.trim(),
           active: _active,
           password: _password.text.trim(),
@@ -1254,23 +1269,44 @@ class _UserDialogState extends State<_UserDialog> {
                 decoration: const InputDecoration(labelText: 'Nombre visible'),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _role,
-                decoration: const InputDecoration(labelText: 'Rol'),
-                items: const [
-                  DropdownMenuItem(value: 'USER', child: Text('USER · sólo lectura')),
-                  DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN · edición')),
-                  DropdownMenuItem(value: 'SUPERADMIN', child: Text('SUPERADMIN · control total')),
-                ],
-                onChanged: _saving ? null : (value) => setState(() => _role = value ?? 'USER'),
-              ),
+              if (_editingSuperadmin)
+                TextFormField(
+                  initialValue: 'SUPERADMIN',
+                  enabled: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Rol',
+                    helperText: 'Los superadmins no se reasignan desde el dashboard.',
+                  ),
+                )
+              else
+                DropdownButtonFormField<String>(
+                  value: _role,
+                  decoration: const InputDecoration(
+                    labelText: 'Rol',
+                    helperText: 'SUPERADMIN no es un rol asignable desde esta pantalla.',
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 'USER', child: Text('USER · sólo lectura')),
+                    if (_canAssignAdmin)
+                      const DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN · edición')),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _role = value ?? _assignableRoles.first),
+                ),
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Acceso activo'),
-                subtitle: const Text('Apágalo para revocar el acceso del usuario.'),
+                subtitle: Text(
+                  _editingSuperadmin
+                      ? 'El acceso superadmin no se revoca desde esta pantalla.'
+                      : 'Apágalo para revocar el acceso del usuario.',
+                ),
                 value: _active,
-                onChanged: _saving ? null : (value) => setState(() => _active = value),
+                onChanged: _saving || !_canEditActive
+                    ? null
+                    : (value) => setState(() => _active = value),
               ),
               const SizedBox(height: 12),
               TextField(
