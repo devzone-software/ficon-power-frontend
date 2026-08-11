@@ -11,6 +11,7 @@ import '../../ports/input/get_sites.dart';
 import '../../ports/input/update_device_details.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/table_filters.dart';
 
 /// Tabla de dispositivos monitoreados (vista de la tabla `devices`).
 /// Permite editar el nombre y la sede de cada dispositivo.
@@ -42,6 +43,8 @@ class _DevicesPageState extends State<DevicesPage> {
   late Future<List<Device>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
+  final Map<String, String> _textFilters = {};
+  final Map<String, DateTime?> _dateFilters = {};
 
   @override
   void initState() {
@@ -107,6 +110,7 @@ class _DevicesPageState extends State<DevicesPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final devices = snapshot.data!;
+          final filteredDevices = devices.where(_matchesFilters).toList();
           if (devices.isEmpty) {
             return const Center(
               child: Text('No hay dispositivos registrados.'),
@@ -117,17 +121,22 @@ class _DevicesPageState extends State<DevicesPage> {
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minWidth: constraints.maxWidth),
-                    child: _DevicesTable(
-                      devices: devices,
-                      onEdit: _edit,
-                      canEdit: widget.currentUser.canEditDevices,
+                child: Column(
+                  children: [
+                    TableFiltersBar(filters: _filters(devices)),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minWidth: constraints.maxWidth),
+                        child: _DevicesTable(
+                          devices: filteredDevices,
+                          onEdit: _edit,
+                          canEdit: widget.currentUser.canEditDevices,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -135,6 +144,82 @@ class _DevicesPageState extends State<DevicesPage> {
         },
       ),
     );
+  }
+
+  List<Widget> _filters(List<Device> devices) => [
+        _textFilter(
+          keyName: 'name',
+          label: 'Nombre',
+          options: uniqueColumnOptions(
+            devices,
+            (device) => device.name.isNotEmpty ? device.name : device.externalId,
+          ),
+        ),
+        _textFilter(
+          keyName: 'externalId',
+          label: 'ID externo',
+          options: uniqueColumnOptions(devices, (device) => device.externalId),
+        ),
+        _textFilter(
+          keyName: 'site',
+          label: 'Sede',
+          options: uniqueColumnOptions(devices, (device) => device.siteName),
+        ),
+        _textFilter(
+          keyName: 'district',
+          label: 'Distrito',
+          options: uniqueColumnOptions(devices, (device) => device.district),
+        ),
+        _textFilter(
+          keyName: 'status',
+          label: 'Estado',
+          options: uniqueColumnOptions(
+            devices,
+            (device) => device.isOnline ? 'En línea' : 'Fuera de línea',
+          ),
+        ),
+        DateColumnFilter(
+          label: 'Último cambio',
+          value: _dateFilters['lastStatusChange'],
+          onChanged: (value) => setState(() => _dateFilters['lastStatusChange'] = value),
+        ),
+        _textFilter(
+          keyName: 'incidents',
+          label: 'Incidentes',
+          options: uniqueColumnOptions(devices, (device) => '${device.incidentCount}'),
+          width: 160,
+        ),
+      ];
+
+  Widget _textFilter({
+    required String keyName,
+    required String label,
+    required List<String> options,
+    double width = 220,
+  }) {
+    return TextColumnFilter(
+      label: label,
+      value: _textFilters[keyName] ?? '',
+      options: options,
+      width: width,
+      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+    );
+  }
+
+  bool _matchesFilters(Device device) {
+    return matchesTextFilter(
+          device.name.isNotEmpty ? device.name : device.externalId,
+          _textFilters['name'] ?? '',
+        ) &&
+        matchesTextFilter(device.externalId, _textFilters['externalId'] ?? '') &&
+        matchesTextFilter(device.siteName, _textFilters['site'] ?? '') &&
+        matchesTextFilter(device.district, _textFilters['district'] ?? '') &&
+        matchesTextFilter(
+          device.isOnline ? 'En línea' : 'Fuera de línea',
+          _textFilters['status'] ?? '',
+        ) &&
+        matchesDateFilter(device.lastStatusChange, _dateFilters['lastStatusChange']) &&
+        matchesTextFilter('${device.incidentCount}', _textFilters['incidents'] ?? '');
   }
 }
 

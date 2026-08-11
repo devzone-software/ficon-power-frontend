@@ -7,6 +7,7 @@ import '../../domain/incident.dart';
 import '../../ports/input/get_incidents.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/table_filters.dart';
 
 /// Tabla de incidentes de corte de energía.
 class IncidentsPage extends StatefulWidget {
@@ -31,6 +32,8 @@ class _IncidentsPageState extends State<IncidentsPage> {
   late Future<List<Incident>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
+  final Map<String, String> _textFilters = {};
+  final Map<String, DateTime?> _dateFilters = {};
 
   @override
   void initState() {
@@ -78,6 +81,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final incidents = snapshot.data!;
+          final filteredIncidents = incidents.where(_matchesFilters).toList();
           if (incidents.isEmpty) {
             return const Center(
               child: Text('No hay incidentes registrados.'),
@@ -88,13 +92,18 @@ class _IncidentsPageState extends State<IncidentsPage> {
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minWidth: constraints.maxWidth),
-                    child: _IncidentsTable(incidents: incidents),
-                  ),
+                child: Column(
+                  children: [
+                    TableFiltersBar(filters: _filters(incidents)),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minWidth: constraints.maxWidth),
+                        child: _IncidentsTable(incidents: filteredIncidents),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -103,7 +112,78 @@ class _IncidentsPageState extends State<IncidentsPage> {
       ),
     );
   }
+
+  List<Widget> _filters(List<Incident> incidents) => [
+        _textFilter(
+          keyName: 'device',
+          label: 'Dispositivo',
+          options: uniqueColumnOptions(incidents, (incident) => incident.deviceName),
+        ),
+        _textFilter(
+          keyName: 'site',
+          label: 'Sede',
+          options: uniqueColumnOptions(incidents, (incident) => incident.siteName),
+        ),
+        _textFilter(
+          keyName: 'status',
+          label: 'Estado',
+          options: uniqueColumnOptions(incidents, (incident) => _incidentStatusLabel(incident.status)),
+        ),
+        DateColumnFilter(
+          label: 'Inicio',
+          value: _dateFilters['startTime'],
+          onChanged: (value) => setState(() => _dateFilters['startTime'] = value),
+        ),
+        DateColumnFilter(
+          label: 'Fin',
+          value: _dateFilters['endTime'],
+          onChanged: (value) => setState(() => _dateFilters['endTime'] = value),
+        ),
+        _textFilter(
+          keyName: 'duration',
+          label: 'Duración',
+          options: uniqueColumnOptions(
+            incidents,
+            (incident) => formatDurationSeconds(incident.durationSeconds),
+          ),
+          width: 170,
+        ),
+      ];
+
+  Widget _textFilter({
+    required String keyName,
+    required String label,
+    required List<String> options,
+    double width = 220,
+  }) {
+    return TextColumnFilter(
+      label: label,
+      value: _textFilters[keyName] ?? '',
+      options: options,
+      width: width,
+      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+    );
+  }
+
+  bool _matchesFilters(Incident incident) {
+    return matchesTextFilter(incident.deviceName, _textFilters['device'] ?? '') &&
+        matchesTextFilter(incident.siteName, _textFilters['site'] ?? '') &&
+        matchesTextFilter(_incidentStatusLabel(incident.status), _textFilters['status'] ?? '') &&
+        matchesDateFilter(incident.startTime, _dateFilters['startTime']) &&
+        matchesDateFilter(incident.endTime, _dateFilters['endTime']) &&
+        matchesTextFilter(
+          formatDurationSeconds(incident.durationSeconds),
+          _textFilters['duration'] ?? '',
+        );
+  }
 }
+
+String _incidentStatusLabel(String status) => switch (status) {
+      'active' => 'Activo',
+      'acknowledged' => 'Atendido',
+      'resolved' => 'Resuelto',
+      _ => status,
+    };
 
 class _IncidentsTable extends StatelessWidget {
   const _IncidentsTable({required this.incidents});

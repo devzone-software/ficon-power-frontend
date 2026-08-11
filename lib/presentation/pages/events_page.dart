@@ -7,6 +7,7 @@ import '../../domain/event.dart';
 import '../../ports/input/get_events.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/table_filters.dart';
 
 /// Tabla de eventos Tuya recibidos por el backend.
 class EventsPage extends StatefulWidget {
@@ -31,6 +32,8 @@ class _EventsPageState extends State<EventsPage> {
   late Future<List<Event>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
+  final Map<String, String> _textFilters = {};
+  final Map<String, DateTime?> _dateFilters = {};
 
   @override
   void initState() {
@@ -78,6 +81,7 @@ class _EventsPageState extends State<EventsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final events = snapshot.data!;
+          final filteredEvents = events.where(_matchesFilters).toList();
           if (events.isEmpty) {
             return const Center(child: Text('No hay eventos registrados.'));
           }
@@ -86,13 +90,18 @@ class _EventsPageState extends State<EventsPage> {
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minWidth: constraints.maxWidth),
-                    child: _EventsTable(events: events),
-                  ),
+                child: Column(
+                  children: [
+                    TableFiltersBar(filters: _filters(events)),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minWidth: constraints.maxWidth),
+                        child: _EventsTable(events: filteredEvents),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -100,6 +109,64 @@ class _EventsPageState extends State<EventsPage> {
         },
       ),
     );
+  }
+
+  List<Widget> _filters(List<Event> events) => [
+        _textFilter(
+          keyName: 'type',
+          label: 'Tipo',
+          options: uniqueColumnOptions(events, (event) => event.eventType),
+        ),
+        _textFilter(
+          keyName: 'device',
+          label: 'Dispositivo',
+          options: uniqueColumnOptions(events, (event) => event.deviceName),
+        ),
+        _textFilter(
+          keyName: 'site',
+          label: 'Sede',
+          options: uniqueColumnOptions(events, (event) => event.siteName),
+        ),
+        DateColumnFilter(
+          label: 'Ocurrió',
+          value: _dateFilters['occurredAt'],
+          onChanged: (value) => setState(() => _dateFilters['occurredAt'] = value),
+        ),
+        _textFilter(
+          keyName: 'latency',
+          label: 'Latencia',
+          options: uniqueColumnOptions(
+            events,
+            (event) => '${event.deliveryLatencyMillis} ms',
+          ),
+          width: 170,
+        ),
+      ];
+
+  Widget _textFilter({
+    required String keyName,
+    required String label,
+    required List<String> options,
+    double width = 220,
+  }) {
+    return TextColumnFilter(
+      label: label,
+      value: _textFilters[keyName] ?? '',
+      options: options,
+      width: width,
+      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+    );
+  }
+
+  bool _matchesFilters(Event event) {
+    return matchesTextFilter(event.eventType, _textFilters['type'] ?? '') &&
+        matchesTextFilter(event.deviceName, _textFilters['device'] ?? '') &&
+        matchesTextFilter(event.siteName, _textFilters['site'] ?? '') &&
+        matchesDateFilter(event.occurredAt, _dateFilters['occurredAt']) &&
+        matchesTextFilter(
+          '${event.deliveryLatencyMillis} ms',
+          _textFilters['latency'] ?? '',
+        );
   }
 }
 
