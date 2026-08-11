@@ -33,11 +33,8 @@ class _AdminPageState extends State<AdminPage> {
   Timer? _liveRefreshTimer;
   bool _loading = true;
   bool _refreshing = false;
-  String _usersFilter = '';
-  String _blockedUsersFilter = '';
-  String _auditLogsFilter = '';
-  String _loginAttemptsFilter = '';
-  String _sessionsFilter = '';
+  final Map<String, String> _textFilters = {};
+  final Map<String, DateTime?> _dateFilters = {};
 
   @override
   void initState() {
@@ -170,19 +167,11 @@ class _AdminPageState extends State<AdminPage> {
     }
 
     final data = _data!;
-    final users = _filterRows(data.users, _usersFilter, _userSearchValues);
-    final blockedUsers = _filterRows(
-      data.blockedUsers,
-      _blockedUsersFilter,
-      _blockedUserSearchValues,
-    );
-    final auditLogs = _filterRows(data.auditLogs, _auditLogsFilter, _auditLogSearchValues);
-    final loginAttempts = _filterRows(
-      data.loginAttempts,
-      _loginAttemptsFilter,
-      _loginAttemptSearchValues,
-    );
-    final sessions = _filterRows(data.sessions, _sessionsFilter, _sessionSearchValues);
+    final users = data.users.where(_matchesUserFilters).toList();
+    final blockedUsers = data.blockedUsers.where(_matchesBlockedUserFilters).toList();
+    final auditLogs = data.auditLogs.where(_matchesAuditLogFilters).toList();
+    final loginAttempts = data.loginAttempts.where(_matchesLoginAttemptFilters).toList();
+    final sessions = data.sessions.where(_matchesSessionFilters).toList();
 
     return DefaultTabController(
       length: 5,
@@ -214,38 +203,172 @@ class _AdminPageState extends State<AdminPage> {
                   onCreate: () => _openUserDialog(),
                   onEdit: _openUserDialog,
                   onRefresh: _refresh,
-                  filterValue: _usersFilter,
-                  filterOptions: _uniqueOptions(data.users, _userSearchValues),
-                  onFilterChanged: (value) => setState(() => _usersFilter = value),
+                  filters: [
+                    _textColumnFilter(
+                      keyName: 'users.username',
+                      label: 'Usuario',
+                      options: _uniqueColumnOptions(data.users, (user) => user.username),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'users.displayName',
+                      label: 'Nombre',
+                      options: _uniqueColumnOptions(data.users, (user) => user.displayName),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'users.role',
+                      label: 'Rol',
+                      options: _uniqueColumnOptions(data.users, (user) => user.role),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'users.status',
+                      label: 'Estado',
+                      options: _uniqueColumnOptions(
+                        data.users,
+                        (user) => user.active ? 'Activo' : 'Revocado',
+                      ),
+                    ),
+                  ],
                 ),
                 _BlockedUsersTab(
                   blockedUsers: blockedUsers,
                   onUnblock: _unblockUser,
                   onRefresh: _refresh,
-                  filterValue: _blockedUsersFilter,
-                  filterOptions: _uniqueOptions(data.blockedUsers, _blockedUserSearchValues),
-                  onFilterChanged: (value) => setState(() => _blockedUsersFilter = value),
+                  filters: [
+                    _textColumnFilter(
+                      keyName: 'blocked.username',
+                      label: 'Usuario',
+                      options: _uniqueColumnOptions(data.blockedUsers, (blocked) => blocked.username),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'blocked.displayName',
+                      label: 'Nombre',
+                      options: _uniqueColumnOptions(data.blockedUsers, (blocked) => blocked.displayName),
+                    ),
+                    _ipColumnFilter('blocked.ip', 'IP'),
+                    _textColumnFilter(
+                      keyName: 'blocked.failedAttempts',
+                      label: 'Fallos',
+                      options: _uniqueColumnOptions(
+                        data.blockedUsers,
+                        (blocked) => '${blocked.failedAttempts}',
+                      ),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'blocked.status',
+                      label: 'Estado',
+                      options: _uniqueColumnOptions(
+                        data.blockedUsers,
+                        (blocked) => blocked.active ? 'Bloqueado' : 'Liberado/expirado',
+                      ),
+                    ),
+                    _dateColumnFilter('blocked.blockedAt', 'Bloqueado'),
+                    _dateColumnFilter('blocked.expiresAt', 'Expira'),
+                    _textColumnFilter(
+                      keyName: 'blocked.unblockedBy',
+                      label: 'Desbloqueado por',
+                      options: _uniqueColumnOptions(
+                        data.blockedUsers,
+                        (blocked) => blocked.unblockedByUsername,
+                      ),
+                    ),
+                  ],
                 ),
                 _AuditTab(
                   logs: auditLogs,
                   onRefresh: _refresh,
-                  filterValue: _auditLogsFilter,
-                  filterOptions: _uniqueOptions(data.auditLogs, _auditLogSearchValues),
-                  onFilterChanged: (value) => setState(() => _auditLogsFilter = value),
+                  filters: [
+                    _dateColumnFilter('audit.createdAt', 'Fecha'),
+                    _textColumnFilter(
+                      keyName: 'audit.actor',
+                      label: 'Usuario',
+                      options: _uniqueColumnOptions(
+                        data.auditLogs,
+                        (log) => '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
+                      ),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'audit.action',
+                      label: 'Acción',
+                      options: _uniqueColumnOptions(data.auditLogs, (log) => log.action),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'audit.entity',
+                      label: 'Entidad',
+                      options: _uniqueColumnOptions(
+                        data.auditLogs,
+                        (log) => '${log.entityType} ${log.entityId ?? ''}',
+                      ),
+                    ),
+                    _ipColumnFilter('audit.ip', 'IP'),
+                    _textColumnFilter(
+                      keyName: 'audit.userAgent',
+                      label: 'Navegador',
+                      options: _uniqueColumnOptions(data.auditLogs, (log) => log.userAgent),
+                    ),
+                  ],
                 ),
                 _LoginAttemptsTab(
                   attempts: loginAttempts,
                   onRefresh: _refresh,
-                  filterValue: _loginAttemptsFilter,
-                  filterOptions: _uniqueOptions(data.loginAttempts, _loginAttemptSearchValues),
-                  onFilterChanged: (value) => setState(() => _loginAttemptsFilter = value),
+                  filters: [
+                    _dateColumnFilter('logins.createdAt', 'Fecha'),
+                    _textColumnFilter(
+                      keyName: 'logins.username',
+                      label: 'Usuario',
+                      options: _uniqueColumnOptions(data.loginAttempts, (attempt) => attempt.username),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'logins.result',
+                      label: 'Resultado',
+                      options: _uniqueColumnOptions(
+                        data.loginAttempts,
+                        (attempt) => attempt.success ? 'Correcto' : 'Fallido',
+                      ),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'logins.reason',
+                      label: 'Motivo',
+                      options: _uniqueColumnOptions(data.loginAttempts, (attempt) => attempt.reason),
+                    ),
+                    _ipColumnFilter('logins.ip', 'IP'),
+                    _textColumnFilter(
+                      keyName: 'logins.userAgent',
+                      label: 'Navegador',
+                      options: _uniqueColumnOptions(data.loginAttempts, (attempt) => attempt.userAgent),
+                    ),
+                  ],
                 ),
                 _SessionsTab(
                   sessions: sessions,
                   onRefresh: _refresh,
-                  filterValue: _sessionsFilter,
-                  filterOptions: _uniqueOptions(data.sessions, _sessionSearchValues),
-                  onFilterChanged: (value) => setState(() => _sessionsFilter = value),
+                  filters: [
+                    _dateColumnFilter('sessions.createdAt', 'Creada'),
+                    _textColumnFilter(
+                      keyName: 'sessions.username',
+                      label: 'Usuario',
+                      options: _uniqueColumnOptions(data.sessions, (session) => session.username),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'sessions.role',
+                      label: 'Rol',
+                      options: _uniqueColumnOptions(data.sessions, (session) => session.role),
+                    ),
+                    _textColumnFilter(
+                      keyName: 'sessions.status',
+                      label: 'Estado',
+                      options: _uniqueColumnOptions(
+                        data.sessions,
+                        (session) => session.active ? 'Activa' : 'Cerrada/expirada',
+                      ),
+                    ),
+                    _dateColumnFilter('sessions.expiresAt', 'Expira'),
+                    _ipColumnFilter('sessions.ip', 'IP'),
+                    _textColumnFilter(
+                      keyName: 'sessions.userAgent',
+                      label: 'Navegador',
+                      options: _uniqueColumnOptions(data.sessions, (session) => session.userAgent),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -255,84 +378,145 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  List<T> _filterRows<T>(
-    List<T> rows,
-    String query,
-    List<String?> Function(T row) valuesForRow,
-  ) {
-    final normalizedQuery = _normalize(query);
-    if (normalizedQuery.isEmpty) return rows;
-    return [
-      for (final row in rows)
-        if (valuesForRow(row).any((value) => _normalize(value ?? '').contains(normalizedQuery))) row,
-    ];
+  bool _matchesUserFilters(ManagedUser user) {
+    return _matchesText('users.username', user.username) &&
+        _matchesText('users.displayName', user.displayName) &&
+        _matchesText('users.role', user.role) &&
+        _matchesText('users.status', user.active ? 'Activo' : 'Revocado');
   }
 
-  List<String> _uniqueOptions<T>(
+  bool _matchesBlockedUserFilters(BlockedLoginUser blockedUser) {
+    return _matchesText('blocked.username', blockedUser.username) &&
+        _matchesText('blocked.displayName', blockedUser.displayName) &&
+        _matchesIp('blocked.ip', blockedUser.ipAddress) &&
+        _matchesText('blocked.failedAttempts', '${blockedUser.failedAttempts}') &&
+        _matchesText(
+          'blocked.status',
+          blockedUser.active ? 'Bloqueado' : 'Liberado/expirado',
+        ) &&
+        _matchesDate('blocked.blockedAt', blockedUser.blockedAt) &&
+        _matchesDate('blocked.expiresAt', blockedUser.expiresAt) &&
+        _matchesText('blocked.unblockedBy', blockedUser.unblockedByUsername);
+  }
+
+  bool _matchesAuditLogFilters(AuditLogEntry log) {
+    return _matchesDate('audit.createdAt', log.createdAt) &&
+        _matchesText('audit.actor', '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}') &&
+        _matchesText('audit.action', log.action) &&
+        _matchesText('audit.entity', '${log.entityType} ${log.entityId ?? ''}') &&
+        _matchesIp('audit.ip', log.ipAddress) &&
+        _matchesText('audit.userAgent', log.userAgent);
+  }
+
+  bool _matchesLoginAttemptFilters(LoginAttempt attempt) {
+    return _matchesDate('logins.createdAt', attempt.createdAt) &&
+        _matchesText('logins.username', attempt.username) &&
+        _matchesText('logins.result', attempt.success ? 'Correcto' : 'Fallido') &&
+        _matchesText('logins.reason', attempt.reason) &&
+        _matchesIp('logins.ip', attempt.ipAddress) &&
+        _matchesText('logins.userAgent', attempt.userAgent);
+  }
+
+  bool _matchesSessionFilters(AdminSession session) {
+    return _matchesDate('sessions.createdAt', session.createdAt) &&
+        _matchesText('sessions.username', session.username) &&
+        _matchesText('sessions.role', session.role) &&
+        _matchesText('sessions.status', session.active ? 'Activa' : 'Cerrada/expirada') &&
+        _matchesDate('sessions.expiresAt', session.expiresAt) &&
+        _matchesIp('sessions.ip', session.ipAddress) &&
+        _matchesText('sessions.userAgent', session.userAgent);
+  }
+
+  bool _matchesText(String keyName, String? value) {
+    final query = _normalize(_textFilters[keyName] ?? '');
+    if (query.isEmpty) return true;
+    return _normalize(value ?? '').contains(query);
+  }
+
+  bool _matchesDate(String keyName, DateTime? value) {
+    final selectedDate = _dateFilters[keyName];
+    if (selectedDate == null) return true;
+    if (value == null) return false;
+    return value.year == selectedDate.year &&
+        value.month == selectedDate.month &&
+        value.day == selectedDate.day;
+  }
+
+  bool _matchesIp(String keyName, String? value) {
+    final filters = [
+      _textFilters['$keyName.0'] ?? '',
+      _textFilters['$keyName.1'] ?? '',
+      _textFilters['$keyName.2'] ?? '',
+      _textFilters['$keyName.3'] ?? '',
+    ].map(_normalize).toList();
+    if (filters.every((filter) => filter.isEmpty)) return true;
+    final segments = (value ?? '').split('.');
+    if (segments.length != 4) return false;
+    for (var index = 0; index < filters.length; index++) {
+      final filter = filters[index];
+      if (filter.isEmpty) continue;
+      if (!segments[index].startsWith(filter)) return false;
+    }
+    return true;
+  }
+
+  List<String> _uniqueColumnOptions<T>(
     List<T> rows,
-    List<String?> Function(T row) valuesForRow,
+    String? Function(T row) valueForRow,
   ) {
     final byNormalizedValue = <String, String>{};
     for (final row in rows) {
-      for (final value in valuesForRow(row)) {
-        final cleanValue = value?.trim();
-        if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') continue;
-        byNormalizedValue.putIfAbsent(_normalize(cleanValue), () => cleanValue);
-      }
+      final cleanValue = valueForRow(row)?.trim();
+      if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') continue;
+      byNormalizedValue.putIfAbsent(_normalize(cleanValue), () => cleanValue);
     }
     final options = byNormalizedValue.values.toList()
       ..sort((a, b) => _normalize(a).compareTo(_normalize(b)));
     return options;
   }
 
-  List<String?> _userSearchValues(ManagedUser user) => [
-        user.username,
-        user.displayName,
-        user.role,
-        user.active ? 'Activo' : 'Revocado',
-      ];
+  Widget _textColumnFilter({
+    required String keyName,
+    required String label,
+    required List<String> options,
+  }) {
+    return SizedBox(
+      width: 240,
+      child: _SearchableTableFilter(
+        label: label,
+        value: _textFilters[keyName] ?? '',
+        options: options,
+        onChanged: (value) => setState(() => _textFilters[keyName] = value),
+      ),
+    );
+  }
 
-  List<String?> _blockedUserSearchValues(BlockedLoginUser blockedUser) => [
-        blockedUser.username,
-        blockedUser.displayName,
-        blockedUser.ipAddress,
-        '${blockedUser.failedAttempts}',
-        blockedUser.active ? 'Bloqueado' : 'Liberado/expirado',
-        formatDateTime(blockedUser.blockedAt),
-        formatDateTime(blockedUser.expiresAt),
-        blockedUser.unblockedByUsername,
-      ];
+  Widget _dateColumnFilter(String keyName, String label) {
+    return SizedBox(
+      width: 190,
+      child: _DateColumnFilter(
+        label: label,
+        value: _dateFilters[keyName],
+        onChanged: (value) => setState(() => _dateFilters[keyName] = value),
+      ),
+    );
+  }
 
-  List<String?> _auditLogSearchValues(AuditLogEntry log) => [
-        formatDateTime(log.createdAt),
-        log.actorUsername,
-        log.actorRole,
-        log.action,
-        log.entityType,
-        log.entityId,
-        log.ipAddress,
-        log.userAgent,
-        log.metadata,
-      ];
-
-  List<String?> _loginAttemptSearchValues(LoginAttempt attempt) => [
-        formatDateTime(attempt.createdAt),
-        attempt.username,
-        attempt.success ? 'Correcto' : 'Fallido',
-        attempt.reason,
-        attempt.ipAddress,
-        attempt.userAgent,
-      ];
-
-  List<String?> _sessionSearchValues(AdminSession session) => [
-        formatDateTime(session.createdAt),
-        session.username,
-        session.role,
-        session.active ? 'Activa' : 'Cerrada/expirada',
-        formatDateTime(session.expiresAt),
-        session.ipAddress,
-        session.userAgent,
-      ];
+  Widget _ipColumnFilter(String keyName, String label) {
+    return SizedBox(
+      width: 330,
+      child: _IpColumnFilter(
+        label: label,
+        values: [
+          _textFilters['$keyName.0'] ?? '',
+          _textFilters['$keyName.1'] ?? '',
+          _textFilters['$keyName.2'] ?? '',
+          _textFilters['$keyName.3'] ?? '',
+        ],
+        onChanged: (index, value) => setState(() => _textFilters['$keyName.$index'] = value),
+      ),
+    );
+  }
 }
 
 class _AdminData {
@@ -357,27 +541,20 @@ class _UsersTab extends StatelessWidget {
     required this.onCreate,
     required this.onEdit,
     required this.onRefresh,
-    required this.filterValue,
-    required this.filterOptions,
-    required this.onFilterChanged,
+    required this.filters,
   });
 
   final List<ManagedUser> users;
   final VoidCallback onCreate;
   final ValueChanged<ManagedUser> onEdit;
   final Future<void> Function() onRefresh;
-  final String filterValue;
-  final List<String> filterOptions;
-  final ValueChanged<String> onFilterChanged;
+  final List<Widget> filters;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
-      filterLabel: 'Filtrar usuarios',
-      filterValue: filterValue,
-      filterOptions: filterOptions,
-      onFilterChanged: onFilterChanged,
+      filters: filters,
       action: FilledButton.icon(
         onPressed: onCreate,
         icon: const Icon(Icons.person_add_alt_1),
@@ -424,26 +601,19 @@ class _BlockedUsersTab extends StatelessWidget {
     required this.blockedUsers,
     required this.onUnblock,
     required this.onRefresh,
-    required this.filterValue,
-    required this.filterOptions,
-    required this.onFilterChanged,
+    required this.filters,
   });
 
   final List<BlockedLoginUser> blockedUsers;
   final ValueChanged<BlockedLoginUser> onUnblock;
   final Future<void> Function() onRefresh;
-  final String filterValue;
-  final List<String> filterOptions;
-  final ValueChanged<String> onFilterChanged;
+  final List<Widget> filters;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
-      filterLabel: 'Filtrar bloqueados',
-      filterValue: filterValue,
-      filterOptions: filterOptions,
-      onFilterChanged: onFilterChanged,
+      filters: filters,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Usuario')),
@@ -492,25 +662,18 @@ class _AuditTab extends StatelessWidget {
   const _AuditTab({
     required this.logs,
     required this.onRefresh,
-    required this.filterValue,
-    required this.filterOptions,
-    required this.onFilterChanged,
+    required this.filters,
   });
 
   final List<AuditLogEntry> logs;
   final Future<void> Function() onRefresh;
-  final String filterValue;
-  final List<String> filterOptions;
-  final ValueChanged<String> onFilterChanged;
+  final List<Widget> filters;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
-      filterLabel: 'Filtrar audit logs',
-      filterValue: filterValue,
-      filterOptions: filterOptions,
-      onFilterChanged: onFilterChanged,
+      filters: filters,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Fecha')),
@@ -542,25 +705,18 @@ class _LoginAttemptsTab extends StatelessWidget {
   const _LoginAttemptsTab({
     required this.attempts,
     required this.onRefresh,
-    required this.filterValue,
-    required this.filterOptions,
-    required this.onFilterChanged,
+    required this.filters,
   });
 
   final List<LoginAttempt> attempts;
   final Future<void> Function() onRefresh;
-  final String filterValue;
-  final List<String> filterOptions;
-  final ValueChanged<String> onFilterChanged;
+  final List<Widget> filters;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
-      filterLabel: 'Filtrar inicios de sesión',
-      filterValue: filterValue,
-      filterOptions: filterOptions,
-      onFilterChanged: onFilterChanged,
+      filters: filters,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Fecha')),
@@ -597,25 +753,18 @@ class _SessionsTab extends StatelessWidget {
   const _SessionsTab({
     required this.sessions,
     required this.onRefresh,
-    required this.filterValue,
-    required this.filterOptions,
-    required this.onFilterChanged,
+    required this.filters,
   });
 
   final List<AdminSession> sessions;
   final Future<void> Function() onRefresh;
-  final String filterValue;
-  final List<String> filterOptions;
-  final ValueChanged<String> onFilterChanged;
+  final List<Widget> filters;
 
   @override
   Widget build(BuildContext context) {
     return _TableShell(
       onRefresh: onRefresh,
-      filterLabel: 'Filtrar sesiones',
-      filterValue: filterValue,
-      filterOptions: filterOptions,
-      onFilterChanged: onFilterChanged,
+      filters: filters,
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Creada')),
@@ -655,24 +804,16 @@ class _TableShell extends StatelessWidget {
     required this.child,
     required this.onRefresh,
     this.action,
-    this.filterLabel,
-    this.filterValue,
-    this.filterOptions,
-    this.onFilterChanged,
+    this.filters = const [],
   });
 
   final Widget child;
   final Future<void> Function() onRefresh;
   final Widget? action;
-  final String? filterLabel;
-  final String? filterValue;
-  final List<String>? filterOptions;
-  final ValueChanged<String>? onFilterChanged;
+  final List<Widget> filters;
 
   @override
   Widget build(BuildContext context) {
-    final canFilter =
-        filterLabel != null && filterValue != null && filterOptions != null && onFilterChanged != null;
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: SingleChildScrollView(
@@ -684,23 +825,14 @@ class _TableShell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (canFilter || action != null) ...[
+                if (filters.isNotEmpty || action != null) ...[
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     alignment: WrapAlignment.spaceBetween,
                     children: [
-                      if (canFilter)
-                        SizedBox(
-                          width: 360,
-                          child: _SearchableTableFilter(
-                            label: filterLabel!,
-                            value: filterValue!,
-                            options: filterOptions!,
-                            onChanged: onFilterChanged!,
-                          ),
-                        ),
+                      ...filters,
                       if (action != null) action!,
                     ],
                   ),
@@ -832,6 +964,159 @@ class _SearchableTableFilterState extends State<_SearchableTableFilter> {
   }
 }
 
+class _DateColumnFilter extends StatelessWidget {
+  const _DateColumnFilter({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.calendar_month_outlined),
+        suffixIcon: value == null
+            ? null
+            : IconButton(
+                tooltip: 'Limpiar fecha',
+                onPressed: () => onChanged(null),
+                icon: const Icon(Icons.close),
+              ),
+      ),
+      child: InkWell(
+        onTap: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: value ?? now,
+            firstDate: DateTime(now.year - 5),
+            lastDate: DateTime(now.year + 1),
+          );
+          if (picked != null) onChanged(picked);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Text(
+            value == null ? 'Cualquier fecha' : _formatDateOnly(value!),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IpColumnFilter extends StatefulWidget {
+  const _IpColumnFilter({
+    required this.label,
+    required this.values,
+    required this.onChanged,
+  });
+
+  final String label;
+  final List<String> values;
+  final void Function(int index, String value) onChanged;
+
+  @override
+  State<_IpColumnFilter> createState() => _IpColumnFilterState();
+}
+
+class _IpColumnFilterState extends State<_IpColumnFilter> {
+  late final List<TextEditingController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = [
+      for (var index = 0; index < 4; index++)
+        TextEditingController(text: index < widget.values.length ? widget.values[index] : ''),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant _IpColumnFilter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    for (var index = 0; index < _controllers.length; index++) {
+      final value = index < widget.values.length ? widget.values[index] : '';
+      if (_controllers[index].text != value) {
+        _controllers[index].text = value;
+        _controllers[index].selection = TextSelection.collapsed(offset: value.length);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: widget.label,
+        prefixIcon: const Icon(Icons.lan_outlined),
+        suffixIcon: _controllers.every((controller) => controller.text.isEmpty)
+            ? null
+            : IconButton(
+                tooltip: 'Limpiar IP',
+                onPressed: () {
+                  for (var index = 0; index < _controllers.length; index++) {
+                    _controllers[index].clear();
+                    widget.onChanged(index, '');
+                  }
+                },
+                icon: const Icon(Icons.close),
+              ),
+      ),
+      child: Row(
+        children: [
+          for (var index = 0; index < _controllers.length; index++) ...[
+            Expanded(
+              child: TextField(
+                controller: _controllers[index],
+                maxLength: 3,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: index == 0 ? '198' : '',
+                  isDense: true,
+                  border: InputBorder.none,
+                ),
+                onChanged: (value) {
+                  final cleanValue = value.replaceAll(RegExp('[^0-9]'), '');
+                  final nextValue = cleanValue.length > 3 ? cleanValue.substring(0, 3) : cleanValue;
+                  if (nextValue != value) {
+                    _controllers[index].text = nextValue;
+                    _controllers[index].selection =
+                        TextSelection.collapsed(offset: nextValue.length);
+                  }
+                  widget.onChanged(index, nextValue);
+                },
+              ),
+            ),
+            if (index < _controllers.length - 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Text('.', style: Theme.of(context).textTheme.titleMedium),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 Iterable<String> _rankedMatches(List<String> options, String query) {
   final normalizedQuery = _normalize(query);
   if (normalizedQuery.isEmpty) return options.take(30);
@@ -870,6 +1155,12 @@ int _lowerBoundByNormalized(List<String> options, String query) {
 }
 
 String _normalize(String value) => value.trim().toLowerCase();
+
+String _formatDateOnly(DateTime value) {
+  final day = value.day.toString().padLeft(2, '0');
+  final month = value.month.toString().padLeft(2, '0');
+  return '$day/$month/${value.year}';
+}
 
 class _UserDialog extends StatefulWidget {
   const _UserDialog({required this.repository, this.user});
