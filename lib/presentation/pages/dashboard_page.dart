@@ -555,18 +555,18 @@ class _DashboardAnalyticsSection extends StatelessWidget {
           children: [
             _InsightMetricCard(
               width: metricWidth,
-              title: 'Eventos registrados',
-              value: '${stats.totalEvents}',
-              description: 'Pulsos y cambios capturados por la red',
-              icon: Icons.timeline_outlined,
+              title: 'Apagados registrados',
+              value: '${stats.totalPowerOutages}',
+              description: 'Cortes detectados en todos los medidores',
+              icon: Icons.power_off_outlined,
               color: FiconColors.logoBlue,
             ),
             _InsightMetricCard(
               width: metricWidth,
-              title: 'Incidentes históricos',
-              value: '${stats.totalIncidents}',
-              description: 'Cortes reportados por los dispositivos',
-              icon: Icons.crisis_alert_outlined,
+              title: 'Promedio semanal',
+              value: stats.weeklyAverageText,
+              description: 'Frecuencia de apagados en las últimas semanas',
+              icon: Icons.date_range_outlined,
               color: StatusColors.offline,
             ),
             _InsightMetricCard(
@@ -581,7 +581,7 @@ class _DashboardAnalyticsSection extends StatelessWidget {
               width: metricWidth,
               title: 'Duración promedio',
               value: _formatDurationCompact(stats.averageIncidentSeconds),
-              description: 'Promedio de incidentes con duración conocida',
+              description: 'Tiempo promedio antes de volver la energía',
               icon: Icons.av_timer_outlined,
               color: FiconColors.cyan,
             ),
@@ -589,11 +589,53 @@ class _DashboardAnalyticsSection extends StatelessWidget {
         );
 
         final charts = [
-          _IncidentStatusChart(stats: stats),
-          _DailyIncidentChart(days: stats.dailyIncidents),
+          _FrequencyBarChart(
+            title: 'Apagados por día',
+            subtitle: 'Cuántas veces se apagaron medidores en los últimos 7 días',
+            icon: Icons.calendar_view_week_outlined,
+            color: FiconColors.logoBlue,
+            points: stats.dailyIncidents,
+          ),
+          _FrequencyBarChart(
+            title: 'Apagados por semana',
+            subtitle: 'Frecuencia semanal acumulada para todos los medidores',
+            icon: Icons.stacked_bar_chart_outlined,
+            color: StatusColors.offline,
+            points: stats.weeklyIncidents,
+          ),
+          _FrequencyBarChart(
+            title: 'Apagados por mes',
+            subtitle: 'Comparación mensual para ver estacionalidad',
+            icon: Icons.calendar_month_outlined,
+            color: FiconColors.cyanSoft,
+            points: stats.monthlyIncidents,
+          ),
+          _FrequencyBarChart(
+            title: 'Días con más apagados',
+            subtitle: 'Ayuda a detectar patrones por día de la semana',
+            icon: Icons.event_repeat_outlined,
+            color: StatusColors.acknowledged,
+            points: stats.weekdayIncidents,
+          ),
           _RankingBarsCard(
-            title: 'Sedes con más impacto',
-            subtitle: 'Ranking por incidentes y tiempo fuera de línea',
+            title: 'Medidores con más apagados',
+            subtitle: 'Ranking para priorizar revisión técnica por equipo',
+            icon: Icons.electric_meter_outlined,
+            color: StatusColors.offline,
+            emptyMessage: 'No hay apagados por medidor.',
+            items: stats.deviceRankings
+                .map(
+                  (device) => _RankingBarItem(
+                    label: device.label,
+                    value: device.incidents,
+                    detail: _formatDurationCompact(device.downtimeSeconds),
+                  ),
+                )
+                .toList(),
+          ),
+          _RankingBarsCard(
+            title: 'Sedes con más apagados',
+            subtitle: 'Agrupado por sede para comparar zonas o locales',
             icon: Icons.location_city_outlined,
             color: FiconColors.logoBlue,
             emptyMessage: 'Aún no hay actividad por sede.',
@@ -604,22 +646,6 @@ class _DashboardAnalyticsSection extends StatelessWidget {
                     value: site.incidents,
                     detail:
                         '${site.devices} disp. · ${_formatDurationCompact(site.downtimeSeconds)} fuera',
-                  ),
-                )
-                .toList(),
-          ),
-          _RankingBarsCard(
-            title: 'Dispositivos más críticos',
-            subtitle: 'Equipos con mayor cantidad de incidentes',
-            icon: Icons.electrical_services_outlined,
-            color: StatusColors.offline,
-            emptyMessage: 'No hay incidentes por dispositivo.',
-            items: stats.deviceRankings
-                .map(
-                  (device) => _RankingBarItem(
-                    label: device.label,
-                    value: device.incidents,
-                    detail: _formatDurationCompact(device.downtimeSeconds),
                   ),
                 )
                 .toList(),
@@ -656,6 +682,15 @@ class _DashboardAnalyticsSection extends StatelessWidget {
                       Expanded(child: charts[2]),
                       const SizedBox(width: 16),
                       Expanded(child: charts[3]),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: charts[4]),
+                      const SizedBox(width: 16),
+                      Expanded(child: charts[5]),
                     ],
                   ),
                 ],
@@ -748,93 +783,35 @@ class _InsightMetricCard extends StatelessWidget {
   }
 }
 
-class _IncidentStatusChart extends StatelessWidget {
-  const _IncidentStatusChart({required this.stats});
+class _FrequencyBarChart extends StatelessWidget {
+  const _FrequencyBarChart({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.points,
+  });
 
-  final _DashboardStats stats;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final List<_FrequencyPoint> points;
 
   @override
   Widget build(BuildContext context) {
-    final total = stats.activeIncidents + stats.acknowledgedIncidents + stats.resolvedIncidents;
-    final items = [
-      _StatusSegment('Activos', stats.activeIncidents, StatusColors.offline),
-      _StatusSegment('Reconocidos', stats.acknowledgedIncidents, StatusColors.acknowledged),
-      _StatusSegment('Resueltos', stats.resolvedIncidents, StatusColors.online),
-    ];
-
+    final maxValue = points.fold<int>(0, (max, point) => point.count > max ? point.count : max);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionHeader(
-              icon: Icons.donut_large_outlined,
-              color: FiconColors.cyanSoft,
-              title: 'Estado de incidentes',
-              subtitle: 'Distribución según la tabla de incidentes',
-            ),
-            const SizedBox(height: 18),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: SizedBox(
-                height: 18,
-                child: total == 0
-                    ? Container(color: FiconColors.cardBorderSoft)
-                    : Row(
-                        children: [
-                          for (final item in items)
-                            if (item.value > 0)
-                              Expanded(
-                                flex: item.value,
-                                child: Container(color: item.color),
-                              ),
-                        ],
-                      ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 14,
-              runSpacing: 8,
-              children: [
-                for (final item in items)
-                  _LegendDot(
-                    color: item.color,
-                    label: '${item.label}: ${item.value}',
-                  ),
-              ],
-            ),
-            if (total == 0) ...[
-              const SizedBox(height: 12),
-              const EmptyNote('No hay incidentes para graficar.'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DailyIncidentChart extends StatelessWidget {
-  const _DailyIncidentChart({required this.days});
-
-  final List<_DailyIncidentStat> days;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxValue = days.fold<int>(0, (max, day) => day.count > max ? day.count : max);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _SectionHeader(
-              icon: Icons.bar_chart_outlined,
-              color: FiconColors.logoBlue,
-              title: 'Tendencia semanal',
-              subtitle: 'Incidentes iniciados en los últimos 7 días',
+            _SectionHeader(
+              icon: icon,
+              color: color,
+              title: title,
+              subtitle: subtitle,
             ),
             const SizedBox(height: 18),
             SizedBox(
@@ -842,15 +819,16 @@ class _DailyIncidentChart extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  for (final day in days) ...[
+                  for (final point in points) ...[
                     Expanded(
                       child: _VerticalBar(
-                        label: day.label,
-                        value: day.count,
-                        ratio: maxValue == 0 ? 0 : day.count / maxValue,
+                        label: point.label,
+                        value: point.count,
+                        ratio: maxValue == 0 ? 0 : point.count / maxValue,
+                        color: color,
                       ),
                     ),
-                    if (day != days.last) const SizedBox(width: 8),
+                    if (point != points.last) const SizedBox(width: 8),
                   ],
                 ],
               ),
@@ -867,11 +845,13 @@ class _VerticalBar extends StatelessWidget {
     required this.label,
     required this.value,
     required this.ratio,
+    required this.color,
   });
 
   final String label;
   final int value;
   final double ratio;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -897,7 +877,7 @@ class _VerticalBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: value == 0
                       ? FiconColors.cardBorderSoft
-                      : FiconColors.logoBlue.withValues(alpha: 0.82),
+                      : color.withValues(alpha: 0.82),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1029,33 +1009,36 @@ class _HorizontalBar extends StatelessWidget {
 
 class _DashboardStats {
   const _DashboardStats({
-    required this.totalEvents,
-    required this.totalIncidents,
+    required this.totalPowerOutages,
     required this.totalDowntimeSeconds,
     required this.averageIncidentSeconds,
-    required this.activeIncidents,
-    required this.acknowledgedIncidents,
-    required this.resolvedIncidents,
     required this.dailyIncidents,
+    required this.weeklyIncidents,
+    required this.monthlyIncidents,
+    required this.weekdayIncidents,
     required this.siteRankings,
     required this.deviceRankings,
   });
 
-  final int totalEvents;
-  final int totalIncidents;
+  final int totalPowerOutages;
   final int totalDowntimeSeconds;
   final int averageIncidentSeconds;
-  final int activeIncidents;
-  final int acknowledgedIncidents;
-  final int resolvedIncidents;
-  final List<_DailyIncidentStat> dailyIncidents;
+  final List<_FrequencyPoint> dailyIncidents;
+  final List<_FrequencyPoint> weeklyIncidents;
+  final List<_FrequencyPoint> monthlyIncidents;
+  final List<_FrequencyPoint> weekdayIncidents;
   final List<_ImpactRankingStat> siteRankings;
   final List<_ImpactRankingStat> deviceRankings;
 
+  String get weeklyAverageText {
+    if (weeklyIncidents.isEmpty) return '0/sem';
+    final average =
+        weeklyIncidents.fold<int>(0, (sum, point) => sum + point.count) / weeklyIncidents.length;
+    return '${average.toStringAsFixed(1)}/sem';
+  }
+
   factory _DashboardStats.from(MonitoringOverview data) {
-    final totalEvents = data.devices.fold<int>(0, (sum, device) => sum + device.eventCount);
-    final totalIncidents =
-        data.devices.fold<int>(0, (sum, device) => sum + device.incidentCount);
+    final totalPowerOutages = data.incidents.length;
     final totalDowntimeSeconds = data.devices.fold<int>(
       0,
       (sum, device) => sum + device.totalDowntimeSeconds,
@@ -1070,21 +1053,19 @@ class _DashboardStats {
         : (durations.fold<int>(0, (sum, duration) => sum + duration) / durations.length).round();
 
     return _DashboardStats(
-      totalEvents: totalEvents,
-      totalIncidents: totalIncidents,
+      totalPowerOutages: totalPowerOutages,
       totalDowntimeSeconds: totalDowntimeSeconds,
       averageIncidentSeconds: averageIncidentSeconds,
-      activeIncidents: data.incidents.where((incident) => incident.status == 'active').length,
-      acknowledgedIncidents:
-          data.incidents.where((incident) => incident.status == 'acknowledged').length,
-      resolvedIncidents: data.incidents.where((incident) => incident.status == 'resolved').length,
-      dailyIncidents: _dailyIncidentStats(data.incidents),
+      dailyIncidents: _dailyFrequencyStats(data.incidents),
+      weeklyIncidents: _weeklyFrequencyStats(data.incidents),
+      monthlyIncidents: _monthlyFrequencyStats(data.incidents),
+      weekdayIncidents: _weekdayFrequencyStats(data.incidents),
       siteRankings: _siteRankingStats(data),
       deviceRankings: _deviceRankingStats(data.devices),
     );
   }
 
-  static List<_DailyIncidentStat> _dailyIncidentStats(List<Incident> incidents) {
+  static List<_FrequencyPoint> _dailyFrequencyStats(List<Incident> incidents) {
     final now = DateTime.now();
     final counts = <DateTime, int>{};
     for (var offset = 6; offset >= 0; offset--) {
@@ -1101,10 +1082,71 @@ class _DashboardStats {
     }
     return [
       for (final entry in counts.entries)
-        _DailyIncidentStat(
+        _FrequencyPoint(
           label: '${entry.key.day.toString().padLeft(2, '0')}/${entry.key.month.toString().padLeft(2, '0')}',
           count: entry.value,
         ),
+    ];
+  }
+
+  static List<_FrequencyPoint> _weeklyFrequencyStats(List<Incident> incidents) {
+    final today = DateTime.now();
+    final currentMonday = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: today.weekday - DateTime.monday));
+    final counts = <DateTime, int>{};
+    for (var offset = 3; offset >= 0; offset--) {
+      counts[currentMonday.subtract(Duration(days: offset * 7))] = 0;
+    }
+    for (final incident in incidents) {
+      final start = incident.startTime;
+      if (start == null) continue;
+      final day = DateTime(start.year, start.month, start.day);
+      final monday = day.subtract(Duration(days: day.weekday - DateTime.monday));
+      if (counts.containsKey(monday)) {
+        counts[monday] = counts[monday]! + 1;
+      }
+    }
+    return [
+      for (final entry in counts.entries)
+        _FrequencyPoint(
+          label: 'S ${entry.key.day.toString().padLeft(2, '0')}/${entry.key.month.toString().padLeft(2, '0')}',
+          count: entry.value,
+        ),
+    ];
+  }
+
+  static List<_FrequencyPoint> _monthlyFrequencyStats(List<Incident> incidents) {
+    final now = DateTime.now();
+    final counts = <DateTime, int>{};
+    for (var offset = 5; offset >= 0; offset--) {
+      final monthCursor = DateTime(now.year, now.month - offset, 1);
+      counts[monthCursor] = 0;
+    }
+    for (final incident in incidents) {
+      final start = incident.startTime;
+      if (start == null) continue;
+      final month = DateTime(start.year, start.month, 1);
+      if (counts.containsKey(month)) {
+        counts[month] = counts[month]! + 1;
+      }
+    }
+    return [
+      for (final entry in counts.entries)
+        _FrequencyPoint(label: _monthShortName(entry.key.month), count: entry.value),
+    ];
+  }
+
+  static List<_FrequencyPoint> _weekdayFrequencyStats(List<Incident> incidents) {
+    final labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final counts = List<int>.filled(7, 0);
+    for (final incident in incidents) {
+      final start = incident.startTime;
+      if (start == null) continue;
+      counts[start.weekday - 1]++;
+    }
+    return [
+      for (var index = 0; index < labels.length; index++)
+        _FrequencyPoint(label: labels[index], count: counts[index]),
     ];
   }
 
@@ -1186,8 +1228,8 @@ class _ImpactRankingStat {
   final int downtimeSeconds;
 }
 
-class _DailyIncidentStat {
-  const _DailyIncidentStat({required this.label, required this.count});
+class _FrequencyPoint {
+  const _FrequencyPoint({required this.label, required this.count});
 
   final String label;
   final int count;
@@ -1205,14 +1247,6 @@ class _RankingBarItem {
   final String detail;
 }
 
-class _StatusSegment {
-  const _StatusSegment(this.label, this.value, this.color);
-
-  final String label;
-  final int value;
-  final Color color;
-}
-
 String _formatDurationCompact(int seconds) {
   if (seconds <= 0) return '0 min';
   final duration = Duration(seconds: seconds);
@@ -1222,6 +1256,24 @@ String _formatDurationCompact(int seconds) {
   if (days > 0) return '${days}d ${hours}h';
   if (hours > 0) return '${hours}h ${minutes}m';
   return '${minutes}m';
+}
+
+String _monthShortName(int month) {
+  const names = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic',
+  ];
+  return names[(month - 1).clamp(0, names.length - 1)];
 }
 
 class _LegendDot extends StatelessWidget {
