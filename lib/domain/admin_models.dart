@@ -133,3 +133,53 @@ class AdminSession {
     );
   }
 }
+
+class BlockedLoginUser {
+  const BlockedLoginUser({
+    required this.id,
+    required this.username,
+    required this.displayName,
+    required this.ipAddress,
+    required this.userAgent,
+    required this.failedAttempts,
+    required this.reason,
+    required this.blockedAt,
+    required this.expiresAt,
+    required this.unblockedAt,
+    required this.unblockedByUsername,
+    required this.unblockReason,
+    required this.active,
+  });
+
+  final String id;
+  final String username;
+  final String? displayName;
+  final String? ipAddress;
+  final String? userAgent;
+  final int failedAttempts;
+  final String reason;
+  final DateTime? blockedAt;
+  final DateTime? expiresAt;
+  final DateTime? unblockedAt;
+  final String? unblockedByUsername;
+  final String? unblockReason;
+  final bool active;
+
+  factory BlockedLoginUser.fromJson(Map<String, dynamic> json) {
+    return BlockedLoginUser(
+      id: json['id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      displayName: json['displayName'] as String?,
+      ipAddress: json['ipAddress'] as String?,
+      userAgent: json['userAgent'] as String?,
+      failedAttempts: json['failedAttempts'] as int? ?? 0,
+      reason: json['reason'] as String? ?? '',
+      blockedAt: DateTime.tryParse(json['blockedAt'] as String? ?? ''),
+      expiresAt: DateTime.tryParse(json['expiresAt'] as String? ?? ''),
+      unblockedAt: DateTime.tryParse(json['unblockedAt'] as String? ?? ''),
+      unblockedByUsername: json['unblockedByUsername'] as String?,
+      unblockReason: json['unblockReason'] as String?,
+      active: json['active'] as bool? ?? false,
+    );
+  }
+}

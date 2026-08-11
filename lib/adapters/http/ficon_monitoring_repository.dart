@@ -142,6 +142,21 @@ class FiconMonitoringRepository
     return data.map(AdminSession.fromJson).toList();
   }
 
+  Future<List<BlockedLoginUser>> fetchBlockedUsers({int limit = 100}) async {
+    final data = await _getList('/api/admin/blocked-users?limit=$limit');
+    return data.map(BlockedLoginUser.fromJson).toList();
+  }
+
+  Future<BlockedLoginUser> unblockBlockedUser(
+    String id, {
+    String reason = 'manual_superadmin_unlock',
+  }) async {
+    final data = await _postJson('/api/admin/blocked-users/$id/unblock', {
+      'reason': reason,
+    });
+    return BlockedLoginUser.fromJson(data);
+  }
+
   @override
   Future<List<Site>> fetchSites() async {
     final data = await _getList('/api/sites');
