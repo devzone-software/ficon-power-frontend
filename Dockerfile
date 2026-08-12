@@ -21,6 +21,10 @@ COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 COPY . .
 RUN flutter build web --release --dart-define=API_BASE_URL=
+RUN if [ -d dist/mobile ]; then \
+      mkdir -p build/web/mobile \
+      && cp -R dist/mobile/. build/web/mobile/; \
+    fi
 
 # Etapa 2: servir la build estática con nginx y actuar de reverse proxy.
 # nginx aplica envsubst sobre /etc/nginx/templates/*.template al arrancar

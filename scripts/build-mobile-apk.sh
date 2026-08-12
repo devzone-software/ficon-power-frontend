@@ -10,14 +10,31 @@ CACHE_DIR="${PROJECT_DIR}/.mobile-build-cache"
 LOCAL_UID="$(id -u)"
 LOCAL_GID="$(id -g)"
 APK_SOURCE="${PROJECT_DIR}/build/app/outputs/flutter-apk/app-release.apk"
-APK_TARGET="${PROJECT_DIR}/dist/ficon-power-beta.apk"
+APK_TARGET="${PROJECT_DIR}/dist/ficon-power.apk"
+MOBILE_DIST_DIR="${PROJECT_DIR}/dist/mobile"
+MOBILE_APK_TARGET="${MOBILE_DIST_DIR}/ficon-power.apk"
+KEY_PROPERTIES="${PROJECT_DIR}/android/key.properties"
+VERSION_LINE="$(grep '^version:' "${PROJECT_DIR}/pubspec.yaml" | awk '{print $2}')"
+APP_VERSION_NAME="${VERSION_LINE%%+*}"
+APP_VERSION_CODE="${VERSION_LINE##*+}"
+API_BASE_URL_CLEAN="${API_BASE_URL%/}"
+MOBILE_UPDATE_MANIFEST_URL="${MOBILE_UPDATE_MANIFEST_URL:-${API_BASE_URL_CLEAN}/mobile/version.json}"
+MOBILE_APK_URL="${MOBILE_APK_URL:-${API_BASE_URL_CLEAN}/mobile/ficon-power.apk}"
+
+if [[ ! -f "${KEY_PROPERTIES}" ]]; then
+  echo "No existe android/key.properties para firmar actualizaciones."
+  echo "Crea la llave local una sola vez con:"
+  echo "  ./scripts/generate-mobile-signing-key.sh"
+  exit 1
+fi
 
 mkdir -p \
   "${CACHE_DIR}/pub" \
   "${CACHE_DIR}/gradle" \
   "${CACHE_DIR}/android-ndk" \
   "${CACHE_DIR}/android-cmake" \
-  "${PROJECT_DIR}/dist"
+  "${PROJECT_DIR}/dist" \
+  "${MOBILE_DIST_DIR}"
 
 # Normaliza ownership de artefactos que pudieron quedar creados por Docker
 # como root/nobody en compilaciones anteriores.
@@ -40,8 +57,21 @@ docker run --rm \
   -e GRADLE_USER_HOME=/tmp/gradle \
   -w /app \
   "${FLUTTER_DOCKER_IMAGE}" \
-  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release --dart-define=API_BASE_URL='${API_BASE_URL}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
+  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
 
 cp "${APK_SOURCE}" "${APK_TARGET}"
+cp "${APK_SOURCE}" "${MOBILE_APK_TARGET}"
+
+cat >"${MOBILE_DIST_DIR}/version.json" <<EOF
+{
+  "versionCode": ${APP_VERSION_CODE},
+  "versionName": "${APP_VERSION_NAME}",
+  "apkUrl": "${MOBILE_APK_URL}",
+  "notes": "Actualización de FICON Power",
+  "required": false
+}
+EOF
 
 echo "APK generado: ${APK_TARGET}"
+echo "APK publicable: ${MOBILE_APK_TARGET}"
+echo "Manifest publicable: ${MOBILE_DIST_DIR}/version.json"

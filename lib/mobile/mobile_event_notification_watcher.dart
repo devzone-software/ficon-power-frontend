@@ -8,9 +8,9 @@ import '../config/auth_session.dart';
 import '../domain/event.dart';
 
 /// Observa eventos nuevos desde el backend y los muestra como notificaciones
-/// locales en la app móvil beta.
+/// locales en la app móvil.
 ///
-/// Esta es una solución beta basada en polling. Funciona cuando la app está
+/// Esta es una solución inicial basada en polling. Funciona cuando la app está
 /// abierta o viva en memoria. Para recibir alertas con la app cerrada/matada se
 /// debe agregar push notifications con FCM desde el backend.
 class MobileEventNotificationWatcher extends StatefulWidget {

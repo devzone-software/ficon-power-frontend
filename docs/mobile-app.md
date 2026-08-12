@@ -1,8 +1,11 @@
-# FICON Power Mobile Beta
+# FICON Power Mobile
 
-Base inicial para la app móvil interna de FICON Power.
+Base inicial para la app móvil interna de FICON Power, en versiones inferiores a
+`1.0.0` mientras madura hacia producción.
 
-Esta beta reutiliza el backend, autenticación y vistas actuales del dashboard Flutter, pero se compila desde un entrypoint separado para poder evolucionar la experiencia móvil sin afectar la versión web.
+La app reutiliza el backend, autenticación y vistas actuales del dashboard
+Flutter, pero se compila desde un entrypoint separado para poder evolucionar la
+experiencia móvil sin afectar la versión web.
 
 ## Alcance de esta base
 
@@ -12,9 +15,10 @@ Incluido:
 - Sesión persistente en almacenamiento seguro del celular hasta cerrar sesión.
 - Acceso a dashboard, dispositivos, incidentes y eventos.
 - Permiso Android de notificaciones.
-- Notificaciones locales beta al detectar eventos nuevos desde `/api/events`.
-- Marca visual `BETA`.
-- Configuración Android con nombre `FICON Power Beta`.
+- Notificaciones locales al detectar eventos nuevos desde `/api/events`.
+- Configuración Android con nombre `FICON Power`.
+- Firma release persistente para actualizar sobre la app instalada.
+- Manifiesto de actualización `version.json`.
 - Entry point móvil independiente: `lib/main_mobile.dart`.
 
 No incluido todavía:
@@ -25,7 +29,7 @@ No incluido todavía:
 - Gestión móvil de usuarios.
 - Publicación en Play Store/App Store.
 
-## Notificaciones beta
+## Notificaciones
 
 La app solicita permiso de notificaciones en Android y consulta eventos nuevos
 cada 20 segundos mientras el usuario está autenticado. Si detecta un evento
@@ -42,7 +46,7 @@ móviles en el backend.
 
 ## Sesión móvil persistente
 
-En Android, la beta guarda el token y el usuario en almacenamiento seguro del
+En Android, la app guarda el token y el usuario en almacenamiento seguro del
 dispositivo. Si cierras la app o la eliminas de segundo plano, al abrirla de
 nuevo intentará restaurar la sesión y entrar directo al dashboard.
 
@@ -73,7 +77,26 @@ flutter run \
   --dart-define=API_BASE_URL=http://IP_O_DOMINIO:3000
 ```
 
-## Build APK beta
+## Firma release persistente
+
+Antes de generar APKs instalables, crea una llave local una sola vez:
+
+```bash
+./scripts/generate-mobile-signing-key.sh
+```
+
+Esto crea:
+
+```text
+android/keystores/ficon-power-release.jks
+android/key.properties
+```
+
+Ambos archivos están ignorados por Git y no deben publicarse. Haz una copia
+segura: si pierdes esa llave, Android no podrá actualizar encima instalaciones
+firmadas con ella.
+
+## Build APK firmado
 
 Con Flutter instalado en el host:
 
@@ -101,17 +124,26 @@ API_BASE_URL=http://IP_O_DOMINIO:3000 ./scripts/build-mobile-apk.sh
 El APK queda en:
 
 ```text
-build/app/outputs/flutter-apk/app-release.apk
+dist/ficon-power.apk
+dist/mobile/ficon-power.apk
 ```
 
-Para compartirlo sin buscar dentro de `build/`, se puede copiar a:
+También genera:
 
-```bash
-mkdir -p dist
-cp build/app/outputs/flutter-apk/app-release.apk dist/ficon-power-beta.apk
+```text
+dist/mobile/version.json
 ```
 
-`dist/` está ignorado por Git para no publicar ejecutables generados.
+Si `dist/mobile/` existe antes de reconstruir el frontend web, Docker lo copia
+al sitio estático. En el VPS quedará disponible como:
+
+```text
+http://TU_VPS:3000/mobile/ficon-power.apk
+http://TU_VPS:3000/mobile/version.json
+```
+
+La app móvil consulta `version.json`; si detecta un `versionCode` mayor al que
+tiene instalado, muestra “Actualización disponible”.
 
 ## Siguiente fase recomendada
 

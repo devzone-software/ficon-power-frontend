@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
@@ -44,10 +45,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _future = widget.getOverview();
-    _autoRefreshTimer = Timer.periodic(
-      _autoRefreshInterval,
-      (_) => _refresh(),
-    );
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
 
   Future<void> _refresh() async {
@@ -114,9 +112,12 @@ class _FiconOverviewHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final onlineText = total == 0 ? 'Sin dispositivos' : '$online/$total online';
-    final incidentText =
-        openIncidents == 0 ? 'Operación estable' : '$openIncidents incidentes';
+    final onlineText = total == 0
+        ? 'Sin dispositivos'
+        : '$online/$total online';
+    final incidentText = openIncidents == 0
+        ? 'Operación estable'
+        : '$openIncidents incidentes';
 
     return Container(
       decoration: BoxDecoration(
@@ -200,11 +201,7 @@ class _FiconOverviewHeader extends StatelessWidget {
                   if (compact) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        intro,
-                        const SizedBox(height: 18),
-                        chips,
-                      ],
+                      children: [intro, const SizedBox(height: 18), chips],
                     );
                   }
                   return Row(
@@ -253,9 +250,9 @@ class _HeaderChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: FiconColors.ink,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: FiconColors.ink,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -276,8 +273,9 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final offlineDevices =
-        data.devices.where((d) => !d.isOnline && d.active).toList();
+    final offlineDevices = data.devices
+        .where((d) => !d.isOnline && d.active)
+        .toList();
     final recentIncidents = data.incidents.take(6).toList();
 
     return ListView(
@@ -302,8 +300,8 @@ class _DashboardBody extends StatelessWidget {
                     final cardWidth = width >= 900
                         ? (width - 3 * 16) / 4
                         : width >= 560
-                            ? (width - 16) / 2
-                            : width;
+                        ? (width - 16) / 2
+                        : width;
                     return Wrap(
                       spacing: 16,
                       runSpacing: 16,
@@ -378,11 +376,60 @@ class _DashboardBody extends StatelessWidget {
                 _NotificationTemplatesCard(
                   getNotificationTemplates: getNotificationTemplates,
                 ),
+                const SizedBox(height: 24),
+                const _MobileAppDownloadCard(),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MobileAppDownloadCard extends StatelessWidget {
+  const _MobileAppDownloadCard();
+
+  static final Uri _apkUri = Uri(path: '/mobile/ficon-power.apk');
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 620;
+            final header = const _SectionHeader(
+              icon: Icons.phone_android_outlined,
+              color: FiconColors.cyanSoft,
+              title: 'App móvil',
+              subtitle: 'Descarga la versión Android publicada en este VPS',
+            );
+            final button = FilledButton.icon(
+              onPressed: () =>
+                  launchUrl(_apkUri, mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Descargar APK'),
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [header, const SizedBox(height: 16), button],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: header),
+                const SizedBox(width: 16),
+                button,
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -462,8 +509,8 @@ class _FleetHealthCard extends StatelessWidget {
     final color = ratio >= 0.9
         ? StatusColors.online
         : ratio >= 0.5
-            ? StatusColors.acknowledged
-            : StatusColors.offline;
+        ? StatusColors.acknowledged
+        : StatusColors.offline;
 
     return Card(
       child: Padding(
@@ -604,10 +651,7 @@ class _SectionHeader extends StatelessWidget {
             ],
           ),
         ),
-        if (trailing != null) ...[
-          const SizedBox(width: 8),
-          trailing!,
-        ],
+        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
       ],
     );
   }
@@ -726,9 +770,7 @@ class _RecentIncidentsCard extends StatelessWidget {
 /// Tarjeta para ver y editar las plantillas de los mensajes
 /// de notificación (corte y retorno de energía).
 class _NotificationTemplatesCard extends StatefulWidget {
-  const _NotificationTemplatesCard({
-    required this.getNotificationTemplates,
-  });
+  const _NotificationTemplatesCard({required this.getNotificationTemplates});
 
   final GetNotificationTemplates getNotificationTemplates;
 
@@ -763,8 +805,7 @@ class _NotificationTemplatesCardState
               icon: Icons.notifications_active_outlined,
               color: FiconColors.cyanSoft,
               title: 'Plantillas Meta de WhatsApp',
-              subtitle:
-                  'Configuración activa para alertas de corte y retorno',
+              subtitle: 'Configuración activa para alertas de corte y retorno',
             ),
             const SizedBox(height: 8),
             FutureBuilder<List<NotificationTemplate>>(
@@ -826,8 +867,9 @@ class _NotificationTemplatesCardState
                                     for (final param
                                         in templates[i].metaTemplateParams)
                                       _VariableChip(
-                                        label: templates[i]
-                                            .labelForVariable(param),
+                                        label: templates[i].labelForVariable(
+                                          param,
+                                        ),
                                       ),
                                 ],
                               ),
@@ -837,10 +879,9 @@ class _NotificationTemplatesCardState
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.color,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.color,
                                   fontSize: 12,
                                 ),
                               ),
@@ -884,9 +925,9 @@ class _TemplateModeChip extends StatelessWidget {
       child: Text(
         usesMeta ? 'Plantilla Meta activa' : 'Plantilla Meta no configurada',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: usesMeta ? FiconColors.deepAlt : FiconColors.logoBlue,
-              fontWeight: FontWeight.w700,
-            ),
+          color: usesMeta ? FiconColors.deepAlt : FiconColors.logoBlue,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -908,9 +949,9 @@ class _VariableChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: FiconColors.deep,
-              fontWeight: FontWeight.w600,
-            ),
+          color: FiconColors.deep,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
