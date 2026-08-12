@@ -47,11 +47,26 @@ flutter run \
 
 ## Build APK beta
 
+Con Flutter instalado en el host:
+
 ```bash
 flutter build apk \
   -t lib/main_mobile.dart \
   --release \
-  --dart-define=API_BASE_URL=https://TU_DOMINIO
+  --dart-define=API_BASE_URL=http://179.197.74.30:3000
+```
+
+Si el host no tiene Flutter/Java, se puede usar Docker:
+
+```bash
+docker run --rm \
+  -v "$PWD:/app" \
+  -w /app \
+  ghcr.io/cirruslabs/flutter:stable \
+  flutter build apk \
+    -t lib/main_mobile.dart \
+    --release \
+    --dart-define=API_BASE_URL=http://179.197.74.30:3000
 ```
 
 El APK queda en:
@@ -59,6 +74,15 @@ El APK queda en:
 ```text
 build/app/outputs/flutter-apk/app-release.apk
 ```
+
+Para compartirlo sin buscar dentro de `build/`, se puede copiar a:
+
+```bash
+mkdir -p dist
+cp build/app/outputs/flutter-apk/app-release.apk dist/ficon-power-beta.apk
+```
+
+`dist/` está ignorado por Git para no publicar ejecutables generados.
 
 ## Siguiente fase recomendada
 

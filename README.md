@@ -86,6 +86,21 @@ flutter run \
 
 La guía completa está en [`docs/mobile-beta.md`](docs/mobile-beta.md).
 
+Para generar el APK beta contra el VPS:
+
+```bash
+docker run --rm \
+  -v "$PWD:/app" \
+  -w /app \
+  ghcr.io/cirruslabs/flutter:stable \
+  flutter build apk \
+    -t lib/main_mobile.dart \
+    --release \
+    --dart-define=API_BASE_URL=http://179.197.74.30:3000
+```
+
+El APK generado queda en `build/app/outputs/flutter-apk/app-release.apk`.
+
 ### Sistema completo con Docker
 
 Desde `ficon-power-frontend/`, manteniendo `ficon-power-backend/` como carpeta hermana:
