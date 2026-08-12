@@ -23,4 +23,13 @@ class AuthUser {
       displayName: json['displayName'] as String? ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'role': role,
+      'displayName': displayName,
+    };
+  }
 }

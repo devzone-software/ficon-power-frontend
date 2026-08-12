@@ -73,6 +73,41 @@ flutter run -d chrome \
 
 En Android emulator, el backend local se alcanza como `http://10.0.2.2:8080`.
 
+### App móvil interna
+
+La rama móvil usa un entrypoint separado para compilar la app Android sin afectar la entrada web:
+
+```bash
+flutter run \
+  -t lib/main_mobile.dart \
+  -d android \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```
+
+La guía completa está en [`docs/mobile-app.md`](docs/mobile-app.md).
+
+La app móvil solicita permiso de notificaciones en Android y muestra alertas
+locales al detectar eventos nuevos mientras la app está autenticada. Para
+notificaciones con la app cerrada se requiere la siguiente fase con Firebase
+Cloud Messaging.
+
+La sesión móvil se guarda en almacenamiento seguro del celular y se restaura al
+abrir la app hasta que el usuario cierre sesión.
+
+Primera vez, crea la firma local:
+
+```bash
+./scripts/generate-mobile-signing-key.sh
+```
+
+Para generar el APK firmado contra el VPS:
+
+```bash
+./scripts/build-mobile-apk.sh
+```
+
+El script usa Docker con cachés persistentes en `.mobile-build-cache/`, por lo que las siguientes compilaciones reutilizan dependencias de Pub, Gradle, NDK y CMake. El APK generado queda en `dist/ficon-power.apk` y el publicable para el VPS en `dist/mobile/ficon-power.apk`.
+
 ### Sistema completo con Docker
 
 Desde `ficon-power-frontend/`, manteniendo `ficon-power-backend/` como carpeta hermana:
