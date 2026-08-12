@@ -86,6 +86,11 @@ flutter run \
 
 La guía completa está en [`docs/mobile-beta.md`](docs/mobile-beta.md).
 
+La beta móvil solicita permiso de notificaciones en Android y muestra alertas
+locales al detectar eventos nuevos mientras la app está autenticada. Para
+notificaciones con la app cerrada se requiere la siguiente fase con Firebase
+Cloud Messaging.
+
 Para generar el APK beta contra el VPS:
 
 ```bash

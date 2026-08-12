@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'adapters/http/ficon_monitoring_repository.dart';
 import 'config/auth_session.dart';
 import 'main.dart';
+import 'mobile/mobile_event_notification_watcher.dart';
 
 /// Entrypoint de la app móvil beta interna.
 ///
@@ -13,11 +14,15 @@ void main() {
   final session = AuthSession();
   final repository = FiconMonitoringRepository(session: session);
   runApp(
-    FiconPowerApp(
+    MobileEventNotificationWatcher(
       repository: repository,
       session: session,
-      title: 'FICON Power Beta',
-      showBetaBanner: true,
+      child: FiconPowerApp(
+        repository: repository,
+        session: session,
+        title: 'FICON Power Beta',
+        showBetaBanner: true,
+      ),
     ),
   );
 }

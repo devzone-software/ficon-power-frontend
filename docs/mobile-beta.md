@@ -10,17 +10,34 @@ Incluido:
 
 - Login contra el backend actual.
 - Acceso a dashboard, dispositivos, incidentes y eventos.
+- Permiso Android de notificaciones.
+- Notificaciones locales beta al detectar eventos nuevos desde `/api/events`.
 - Marca visual `BETA`.
 - Configuración Android con nombre `FICON Power Beta`.
 - Entry point móvil independiente: `lib/main_mobile.dart`.
 
 No incluido todavía:
 
-- Notificaciones push.
+- Notificaciones push con la app completamente cerrada.
 - Pantallas móviles rediseñadas desde cero.
 - Offline mode.
 - Gestión móvil de usuarios.
 - Publicación en Play Store/App Store.
+
+## Notificaciones beta
+
+La app solicita permiso de notificaciones en Android y consulta eventos nuevos
+cada 20 segundos mientras el usuario está autenticado. Si detecta un evento
+nuevo, muestra una notificación local:
+
+- `deviceOffline`: Corte detectado.
+- `deviceOnline`: Retorno detectado.
+- otros eventos: Nuevo evento FICON Power.
+
+Esta fase es suficiente para pruebas internas con la app abierta o viva en
+memoria. Para recibir alertas cuando Android haya cerrado la app por completo,
+la siguiente fase debe integrar Firebase Cloud Messaging y registrar tokens
+móviles en el backend.
 
 ## Ejecutar en Android emulator
 
@@ -92,7 +109,7 @@ cp build/app/outputs/flutter-apk/app-release.apk dist/ficon-power-beta.apk
    - Dispositivos
    - Incidentes
    - Perfil
-2. Agregar Firebase Cloud Messaging.
+2. Agregar Firebase Cloud Messaging para notificaciones push reales.
 3. Registrar tokens móviles en backend.
 4. Enviar push ante corte y retorno de energía.
 5. Agregar detalle móvil de incidente/dispositivo.
