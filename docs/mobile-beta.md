@@ -59,14 +59,15 @@ flutter build apk \
 Si el host no tiene Flutter/Java, se puede usar Docker:
 
 ```bash
-docker run --rm \
-  -v "$PWD:/app" \
-  -w /app \
-  ghcr.io/cirruslabs/flutter:stable \
-  flutter build apk \
-    -t lib/main_mobile.dart \
-    --release \
-    --dart-define=API_BASE_URL=http://179.197.74.30:3000
+./scripts/build-mobile-apk.sh
+```
+
+El script usa cachés persistentes en `.mobile-build-cache/` para reutilizar paquetes Pub, Gradle, NDK y CMake entre compilaciones. Esa carpeta está ignorada por Git.
+
+Para compilar contra otra URL:
+
+```bash
+API_BASE_URL=http://IP_O_DOMINIO:3000 ./scripts/build-mobile-apk.sh
 ```
 
 El APK queda en:
