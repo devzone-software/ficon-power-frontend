@@ -48,32 +48,28 @@ class FiconMonitoringRepository
   FiconMonitoringRepository({
     http.Client? client,
     String? baseUrl,
-    AuthSession? session,
-  })
-      : _client = client ?? http.Client(),
-        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
-        _session = session;
+    this.session,
+  }) : _client = client ?? http.Client(),
+       _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   final http.Client _client;
   final String _baseUrl;
-  final AuthSession? _session;
+  final AuthSession? session;
 
   Map<String, String> get _headers => {
-        'Accept': 'application/json',
-        if (_session?.token != null) 'Authorization': 'Bearer ${_session!.token}',
-        if (AppConfig.apiKey.isNotEmpty) 'X-API-Key': AppConfig.apiKey,
-      };
+    'Accept': 'application/json',
+    if (session?.token != null) 'Authorization': 'Bearer ${session!.token}',
+    if (AppConfig.apiKey.isNotEmpty) 'X-API-Key': AppConfig.apiKey,
+  };
 
   Future<LoginResult> login({
     required String username,
     required String password,
   }) async {
-    final data = await _sendJson(
-      'POST',
-      '/api/auth/login',
-      {'username': username, 'password': password},
-      authenticated: false,
-    );
+    final data = await _sendJson('POST', '/api/auth/login', {
+      'username': username,
+      'password': password,
+    }, authenticated: false);
     return LoginResult(
       token: data['token'] as String? ?? '',
       user: AuthUser.fromJson(
@@ -240,20 +236,17 @@ class FiconMonitoringRepository
   Future<Map<String, dynamic>> _putJson(
     String path,
     Map<String, dynamic> payload,
-  ) =>
-      _sendJson('PUT', path, payload);
+  ) => _sendJson('PUT', path, payload);
 
   Future<Map<String, dynamic>> _postJson(
     String path,
     Map<String, dynamic> payload,
-  ) =>
-      _sendJson('POST', path, payload);
+  ) => _sendJson('POST', path, payload);
 
   Future<Map<String, dynamic>> _sendJson(
     String method,
     String path,
-    Map<String, dynamic> payload,
-    {
+    Map<String, dynamic> payload, {
     bool authenticated = true,
   }) async {
     final uri = Uri.parse('$_baseUrl$path');
@@ -264,10 +257,11 @@ class FiconMonitoringRepository
     final body = jsonEncode(payload);
     final http.Response response;
     try {
-      response = await (method == 'POST'
-              ? _client.post(uri, headers: headers, body: body)
-              : _client.put(uri, headers: headers, body: body))
-          .timeout(const Duration(seconds: 15));
+      response =
+          await (method == 'POST'
+                  ? _client.post(uri, headers: headers, body: body)
+                  : _client.put(uri, headers: headers, body: body))
+              .timeout(const Duration(seconds: 15));
     } catch (e) {
       throw ApiException('No se pudo conectar con $_baseUrl: $e');
     }

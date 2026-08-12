@@ -29,18 +29,18 @@ List<String> uniqueColumnOptions<T>(
     if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') {
       continue;
     }
-    byNormalizedValue.putIfAbsent(normalizeFilterValue(cleanValue), () => cleanValue);
+    byNormalizedValue.putIfAbsent(
+      normalizeFilterValue(cleanValue),
+      () => cleanValue,
+    );
   }
-  return byNormalizedValue.values.toList()
-    ..sort((a, b) => normalizeFilterValue(a).compareTo(normalizeFilterValue(b)));
+  return byNormalizedValue.values.toList()..sort(
+    (a, b) => normalizeFilterValue(a).compareTo(normalizeFilterValue(b)),
+  );
 }
 
 class TableFiltersBar extends StatelessWidget {
-  const TableFiltersBar({
-    super.key,
-    required this.filters,
-    this.trailing,
-  });
+  const TableFiltersBar({super.key, required this.filters, this.trailing});
 
   final List<Widget> filters;
   final Widget? trailing;
@@ -57,10 +57,7 @@ class TableFiltersBar extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              ...filters,
-              if (trailing != null) trailing!,
-            ],
+            children: [...filters, ?trailing],
           ),
         ),
       ),
@@ -104,7 +101,9 @@ class _TextColumnFilterState extends State<TextColumnFilter> {
     super.didUpdateWidget(oldWidget);
     if (widget.value != _controller.text) {
       _controller.text = widget.value;
-      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
     }
   }
 
@@ -127,7 +126,9 @@ class _TextColumnFilterState extends State<TextColumnFilter> {
         },
         onSelected: (selected) {
           _controller.text = selected;
-          _controller.selection = TextSelection.collapsed(offset: selected.length);
+          _controller.selection = TextSelection.collapsed(
+            offset: selected.length,
+          );
           widget.onChanged(selected);
         },
         fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -166,17 +167,24 @@ class _TextColumnFilterState extends State<TextColumnFilter> {
               elevation: 6,
               borderRadius: BorderRadius.circular(12),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: 280, maxWidth: widget.width),
+                constraints: BoxConstraints(
+                  maxHeight: 280,
+                  maxWidth: widget.width,
+                ),
                 child: ListView.separated(
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
                   itemCount: visibleOptions.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final option = visibleOptions[index];
                     return ListTile(
                       dense: true,
-                      title: Text(option, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      title: Text(
+                        option,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       onTap: () => onSelected(option),
                     );
                   },
@@ -237,7 +245,9 @@ class DateColumnFilter extends StatelessWidget {
               value == null ? 'Cualquier fecha' : formatDateOnly(value!),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: value == null ? FiconColors.slate : FiconColors.ink),
+              style: TextStyle(
+                color: value == null ? FiconColors.slate : FiconColors.ink,
+              ),
             ),
           ),
         ),
@@ -252,7 +262,11 @@ Iterable<String> rankedFilterMatches(List<String> options, String query) {
 
   final prefixMatches = <String>[];
   final start = lowerBoundByNormalized(options, normalizedQuery);
-  for (var index = start; index < options.length && prefixMatches.length < 20; index++) {
+  for (
+    var index = start;
+    index < options.length && prefixMatches.length < 20;
+    index++
+  ) {
     final option = options[index];
     if (!normalizeFilterValue(option).startsWith(normalizedQuery)) break;
     prefixMatches.add(option);

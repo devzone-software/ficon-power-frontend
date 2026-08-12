@@ -40,10 +40,7 @@ class _AdminPageState extends State<AdminPage> {
   void initState() {
     super.initState();
     _refresh(showLoading: true);
-    _liveRefreshTimer = Timer.periodic(
-      _liveRefreshInterval,
-      (_) => _refresh(),
-    );
+    _liveRefreshTimer = Timer.periodic(_liveRefreshInterval, (_) => _refresh());
   }
 
   @override
@@ -108,7 +105,11 @@ class _AdminPageState extends State<AdminPage> {
     );
     if (saved == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(user == null ? 'Usuario creado.' : 'Usuario actualizado.')),
+        SnackBar(
+          content: Text(
+            user == null ? 'Usuario creado.' : 'Usuario actualizado.',
+          ),
+        ),
       );
       await _refresh();
     }
@@ -145,9 +146,9 @@ class _AdminPageState extends State<AdminPage> {
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo desbloquear: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No se pudo desbloquear: $e')));
     }
   }
 
@@ -167,14 +168,21 @@ class _AdminPageState extends State<AdminPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null && _data == null) {
-      return ErrorView(error: _error, onRetry: () => _refresh(showLoading: true));
+      return ErrorView(
+        error: _error,
+        onRetry: () => _refresh(showLoading: true),
+      );
     }
 
     final data = _data!;
     final users = data.users.where(_matchesUserFilters).toList();
-    final blockedUsers = data.blockedUsers.where(_matchesBlockedUserFilters).toList();
+    final blockedUsers = data.blockedUsers
+        .where(_matchesBlockedUserFilters)
+        .toList();
     final auditLogs = data.auditLogs.where(_matchesAuditLogFilters).toList();
-    final loginAttempts = data.loginAttempts.where(_matchesLoginAttemptFilters).toList();
+    final loginAttempts = data.loginAttempts
+        .where(_matchesLoginAttemptFilters)
+        .toList();
     final sessions = data.sessions.where(_matchesSessionFilters).toList();
 
     return DefaultTabController(
@@ -211,17 +219,26 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'users.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(data.users, (user) => user.username),
+                      options: _uniqueColumnOptions(
+                        data.users,
+                        (user) => user.username,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'users.displayName',
                       label: 'Nombre',
-                      options: _uniqueColumnOptions(data.users, (user) => user.displayName),
+                      options: _uniqueColumnOptions(
+                        data.users,
+                        (user) => user.displayName,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'users.role',
                       label: 'Rol',
-                      options: _uniqueColumnOptions(data.users, (user) => user.role),
+                      options: _uniqueColumnOptions(
+                        data.users,
+                        (user) => user.role,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'users.status',
@@ -241,12 +258,18 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'blocked.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(data.blockedUsers, (blocked) => blocked.username),
+                      options: _uniqueColumnOptions(
+                        data.blockedUsers,
+                        (blocked) => blocked.username,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'blocked.displayName',
                       label: 'Nombre',
-                      options: _uniqueColumnOptions(data.blockedUsers, (blocked) => blocked.displayName),
+                      options: _uniqueColumnOptions(
+                        data.blockedUsers,
+                        (blocked) => blocked.displayName,
+                      ),
                     ),
                     _ipColumnFilter('blocked.ip', 'IP'),
                     _textColumnFilter(
@@ -262,7 +285,8 @@ class _AdminPageState extends State<AdminPage> {
                       label: 'Estado',
                       options: _uniqueColumnOptions(
                         data.blockedUsers,
-                        (blocked) => blocked.active ? 'Bloqueado' : 'Liberado/expirado',
+                        (blocked) =>
+                            blocked.active ? 'Bloqueado' : 'Liberado/expirado',
                       ),
                     ),
                     _dateColumnFilter('blocked.blockedAt', 'Bloqueado'),
@@ -287,13 +311,17 @@ class _AdminPageState extends State<AdminPage> {
                       label: 'Usuario',
                       options: _uniqueColumnOptions(
                         data.auditLogs,
-                        (log) => '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
+                        (log) =>
+                            '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
                       ),
                     ),
                     _textColumnFilter(
                       keyName: 'audit.action',
                       label: 'Acción',
-                      options: _uniqueColumnOptions(data.auditLogs, (log) => log.action),
+                      options: _uniqueColumnOptions(
+                        data.auditLogs,
+                        (log) => log.action,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'audit.entity',
@@ -307,7 +335,10 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'audit.userAgent',
                       label: 'Navegador',
-                      options: _uniqueColumnOptions(data.auditLogs, (log) => log.userAgent),
+                      options: _uniqueColumnOptions(
+                        data.auditLogs,
+                        (log) => log.userAgent,
+                      ),
                     ),
                   ],
                 ),
@@ -319,7 +350,10 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'logins.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(data.loginAttempts, (attempt) => attempt.username),
+                      options: _uniqueColumnOptions(
+                        data.loginAttempts,
+                        (attempt) => attempt.username,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'logins.result',
@@ -332,13 +366,19 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'logins.reason',
                       label: 'Motivo',
-                      options: _uniqueColumnOptions(data.loginAttempts, (attempt) => attempt.reason),
+                      options: _uniqueColumnOptions(
+                        data.loginAttempts,
+                        (attempt) => attempt.reason,
+                      ),
                     ),
                     _ipColumnFilter('logins.ip', 'IP'),
                     _textColumnFilter(
                       keyName: 'logins.userAgent',
                       label: 'Navegador',
-                      options: _uniqueColumnOptions(data.loginAttempts, (attempt) => attempt.userAgent),
+                      options: _uniqueColumnOptions(
+                        data.loginAttempts,
+                        (attempt) => attempt.userAgent,
+                      ),
                     ),
                   ],
                 ),
@@ -350,19 +390,26 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'sessions.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(data.sessions, (session) => session.username),
+                      options: _uniqueColumnOptions(
+                        data.sessions,
+                        (session) => session.username,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'sessions.role',
                       label: 'Rol',
-                      options: _uniqueColumnOptions(data.sessions, (session) => session.role),
+                      options: _uniqueColumnOptions(
+                        data.sessions,
+                        (session) => session.role,
+                      ),
                     ),
                     _textColumnFilter(
                       keyName: 'sessions.status',
                       label: 'Estado',
                       options: _uniqueColumnOptions(
                         data.sessions,
-                        (session) => session.active ? 'Activa' : 'Cerrada/expirada',
+                        (session) =>
+                            session.active ? 'Activa' : 'Cerrada/expirada',
                       ),
                     ),
                     _dateColumnFilter('sessions.expiresAt', 'Expira'),
@@ -370,7 +417,10 @@ class _AdminPageState extends State<AdminPage> {
                     _textColumnFilter(
                       keyName: 'sessions.userAgent',
                       label: 'Navegador',
-                      options: _uniqueColumnOptions(data.sessions, (session) => session.userAgent),
+                      options: _uniqueColumnOptions(
+                        data.sessions,
+                        (session) => session.userAgent,
+                      ),
                     ),
                   ],
                 ),
@@ -393,7 +443,10 @@ class _AdminPageState extends State<AdminPage> {
     return _matchesText('blocked.username', blockedUser.username) &&
         _matchesText('blocked.displayName', blockedUser.displayName) &&
         _matchesIp('blocked.ip', blockedUser.ipAddress) &&
-        _matchesText('blocked.failedAttempts', '${blockedUser.failedAttempts}') &&
+        _matchesText(
+          'blocked.failedAttempts',
+          '${blockedUser.failedAttempts}',
+        ) &&
         _matchesText(
           'blocked.status',
           blockedUser.active ? 'Bloqueado' : 'Liberado/expirado',
@@ -405,9 +458,15 @@ class _AdminPageState extends State<AdminPage> {
 
   bool _matchesAuditLogFilters(AuditLogEntry log) {
     return _matchesDate('audit.createdAt', log.createdAt) &&
-        _matchesText('audit.actor', '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}') &&
+        _matchesText(
+          'audit.actor',
+          '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
+        ) &&
         _matchesText('audit.action', log.action) &&
-        _matchesText('audit.entity', '${log.entityType} ${log.entityId ?? ''}') &&
+        _matchesText(
+          'audit.entity',
+          '${log.entityType} ${log.entityId ?? ''}',
+        ) &&
         _matchesIp('audit.ip', log.ipAddress) &&
         _matchesText('audit.userAgent', log.userAgent);
   }
@@ -415,7 +474,10 @@ class _AdminPageState extends State<AdminPage> {
   bool _matchesLoginAttemptFilters(LoginAttempt attempt) {
     return _matchesDate('logins.createdAt', attempt.createdAt) &&
         _matchesText('logins.username', attempt.username) &&
-        _matchesText('logins.result', attempt.success ? 'Correcto' : 'Fallido') &&
+        _matchesText(
+          'logins.result',
+          attempt.success ? 'Correcto' : 'Fallido',
+        ) &&
         _matchesText('logins.reason', attempt.reason) &&
         _matchesIp('logins.ip', attempt.ipAddress) &&
         _matchesText('logins.userAgent', attempt.userAgent);
@@ -425,7 +487,10 @@ class _AdminPageState extends State<AdminPage> {
     return _matchesDate('sessions.createdAt', session.createdAt) &&
         _matchesText('sessions.username', session.username) &&
         _matchesText('sessions.role', session.role) &&
-        _matchesText('sessions.status', session.active ? 'Activa' : 'Cerrada/expirada') &&
+        _matchesText(
+          'sessions.status',
+          session.active ? 'Activa' : 'Cerrada/expirada',
+        ) &&
         _matchesDate('sessions.expiresAt', session.expiresAt) &&
         _matchesIp('sessions.ip', session.ipAddress) &&
         _matchesText('sessions.userAgent', session.userAgent);
@@ -471,7 +536,9 @@ class _AdminPageState extends State<AdminPage> {
     final byNormalizedValue = <String, String>{};
     for (final row in rows) {
       final cleanValue = valueForRow(row)?.trim();
-      if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') continue;
+      if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') {
+        continue;
+      }
       byNormalizedValue.putIfAbsent(_normalize(cleanValue), () => cleanValue);
     }
     final options = byNormalizedValue.values.toList()
@@ -517,7 +584,8 @@ class _AdminPageState extends State<AdminPage> {
           _textFilters['$keyName.2'] ?? '',
           _textFilters['$keyName.3'] ?? '',
         ],
-        onChanged: (index, value) => setState(() => _textFilters['$keyName.$index'] = value),
+        onChanged: (index, value) =>
+            setState(() => _textFilters['$keyName.$index'] = value),
       ),
     );
   }
@@ -578,7 +646,9 @@ class _UsersTab extends StatelessWidget {
               cells: [
                 DataCell(Text(user.username)),
                 DataCell(Text(user.displayName)),
-                DataCell(StatusChip(label: user.role, color: FiconColors.logoBlue)),
+                DataCell(
+                  StatusChip(label: user.role, color: FiconColors.logoBlue),
+                ),
                 DataCell(
                   StatusChip(
                     label: user.active ? 'Activo' : 'Revocado',
@@ -641,7 +711,9 @@ class _BlockedUsersTab extends StatelessWidget {
                 DataCell(
                   StatusChip(
                     label: blocked.active ? 'Bloqueado' : 'Liberado/expirado',
-                    color: blocked.active ? FiconColors.logoBlue : FiconColors.deepAlt,
+                    color: blocked.active
+                        ? FiconColors.logoBlue
+                        : FiconColors.deepAlt,
                   ),
                 ),
                 DataCell(Text(formatDateTime(blocked.blockedAt))),
@@ -692,7 +764,9 @@ class _AuditTab extends StatelessWidget {
             DataRow(
               cells: [
                 DataCell(Text(formatDateTime(log.createdAt))),
-                DataCell(Text('${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}')),
+                DataCell(
+                  Text('${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}'),
+                ),
                 DataCell(Text(log.action)),
                 DataCell(Text('${log.entityType} ${log.entityId ?? ''}')),
                 DataCell(Text(log.ipAddress ?? '—')),
@@ -739,7 +813,9 @@ class _LoginAttemptsTab extends StatelessWidget {
                 DataCell(
                   StatusChip(
                     label: attempt.success ? 'Correcto' : 'Fallido',
-                    color: attempt.success ? FiconColors.cyan : FiconColors.logoBlue,
+                    color: attempt.success
+                        ? FiconColors.cyan
+                        : FiconColors.logoBlue,
                   ),
                 ),
                 DataCell(Text(attempt.reason ?? '—')),
@@ -789,7 +865,9 @@ class _SessionsTab extends StatelessWidget {
                 DataCell(
                   StatusChip(
                     label: session.active ? 'Activa' : 'Cerrada/expirada',
-                    color: session.active ? FiconColors.cyan : FiconColors.deepAlt,
+                    color: session.active
+                        ? FiconColors.cyan
+                        : FiconColors.deepAlt,
                   ),
                 ),
                 DataCell(Text(formatDateTime(session.expiresAt))),
@@ -835,14 +913,14 @@ class _TableShell extends StatelessWidget {
                     runSpacing: 12,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     alignment: WrapAlignment.spaceBetween,
-                    children: [
-                      ...filters,
-                      if (action != null) action!,
-                    ],
+                    children: [...filters, ?action],
                   ),
                   const SizedBox(height: 12),
                 ],
-                SingleChildScrollView(scrollDirection: Axis.horizontal, child: child),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: child,
+                ),
               ],
             ),
           ),
@@ -885,7 +963,9 @@ class _SearchableTableFilterState extends State<_SearchableTableFilter> {
     super.didUpdateWidget(oldWidget);
     if (widget.value != _controller.text) {
       _controller.text = widget.value;
-      _controller.selection = TextSelection.collapsed(offset: _controller.text.length);
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
     }
   }
 
@@ -906,7 +986,9 @@ class _SearchableTableFilterState extends State<_SearchableTableFilter> {
       },
       onSelected: (selected) {
         _controller.text = selected;
-        _controller.selection = TextSelection.collapsed(offset: selected.length);
+        _controller.selection = TextSelection.collapsed(
+          offset: selected.length,
+        );
         widget.onChanged(selected);
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -950,12 +1032,16 @@ class _SearchableTableFilterState extends State<_SearchableTableFilter> {
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 itemCount: visibleOptions.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final option = visibleOptions[index];
                   return ListTile(
                     dense: true,
-                    title: Text(option, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(
+                      option,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     onTap: () => onSelected(option),
                   );
                 },
@@ -1040,7 +1126,9 @@ class _IpColumnFilterState extends State<_IpColumnFilter> {
     super.initState();
     _controllers = [
       for (var index = 0; index < 4; index++)
-        TextEditingController(text: index < widget.values.length ? widget.values[index] : ''),
+        TextEditingController(
+          text: index < widget.values.length ? widget.values[index] : '',
+        ),
     ];
   }
 
@@ -1051,7 +1139,9 @@ class _IpColumnFilterState extends State<_IpColumnFilter> {
       final value = index < widget.values.length ? widget.values[index] : '';
       if (_controllers[index].text != value) {
         _controllers[index].text = value;
-        _controllers[index].selection = TextSelection.collapsed(offset: value.length);
+        _controllers[index].selection = TextSelection.collapsed(
+          offset: value.length,
+        );
       }
     }
   }
@@ -1099,11 +1189,14 @@ class _IpColumnFilterState extends State<_IpColumnFilter> {
                 ),
                 onChanged: (value) {
                   final cleanValue = value.replaceAll(RegExp('[^0-9]'), '');
-                  final nextValue = cleanValue.length > 3 ? cleanValue.substring(0, 3) : cleanValue;
+                  final nextValue = cleanValue.length > 3
+                      ? cleanValue.substring(0, 3)
+                      : cleanValue;
                   if (nextValue != value) {
                     _controllers[index].text = nextValue;
-                    _controllers[index].selection =
-                        TextSelection.collapsed(offset: nextValue.length);
+                    _controllers[index].selection = TextSelection.collapsed(
+                      offset: nextValue.length,
+                    );
                   }
                   widget.onChanged(index, nextValue);
                 },
@@ -1112,7 +1205,10 @@ class _IpColumnFilterState extends State<_IpColumnFilter> {
             if (index < _controllers.length - 1)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Text('.', style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  '.',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
           ],
         ],
@@ -1127,7 +1223,11 @@ Iterable<String> _rankedMatches(List<String> options, String query) {
 
   final prefixMatches = <String>[];
   final start = _lowerBoundByNormalized(options, normalizedQuery);
-  for (var index = start; index < options.length && prefixMatches.length < 20; index++) {
+  for (
+    var index = start;
+    index < options.length && prefixMatches.length < 20;
+    index++
+  ) {
     final option = options[index];
     if (!_normalize(option).startsWith(normalizedQuery)) break;
     prefixMatches.add(option);
@@ -1138,7 +1238,9 @@ Iterable<String> _rankedMatches(List<String> options, String query) {
   for (final option in options) {
     if (prefixMatches.length + containsMatches.length >= 30) break;
     if (seen.contains(option)) continue;
-    if (_normalize(option).contains(normalizedQuery)) containsMatches.add(option);
+    if (_normalize(option).contains(normalizedQuery)) {
+      containsMatches.add(option);
+    }
   }
 
   return [...prefixMatches, ...containsMatches];
@@ -1195,7 +1297,8 @@ class _UserDialogState extends State<_UserDialog> {
   bool get _editingSuperadmin => widget.user?.role == 'SUPERADMIN';
   bool get _canAssignAdmin => widget.currentUser.role == 'SUPERADMIN';
   bool get _canEditActive => !_editingSuperadmin;
-  List<String> get _assignableRoles => _canAssignAdmin ? const ['USER', 'ADMIN'] : const ['USER'];
+  List<String> get _assignableRoles =>
+      _canAssignAdmin ? const ['USER', 'ADMIN'] : const ['USER'];
 
   @override
   void initState() {
@@ -1204,7 +1307,9 @@ class _UserDialogState extends State<_UserDialog> {
     _displayName = TextEditingController(text: widget.user?.displayName ?? '');
     _password = TextEditingController();
     final initialRole = widget.user?.role ?? 'USER';
-    _role = _assignableRoles.contains(initialRole) ? initialRole : _assignableRoles.first;
+    _role = _assignableRoles.contains(initialRole)
+        ? initialRole
+        : _assignableRoles.first;
     _active = widget.user?.active ?? true;
   }
 
@@ -1275,24 +1380,34 @@ class _UserDialogState extends State<_UserDialog> {
                   enabled: false,
                   decoration: const InputDecoration(
                     labelText: 'Rol',
-                    helperText: 'Los superadmins no se reasignan desde el dashboard.',
+                    helperText:
+                        'Los superadmins no se reasignan desde el dashboard.',
                   ),
                 )
               else
                 DropdownButtonFormField<String>(
-                  value: _role,
+                  initialValue: _role,
                   decoration: const InputDecoration(
                     labelText: 'Rol',
-                    helperText: 'SUPERADMIN no es un rol asignable desde esta pantalla.',
+                    helperText:
+                        'SUPERADMIN no es un rol asignable desde esta pantalla.',
                   ),
                   items: [
-                    const DropdownMenuItem(value: 'USER', child: Text('USER · sólo lectura')),
+                    const DropdownMenuItem(
+                      value: 'USER',
+                      child: Text('USER · sólo lectura'),
+                    ),
                     if (_canAssignAdmin)
-                      const DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN · edición')),
+                      const DropdownMenuItem(
+                        value: 'ADMIN',
+                        child: Text('ADMIN · edición'),
+                      ),
                   ],
                   onChanged: _saving
                       ? null
-                      : (value) => setState(() => _role = value ?? _assignableRoles.first),
+                      : (value) => setState(
+                          () => _role = value ?? _assignableRoles.first,
+                        ),
                 ),
               const SizedBox(height: 12),
               SwitchListTile(
@@ -1314,14 +1429,20 @@ class _UserDialogState extends State<_UserDialog> {
                 enabled: !_saving,
                 obscureText: !_showPassword,
                 decoration: InputDecoration(
-                  labelText: _isEdit ? 'Nueva contraseña opcional' : 'Contraseña',
+                  labelText: _isEdit
+                      ? 'Nueva contraseña opcional'
+                      : 'Contraseña',
                   suffixIcon: IconButton(
-                    tooltip: _showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña',
+                    tooltip: _showPassword
+                        ? 'Ocultar contraseña'
+                        : 'Mostrar contraseña',
                     onPressed: _saving
                         ? null
                         : () => setState(() => _showPassword = !_showPassword),
                     icon: Icon(
-                      _showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _showPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                     ),
                   ),
                 ),
