@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -379,8 +380,10 @@ class _DashboardBody extends StatelessWidget {
                 _NotificationTemplatesCard(
                   getNotificationTemplates: getNotificationTemplates,
                 ),
-                const SizedBox(height: 24),
-                const _MobileAppDownloadCard(),
+                if (kIsWeb) ...[
+                  const SizedBox(height: 24),
+                  const _MobileAppDownloadCard(),
+                ],
               ],
             ),
           ),
@@ -593,8 +596,8 @@ class _DashboardAnalyticsSection extends StatelessWidget {
         final metricWidth = wide
             ? (constraints.maxWidth - 3 * 16) / 4
             : medium
-                ? (constraints.maxWidth - 16) / 2
-                : constraints.maxWidth;
+            ? (constraints.maxWidth - 16) / 2
+            : constraints.maxWidth;
 
         final metricCards = Wrap(
           spacing: 16,
@@ -638,7 +641,8 @@ class _DashboardAnalyticsSection extends StatelessWidget {
         final charts = [
           _FrequencyBarChart(
             title: 'Apagados por día',
-            subtitle: 'Cuántas veces se apagaron medidores en los últimos 7 días',
+            subtitle:
+                'Cuántas veces se apagaron medidores en los últimos 7 días',
             icon: Icons.calendar_view_week_outlined,
             color: FiconColors.logoBlue,
             points: stats.dailyIncidents,
@@ -696,7 +700,8 @@ class _DashboardAnalyticsSection extends StatelessWidget {
               icon: Icons.analytics_outlined,
               color: FiconColors.logoBlue,
               title: 'Lectura estadística',
-              subtitle: 'Métricas y gráficos derivados de las tablas operativas',
+              subtitle:
+                  'Métricas y gráficos derivados de las tablas operativas',
             ),
             const SizedBox(height: 16),
             metricCards,
@@ -807,7 +812,9 @@ class _InsightMetricCard extends StatelessWidget {
                       description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall?.copyWith(color: FiconColors.slate),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: FiconColors.slate,
+                      ),
                     ),
                   ],
                 ),
@@ -837,7 +844,10 @@ class _FrequencyBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxValue = points.fold<int>(0, (max, point) => point.count > max ? point.count : max);
+    final maxValue = points.fold<int>(
+      0,
+      (max, point) => point.count > max ? point.count : max,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -899,9 +909,9 @@ class _VerticalBar extends StatelessWidget {
         Text(
           '$value',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: FiconColors.deepAlt,
-                fontWeight: FontWeight.w700,
-              ),
+            color: FiconColors.deepAlt,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 6),
         Expanded(
@@ -924,7 +934,9 @@ class _VerticalBar extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: FiconColors.slate),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: FiconColors.slate),
         ),
       ],
     );
@@ -950,7 +962,10 @@ class _RankingBarsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxValue = items.fold<int>(0, (max, item) => item.value > max ? item.value : max);
+    final maxValue = items.fold<int>(
+      0,
+      (max, item) => item.value > max ? item.value : max,
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -969,7 +984,11 @@ class _RankingBarsCard extends StatelessWidget {
             else
               for (var index = 0; index < items.length; index++) ...[
                 if (index > 0) const SizedBox(height: 14),
-                _HorizontalBar(item: items[index], maxValue: maxValue, color: color),
+                _HorizontalBar(
+                  item: items[index],
+                  maxValue: maxValue,
+                  color: color,
+                ),
               ],
           ],
         ),
@@ -1003,18 +1022,18 @@ class _HorizontalBar extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: FiconColors.ink,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: FiconColors.ink,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(width: 10),
             Text(
               '${item.value}',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                  ),
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
@@ -1037,7 +1056,9 @@ class _HorizontalBar extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           item.detail,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: FiconColors.slate),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: FiconColors.slate),
         ),
       ],
     );
@@ -1070,7 +1091,8 @@ class _DashboardStats {
   String get weeklyAverageText {
     if (weeklyIncidents.isEmpty) return '0/sem';
     final average =
-        weeklyIncidents.fold<int>(0, (sum, point) => sum + point.count) / weeklyIncidents.length;
+        weeklyIncidents.fold<int>(0, (sum, point) => sum + point.count) /
+        weeklyIncidents.length;
     return '${average.toStringAsFixed(1)}/sem';
   }
 
@@ -1087,7 +1109,9 @@ class _DashboardStats {
     ];
     final averageIncidentSeconds = durations.isEmpty
         ? 0
-        : (durations.fold<int>(0, (sum, duration) => sum + duration) / durations.length).round();
+        : (durations.fold<int>(0, (sum, duration) => sum + duration) /
+                  durations.length)
+              .round();
 
     return _DashboardStats(
       totalPowerOutages: totalPowerOutages,
@@ -1106,7 +1130,11 @@ class _DashboardStats {
     final now = DateTime.now();
     final counts = <DateTime, int>{};
     for (var offset = 6; offset >= 0; offset--) {
-      final date = DateTime(now.year, now.month, now.day).subtract(Duration(days: offset));
+      final date = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: offset));
       counts[date] = 0;
     }
     for (final incident in incidents) {
@@ -1120,7 +1148,8 @@ class _DashboardStats {
     return [
       for (final entry in counts.entries)
         _FrequencyPoint(
-          label: '${entry.key.day.toString().padLeft(2, '0')}/${entry.key.month.toString().padLeft(2, '0')}',
+          label:
+              '${entry.key.day.toString().padLeft(2, '0')}/${entry.key.month.toString().padLeft(2, '0')}',
           count: entry.value,
         ),
     ];
@@ -1128,8 +1157,11 @@ class _DashboardStats {
 
   static List<_FrequencyPoint> _weeklyFrequencyStats(List<Incident> incidents) {
     final today = DateTime.now();
-    final currentMonday = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: today.weekday - DateTime.monday));
+    final currentMonday = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(Duration(days: today.weekday - DateTime.monday));
     final counts = <DateTime, int>{};
     for (var offset = 3; offset >= 0; offset--) {
       counts[currentMonday.subtract(Duration(days: offset * 7))] = 0;
@@ -1138,7 +1170,9 @@ class _DashboardStats {
       final start = incident.startTime;
       if (start == null) continue;
       final day = DateTime(start.year, start.month, start.day);
-      final monday = day.subtract(Duration(days: day.weekday - DateTime.monday));
+      final monday = day.subtract(
+        Duration(days: day.weekday - DateTime.monday),
+      );
       if (counts.containsKey(monday)) {
         counts[monday] = counts[monday]! + 1;
       }
@@ -1146,13 +1180,16 @@ class _DashboardStats {
     return [
       for (final entry in counts.entries)
         _FrequencyPoint(
-          label: 'S ${entry.key.day.toString().padLeft(2, '0')}/${entry.key.month.toString().padLeft(2, '0')}',
+          label:
+              'S ${entry.key.day.toString().padLeft(2, '0')}/${entry.key.month.toString().padLeft(2, '0')}',
           count: entry.value,
         ),
     ];
   }
 
-  static List<_FrequencyPoint> _monthlyFrequencyStats(List<Incident> incidents) {
+  static List<_FrequencyPoint> _monthlyFrequencyStats(
+    List<Incident> incidents,
+  ) {
     final now = DateTime.now();
     final counts = <DateTime, int>{};
     for (var offset = 5; offset >= 0; offset--) {
@@ -1169,11 +1206,16 @@ class _DashboardStats {
     }
     return [
       for (final entry in counts.entries)
-        _FrequencyPoint(label: _monthShortName(entry.key.month), count: entry.value),
+        _FrequencyPoint(
+          label: _monthShortName(entry.key.month),
+          count: entry.value,
+        ),
     ];
   }
 
-  static List<_FrequencyPoint> _weekdayFrequencyStats(List<Incident> incidents) {
+  static List<_FrequencyPoint> _weekdayFrequencyStats(
+    List<Incident> incidents,
+  ) {
     final labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     final counts = List<int>.filled(7, 0);
     for (final incident in incidents) {
@@ -1187,7 +1229,9 @@ class _DashboardStats {
     ];
   }
 
-  static List<_FrequencyPoint> _timeOfDayFrequencyStats(List<Incident> incidents) {
+  static List<_FrequencyPoint> _timeOfDayFrequencyStats(
+    List<Incident> incidents,
+  ) {
     final counts = List<int>.filled(4, 0);
     for (final incident in incidents) {
       final start = incident.startTime;
@@ -1212,20 +1256,25 @@ class _DashboardStats {
   }
 
   static List<_ImpactRankingStat> _deviceRankingStats(List<Device> devices) {
-    final rankings = [
-      for (final device in devices)
-        _ImpactRankingStat(
-          label: device.name.isNotEmpty ? device.name : device.externalId ?? 'Dispositivo',
-          devices: 1,
-          incidents: device.incidentCount,
-          downtimeSeconds: device.totalDowntimeSeconds,
-        ),
-    ].where((stat) => stat.incidents > 0 || stat.downtimeSeconds > 0).toList()
-      ..sort((a, b) {
-        final incidentCompare = b.incidents.compareTo(a.incidents);
-        if (incidentCompare != 0) return incidentCompare;
-        return b.downtimeSeconds.compareTo(a.downtimeSeconds);
-      });
+    final rankings =
+        [
+              for (final device in devices)
+                _ImpactRankingStat(
+                  label: device.name.isNotEmpty
+                      ? device.name
+                      : device.externalId ?? 'Dispositivo',
+                  devices: 1,
+                  incidents: device.incidentCount,
+                  downtimeSeconds: device.totalDowntimeSeconds,
+                ),
+            ]
+            .where((stat) => stat.incidents > 0 || stat.downtimeSeconds > 0)
+            .toList()
+          ..sort((a, b) {
+            final incidentCompare = b.incidents.compareTo(a.incidents);
+            if (incidentCompare != 0) return incidentCompare;
+            return b.downtimeSeconds.compareTo(a.downtimeSeconds);
+          });
     return rankings.take(10).toList();
   }
 }

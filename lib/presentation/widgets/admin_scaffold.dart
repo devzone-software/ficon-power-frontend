@@ -82,26 +82,36 @@ class AdminScaffold extends StatelessWidget {
             builder: (context, constraints) {
               final wide = MediaQuery.of(context).size.width >= 720;
               final visibleItems = navItems
-                  .where((item) => !item.superadminOnly || currentUser.canManageUsers)
+                  .where(
+                    (item) =>
+                        !item.superadminOnly || currentUser.canManageUsers,
+                  )
                   .toList();
               if (!wide) {
-                return PopupMenuButton<String>(
-                  icon: const Icon(Icons.menu),
-                  tooltip: 'Secciones',
-                  onSelected: (route) => _goTo(context, route),
-                  itemBuilder: (context) => [
-                    for (final item in visibleItems)
-                      PopupMenuItem(
-                        value: item.route,
-                        child: Text(
-                          item.label,
-                          style: TextStyle(
-                            fontWeight: item.route == currentRoute
-                                ? FontWeight.w700
-                                : FontWeight.w400,
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _UserMenu(user: currentUser, onLogout: onLogout),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.menu),
+                      tooltip: 'Secciones',
+                      onSelected: (route) => _goTo(context, route),
+                      itemBuilder: (context) => [
+                        for (final item in visibleItems)
+                          PopupMenuItem(
+                            value: item.route,
+                            child: Text(
+                              item.label,
+                              style: TextStyle(
+                                fontWeight: item.route == currentRoute
+                                    ? FontWeight.w700
+                                    : FontWeight.w400,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                      ],
+                    ),
+                    const SizedBox(width: 4),
                   ],
                 );
               }
@@ -181,11 +191,10 @@ class _NavButton extends StatelessWidget {
         onPressed: active ? null : onPressed,
         style: TextButton.styleFrom(
           foregroundColor: active ? FiconColors.ink : Colors.white,
-          backgroundColor:
-              active ? FiconColors.cyan.withValues(alpha: 0.86) : null,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          backgroundColor: active
+              ? FiconColors.cyan.withValues(alpha: 0.86)
+              : null,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: Text(
           label,
