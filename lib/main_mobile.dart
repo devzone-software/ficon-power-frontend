@@ -21,7 +21,7 @@ void main() {
         repository: repository,
         session: session,
         title: 'FICON Power Beta',
-        showBetaBanner: true,
+        showBetaBanner: false,
       ),
     ),
   );
