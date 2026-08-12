@@ -19,6 +19,13 @@ mkdir -p \
   "${CACHE_DIR}/android-cmake" \
   "${PROJECT_DIR}/dist"
 
+# Normaliza ownership de artefactos que pudieron quedar creados por Docker
+# como root/nobody en compilaciones anteriores.
+docker run --rm \
+  -v "${PROJECT_DIR}:/app" \
+  alpine:3.20 \
+  sh -c "chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.dart_tool /app/.mobile-build-cache /app/build /app/dist 2>/dev/null || true"
+
 # Evita referencias rotas a cachés internas de contenedores anteriores.
 rm -rf "${PROJECT_DIR}/.dart_tool"
 
