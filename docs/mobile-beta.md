@@ -9,6 +9,7 @@ Esta beta reutiliza el backend, autenticación y vistas actuales del dashboard F
 Incluido:
 
 - Login contra el backend actual.
+- Sesión persistente en almacenamiento seguro del celular hasta cerrar sesión.
 - Acceso a dashboard, dispositivos, incidentes y eventos.
 - Permiso Android de notificaciones.
 - Notificaciones locales beta al detectar eventos nuevos desde `/api/events`.
@@ -38,6 +39,16 @@ Esta fase es suficiente para pruebas internas con la app abierta o viva en
 memoria. Para recibir alertas cuando Android haya cerrado la app por completo,
 la siguiente fase debe integrar Firebase Cloud Messaging y registrar tokens
 móviles en el backend.
+
+## Sesión móvil persistente
+
+En Android, la beta guarda el token y el usuario en almacenamiento seguro del
+dispositivo. Si cierras la app o la eliminas de segundo plano, al abrirla de
+nuevo intentará restaurar la sesión y entrar directo al dashboard.
+
+La sesión solo se borra cuando el usuario pulsa “Cerrar sesión”. Si el backend
+invalida el token por expiración o seguridad, la app deberá volver a iniciar
+sesión.
 
 ## Ejecutar en Android emulator
 

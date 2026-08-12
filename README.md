@@ -91,6 +91,9 @@ locales al detectar eventos nuevos mientras la app está autenticada. Para
 notificaciones con la app cerrada se requiere la siguiente fase con Firebase
 Cloud Messaging.
 
+La sesión móvil se guarda en almacenamiento seguro del celular y se restaura al
+abrir la app hasta que el usuario cierre sesión.
+
 Para generar el APK beta contra el VPS:
 
 ```bash
