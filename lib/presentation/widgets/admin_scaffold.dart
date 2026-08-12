@@ -69,7 +69,17 @@ class AdminScaffold extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: 64,
         titleSpacing: 20,
-        title: const FiconBrandMark(height: 40),
+        title: Tooltip(
+          message: 'Ir al dashboard',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => _goTo(context, AppRoutes.dashboard),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: FiconBrandMark(height: 40),
+            ),
+          ),
+        ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
           child: Container(
