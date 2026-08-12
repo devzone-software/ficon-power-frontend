@@ -30,10 +30,14 @@ class FiconPowerApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.session,
+    this.title = 'FICON Power',
+    this.showBetaBanner = false,
   });
 
   final FiconMonitoringRepository repository;
   final AuthSession session;
+  final String title;
+  final bool showBetaBanner;
 
   @override
   State<FiconPowerApp> createState() => _FiconPowerAppState();
@@ -71,9 +75,23 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
       animation: widget.session,
       builder: (context, _) => MaterialApp(
         navigatorKey: _navigatorKey,
-        title: 'FICON Power',
+        title: widget.title,
         debugShowCheckedModeBanner: false,
         theme: buildFiconTheme(),
+        builder: (context, child) {
+          if (!widget.showBetaBanner || child == null) return child ?? const SizedBox.shrink();
+          return Banner(
+            message: 'BETA',
+            location: BannerLocation.topEnd,
+            color: FiconColors.cyan,
+            textStyle: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+            child: child,
+          );
+        },
         initialRoute: widget.session.isAuthenticated
             ? AppRoutes.dashboard
             : AppRoutes.login,

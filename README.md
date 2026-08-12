@@ -73,6 +73,19 @@ flutter run -d chrome \
 
 En Android emulator, el backend local se alcanza como `http://10.0.2.2:8080`.
 
+### App móvil beta interna
+
+La rama móvil usa un entrypoint separado para compilar una beta interna sin afectar la entrada web:
+
+```bash
+flutter run \
+  -t lib/main_mobile.dart \
+  -d android \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8080
+```
+
+La guía completa está en [`docs/mobile-beta.md`](docs/mobile-beta.md).
+
 ### Sistema completo con Docker
 
 Desde `ficon-power-frontend/`, manteniendo `ficon-power-backend/` como carpeta hermana:
