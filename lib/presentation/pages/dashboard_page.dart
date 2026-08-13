@@ -299,14 +299,14 @@ class _DashboardBody extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final width = constraints.maxWidth;
+                    final spacing = width >= 560 ? 16.0 : 10.0;
+                    final compactCards = width < 560;
                     final cardWidth = width >= 900
-                        ? (width - 3 * 16) / 4
-                        : width >= 560
-                        ? (width - 16) / 2
-                        : width;
+                        ? (width - 3 * spacing) / 4
+                        : (width - spacing) / 2;
                     return Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
+                      spacing: spacing,
+                      runSpacing: spacing,
                       children: [
                         _KpiCard(
                           title: 'Sedes',
@@ -314,6 +314,7 @@ class _DashboardBody extends StatelessWidget {
                           icon: Icons.business,
                           color: FiconColors.logoBlue,
                           width: cardWidth,
+                          compact: compactCards,
                         ),
                         _KpiCard(
                           title: 'Dispositivos',
@@ -321,6 +322,7 @@ class _DashboardBody extends StatelessWidget {
                           icon: Icons.electrical_services,
                           color: FiconColors.cyanSoft,
                           width: cardWidth,
+                          compact: compactCards,
                         ),
                         _KpiCard(
                           title: 'En línea',
@@ -328,6 +330,7 @@ class _DashboardBody extends StatelessWidget {
                           icon: Icons.check_circle_outline,
                           color: StatusColors.online,
                           width: cardWidth,
+                          compact: compactCards,
                         ),
                         _KpiCard(
                           title: 'Incidentes activos',
@@ -337,6 +340,7 @@ class _DashboardBody extends StatelessWidget {
                               ? StatusColors.offline
                               : StatusColors.online,
                           width: cardWidth,
+                          compact: compactCards,
                         ),
                       ],
                     );
@@ -447,6 +451,7 @@ class _KpiCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.width,
+    this.compact = false,
   });
 
   final String title;
@@ -454,6 +459,7 @@ class _KpiCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double width;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -462,29 +468,32 @@ class _KpiCard extends StatelessWidget {
       width: width,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(compact ? 14 : 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(compact ? 8 : 10),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: compact ? 20 : 24),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: compact ? 10 : 16),
               Text(
                 value,
                 style: textTheme.headlineMedium?.copyWith(
                   color: FiconColors.ink,
                   fontWeight: FontWeight.w800,
+                  fontSize: compact ? 24 : null,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: textTheme.bodySmall?.copyWith(
                   color: FiconColors.slate,
                   fontWeight: FontWeight.w600,
