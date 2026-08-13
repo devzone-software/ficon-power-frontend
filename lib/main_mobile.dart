@@ -22,15 +22,18 @@ Future<void> main() async {
   session.addListener(() => unawaited(sessionStorage.save(session)));
 
   final repository = FiconMonitoringRepository(session: session);
+  final navigatorKey = GlobalKey<NavigatorState>();
   runApp(
     MobileUpdateChecker(
       session: session,
+      navigatorKey: navigatorKey,
       child: MobileEventNotificationWatcher(
         repository: repository,
         session: session,
         child: FiconPowerApp(
           repository: repository,
           session: session,
+          navigatorKey: navigatorKey,
           title: 'FICON Power',
           showBetaBanner: false,
         ),

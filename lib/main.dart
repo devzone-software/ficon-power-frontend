@@ -30,12 +30,14 @@ class FiconPowerApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.session,
+    this.navigatorKey,
     this.title = 'FICON Power',
     this.showBetaBanner = false,
   });
 
   final FiconMonitoringRepository repository;
   final AuthSession session;
+  final GlobalKey<NavigatorState>? navigatorKey;
   final String title;
   final bool showBetaBanner;
 
@@ -44,7 +46,7 @@ class FiconPowerApp extends StatefulWidget {
 }
 
 class _FiconPowerAppState extends State<FiconPowerApp> {
-  final _navigatorKey = GlobalKey<NavigatorState>();
+  late final GlobalKey<NavigatorState> _navigatorKey;
   late final GetMonitoringOverviewService getOverview;
   late final GetDevicesService getDevices;
   late final GetIncidentsService getIncidents;
@@ -57,6 +59,7 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
   @override
   void initState() {
     super.initState();
+    _navigatorKey = widget.navigatorKey ?? GlobalKey<NavigatorState>();
     getOverview = GetMonitoringOverviewService(widget.repository);
     getDevices = GetDevicesService(widget.repository);
     getIncidents = GetIncidentsService(widget.repository);

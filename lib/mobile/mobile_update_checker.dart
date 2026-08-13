@@ -12,11 +12,13 @@ class MobileUpdateChecker extends StatefulWidget {
   const MobileUpdateChecker({
     super.key,
     required this.session,
+    required this.navigatorKey,
     required this.child,
     this.checkInterval = const Duration(minutes: 30),
   });
 
   final AuthSession session;
+  final GlobalKey<NavigatorState> navigatorKey;
   final Widget child;
   final Duration checkInterval;
 
@@ -47,7 +49,9 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
     if (!mounted) return;
     if (widget.session.isAuthenticated) {
       _timer ??= Timer.periodic(widget.checkInterval, (_) => _check());
-      unawaited(_check());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_check());
+      });
     } else {
       _timer?.cancel();
       _timer = null;
@@ -64,8 +68,8 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
       if (manifest.versionCode <= AppConfig.appVersionCode) return;
       if (_lastPromptedVersionCode == manifest.versionCode) return;
 
-      _lastPromptedVersionCode = manifest.versionCode;
-      await _showUpdateDialog(manifest);
+      final prompted = await _showUpdateDialog(manifest);
+      if (prompted) _lastPromptedVersionCode = manifest.versionCode;
     } catch (_) {
       // Si el manifest no existe o no hay red, no bloquea la app.
     } finally {
@@ -92,10 +96,15 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
     return Uri.parse('$base/mobile/version.json');
   }
 
-  Future<void> _showUpdateDialog(_MobileUpdateManifest manifest) async {
-    final context = this.context;
-    return showDialog<void>(
+  Future<bool> _showUpdateDialog(_MobileUpdateManifest manifest) async {
+    final context =
+        widget.navigatorKey.currentContext ??
+        widget.navigatorKey.currentState?.overlay?.context;
+    if (context == null) return false;
+
+    await showDialog<void>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: !manifest.required,
       builder: (context) => AlertDialog(
         title: const Text('Actualización disponible'),
@@ -134,6 +143,7 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
         ],
       ),
     );
+    return true;
   }
 
   @override
