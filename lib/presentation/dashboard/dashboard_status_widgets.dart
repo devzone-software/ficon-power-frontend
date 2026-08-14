@@ -23,64 +23,6 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-/// Encabezado de sección reutilizable: ícono en recuadro teñido,
-/// título y subtítulo.
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.icon,
-    required this.color,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleMedium?.copyWith(
-                  color: FiconColors.ink,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: FiconColors.slate,
-                  ),
-                ),
-            ],
-          ),
-        ),
-        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
-      ],
-    );
-  }
-}
-
 class _OfflineDevicesCard extends StatelessWidget {
   const _OfflineDevicesCard({required this.devices});
 
@@ -95,7 +37,7 @@ class _OfflineDevicesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionHeader(
+            DashboardSectionHeader(
               icon: Icons.router_outlined,
               color: StatusColors.offline,
               title: 'Fuera de línea',
@@ -151,7 +93,7 @@ class _RecentIncidentsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionHeader(
+            const DashboardSectionHeader(
               icon: Icons.history,
               color: FiconColors.cyanSoft,
               title: 'Incidentes recientes',
@@ -225,7 +167,7 @@ class _NotificationTemplatesCardState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionHeader(
+            const DashboardSectionHeader(
               icon: Icons.notifications_active_outlined,
               color: FiconColors.cyanSoft,
               title: 'Plantillas Meta de WhatsApp',

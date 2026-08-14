@@ -253,7 +253,7 @@ class _DashboardBody extends StatelessWidget {
                   total: data.devices.length,
                 ),
                 const SizedBox(height: 24),
-                _DashboardAnalyticsSection(stats: stats),
+                DashboardAnalyticsSection(stats: stats),
                 const SizedBox(height: 24),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -311,7 +311,7 @@ class _MobileAppDownloadCard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact = constraints.maxWidth < 620;
-            final header = const _SectionHeader(
+            final header = const DashboardSectionHeader(
               icon: Icons.phone_android_outlined,
               color: FiconColors.cyanSoft,
               title: 'App móvil',
@@ -437,7 +437,7 @@ class _FleetHealthCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _SectionHeader(
+                  child: DashboardSectionHeader(
                     icon: Icons.monitor_heart_outlined,
                     color: FiconColors.logoBlue,
                     title: 'Disponibilidad de dispositivos',

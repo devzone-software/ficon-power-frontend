@@ -12,11 +12,12 @@ import '../../domain/monitoring_overview.dart';
 import '../../domain/notification_template.dart';
 import '../../ports/input/get_monitoring_overview.dart';
 import '../../ports/input/get_notification_templates.dart';
+import '../dashboard/dashboard_analytics_section.dart';
+import '../dashboard/dashboard_section_header.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
-part '../dashboard/dashboard_analytics.dart';
 part '../dashboard/dashboard_overview_widgets.dart';
 part '../dashboard/dashboard_status_widgets.dart';
 
