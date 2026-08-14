@@ -5,11 +5,15 @@ import '../../application/admin_activity_controller.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../admin/admin_table_filters.dart';
+import '../admin/audit_tab.dart';
+import '../admin/blocked_users_tab.dart';
+import '../admin/login_attempts_tab.dart';
+import '../admin/sessions_tab.dart';
+import '../admin/users_tab.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
-part '../admin/admin_tables.dart';
 part '../admin/admin_user_dialog.dart';
 
 class AdminPage extends StatefulWidget {
@@ -181,7 +185,7 @@ class _AdminPageState extends State<AdminPage> {
           Expanded(
             child: TabBarView(
               children: [
-                _UsersTab(
+                UsersTab(
                   users: users,
                   onCreate: () => _openUserDialog(),
                   onEdit: _openUserDialog,
@@ -221,7 +225,7 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                   ],
                 ),
-                _BlockedUsersTab(
+                BlockedUsersTab(
                   blockedUsers: blockedUsers,
                   onUnblock: _unblockUser,
                   onRefresh: _activityController.refresh,
@@ -272,7 +276,7 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                   ],
                 ),
-                _AuditTab(
+                AuditTab(
                   logs: auditLogs,
                   onRefresh: _activityController.refresh,
                   filters: [
@@ -313,7 +317,7 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                   ],
                 ),
-                _LoginAttemptsTab(
+                LoginAttemptsTab(
                   attempts: loginAttempts,
                   onRefresh: _activityController.refresh,
                   filters: [
@@ -353,7 +357,7 @@ class _AdminPageState extends State<AdminPage> {
                     ),
                   ],
                 ),
-                _SessionsTab(
+                SessionsTab(
                   sessions: sessions,
                   onRefresh: _activityController.refresh,
                   filters: [

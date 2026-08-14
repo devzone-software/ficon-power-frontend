@@ -200,17 +200,3 @@ class _UserDialogState extends State<_UserDialog> {
     );
   }
 }
-
-class _EllipsisText extends StatelessWidget {
-  const _EllipsisText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
-      child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis),
-    );
-  }
-}
