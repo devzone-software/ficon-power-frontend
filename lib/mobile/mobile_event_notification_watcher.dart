@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../adapters/http/ficon_monitoring_repository.dart';
 import '../config/auth_session.dart';
 import '../domain/event.dart';
+import 'mobile_event_detector.dart';
 
 /// Observa eventos nuevos desde el backend y los muestra como notificaciones
 /// locales en la app móvil.
@@ -41,9 +42,9 @@ class _MobileEventNotificationWatcherState
 
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
+  final MobileEventDetector _eventDetector = MobileEventDetector();
 
   Timer? _timer;
-  String? _lastSeenEventId;
   bool _initializing = false;
   bool _notificationsReady = false;
   bool _polling = false;
@@ -92,18 +93,16 @@ class _MobileEventNotificationWatcherState
     } else {
       _timer?.cancel();
       _timer = null;
-      _lastSeenEventId = null;
+      _eventDetector.reset();
     }
   }
 
   Future<void> _primeLatestEvent() async {
-    if (_lastSeenEventId != null || _polling) return;
+    if (_eventDetector.isPrimed || _polling) return;
     _polling = true;
     try {
       final events = await widget.repository.fetchEvents(limit: 1);
-      if (events.isNotEmpty) {
-        _lastSeenEventId = events.first.id;
-      }
+      _eventDetector.prime(events);
     } catch (_) {
       // La UI principal ya maneja errores visibles de API.
     } finally {
@@ -118,24 +117,11 @@ class _MobileEventNotificationWatcherState
       final events = await widget.repository.fetchEvents(limit: 10);
       if (events.isEmpty) return;
 
-      final lastSeen = _lastSeenEventId;
-      if (lastSeen == null) {
-        _lastSeenEventId = events.first.id;
-        return;
-      }
-
-      final newEvents = <Event>[];
-      for (final event in events) {
-        if (event.id == lastSeen) break;
-        newEvents.add(event);
-      }
-
+      final newEvents = _eventDetector.detect(events);
       if (newEvents.isEmpty) return;
-
-      _lastSeenEventId = events.first.id;
       await _initializeNotifications();
 
-      for (final event in newEvents.reversed) {
+      for (final event in newEvents) {
         await _showEventNotification(event);
       }
     } catch (_) {
@@ -159,31 +145,14 @@ class _MobileEventNotificationWatcherState
       ),
     );
 
+    final content = EventNotificationContent.fromEvent(event);
     await _notifications.show(
       id: event.id.hashCode & 0x7fffffff,
-      title: _titleFor(event),
-      body: _bodyFor(event),
+      title: content.title,
+      body: content.body,
       notificationDetails: details,
       payload: event.id,
     );
-  }
-
-  String _titleFor(Event event) {
-    return switch (event.eventType) {
-      'deviceOffline' => 'Corte detectado',
-      'deviceOnline' => 'Retorno detectado',
-      _ => 'Nuevo evento FICON Power',
-    };
-  }
-
-  String _bodyFor(Event event) {
-    final device = event.deviceName?.trim().isNotEmpty == true
-        ? event.deviceName!.trim()
-        : 'Dispositivo';
-    final site = event.siteName?.trim().isNotEmpty == true
-        ? ' · ${event.siteName!.trim()}'
-        : '';
-    return '$device$site';
   }
 
   @override
