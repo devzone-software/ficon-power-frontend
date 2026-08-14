@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
 import '../config/auth_session.dart';
+import 'mobile_update_service.dart';
 
 class MobileUpdateChecker extends StatefulWidget {
   const MobileUpdateChecker({
@@ -28,12 +27,20 @@ class MobileUpdateChecker extends StatefulWidget {
 
 class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
   Timer? _timer;
+  late final MobileUpdateService _updateService;
   bool _checking = false;
   int? _lastPromptedVersionCode;
 
   @override
   void initState() {
     super.initState();
+    _updateService = MobileUpdateService(
+      manifestUri: MobileUpdateService.resolveManifestUri(
+        configuredUrl: AppConfig.mobileUpdateManifestUrl,
+        apiBaseUrl: AppConfig.apiBaseUrl,
+      ),
+      installedVersionCode: AppConfig.appVersionCode,
+    );
     widget.session.addListener(_handleSessionChange);
     _handleSessionChange();
   }
@@ -42,6 +49,7 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
   void dispose() {
     widget.session.removeListener(_handleSessionChange);
     _timer?.cancel();
+    _updateService.close();
     super.dispose();
   }
 
@@ -63,9 +71,8 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
     if (_checking || !widget.session.isAuthenticated) return;
     _checking = true;
     try {
-      final manifest = await _fetchManifest();
+      final manifest = await _updateService.findAvailableUpdate();
       if (manifest == null || !mounted) return;
-      if (manifest.versionCode <= AppConfig.appVersionCode) return;
       if (_lastPromptedVersionCode == manifest.versionCode) return;
 
       final prompted = await _showUpdateDialog(manifest);
@@ -77,26 +84,7 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
     }
   }
 
-  Future<_MobileUpdateManifest?> _fetchManifest() async {
-    final response = await http
-        .get(_manifestUri(), headers: {'Accept': 'application/json'})
-        .timeout(const Duration(seconds: 10));
-    if (response.statusCode != 200) return null;
-    return _MobileUpdateManifest.fromJson(
-      (jsonDecode(utf8.decode(response.bodyBytes)) as Map<dynamic, dynamic>)
-          .cast<String, dynamic>(),
-    );
-  }
-
-  Uri _manifestUri() {
-    final configured = AppConfig.mobileUpdateManifestUrl.trim();
-    if (configured.isNotEmpty) return Uri.parse(configured);
-
-    final base = AppConfig.apiBaseUrl.replaceFirst(RegExp(r'/$'), '');
-    return Uri.parse('$base/mobile/version.json');
-  }
-
-  Future<bool> _showUpdateDialog(_MobileUpdateManifest manifest) async {
+  Future<bool> _showUpdateDialog(MobileUpdateManifest manifest) async {
     final context =
         widget.navigatorKey.currentContext ??
         widget.navigatorKey.currentState?.overlay?.context;
@@ -148,30 +136,4 @@ class _MobileUpdateCheckerState extends State<MobileUpdateChecker> {
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-class _MobileUpdateManifest {
-  const _MobileUpdateManifest({
-    required this.versionCode,
-    required this.versionName,
-    required this.apkUri,
-    required this.notes,
-    required this.required,
-  });
-
-  final int versionCode;
-  final String versionName;
-  final Uri apkUri;
-  final String notes;
-  final bool required;
-
-  factory _MobileUpdateManifest.fromJson(Map<String, dynamic> json) {
-    return _MobileUpdateManifest(
-      versionCode: (json['versionCode'] as num?)?.toInt() ?? 0,
-      versionName: json['versionName'] as String? ?? '',
-      apkUri: Uri.parse(json['apkUrl'] as String? ?? ''),
-      notes: json['notes'] as String? ?? '',
-      required: json['required'] as bool? ?? false,
-    );
-  }
 }
