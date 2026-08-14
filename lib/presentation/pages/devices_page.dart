@@ -9,12 +9,12 @@ import '../../ports/input/create_site.dart';
 import '../../ports/input/get_devices.dart';
 import '../../ports/input/get_sites.dart';
 import '../../ports/input/update_device_details.dart';
-import '../theme/ficon_theme.dart';
+import '../devices/devices_compact_list.dart';
+import '../devices/devices_table.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
 
-part '../devices/device_views.dart';
 part '../devices/edit_device_dialog.dart';
 
 /// Tabla de dispositivos monitoreados (vista de la tabla `devices`).
@@ -132,7 +132,7 @@ class _DevicesPageState extends State<DevicesPage> {
                           child: Text('No hay dispositivos con esos filtros.'),
                         )
                       else if (compact)
-                        _DevicesCompactList(
+                        DevicesCompactList(
                           devices: filteredDevices,
                           onEdit: _edit,
                           canEdit: widget.currentUser.canEditDevices,
@@ -144,7 +144,7 @@ class _DevicesPageState extends State<DevicesPage> {
                             constraints: BoxConstraints(
                               minWidth: constraints.maxWidth,
                             ),
-                            child: _DevicesTable(
+                            child: DevicesTable(
                               devices: filteredDevices,
                               onEdit: _edit,
                               canEdit: widget.currentUser.canEditDevices,
