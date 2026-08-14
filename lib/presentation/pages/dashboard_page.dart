@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../application/dashboard_statistics.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/incident.dart';

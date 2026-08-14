@@ -179,7 +179,7 @@ class _DashboardBody extends StatelessWidget {
         .where((d) => !d.isOnline && d.active)
         .toList();
     final recentIncidents = data.incidents.take(6).toList();
-    final stats = _DashboardStats.from(data);
+    final stats = DashboardStatistics.from(data);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
