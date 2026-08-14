@@ -19,6 +19,42 @@ bool matchesDateFilter(DateTime? value, DateTime? selectedDate) {
       localValue.day == selectedDate.day;
 }
 
+class ColumnFilterState {
+  final Map<String, String> _textValues = {};
+  final Map<String, DateTime?> _dateValues = {};
+
+  String text(String key) => _textValues[key] ?? '';
+  DateTime? date(String key) => _dateValues[key];
+  List<String> ipSegments(String key) => [
+    for (var index = 0; index < 4; index++) text('$key.$index'),
+  ];
+
+  void setText(String key, String value) => _textValues[key] = value;
+  void setDate(String key, DateTime? value) => _dateValues[key] = value;
+  void setIpSegment(String key, int index, String value) {
+    _textValues['$key.$index'] = value;
+  }
+
+  bool matchesText(String key, String? value) =>
+      matchesTextFilter(value, text(key));
+  bool matchesDate(String key, DateTime? value) =>
+      matchesDateFilter(value, date(key));
+
+  bool matchesIp(String key, String? value) {
+    final filters = ipSegments(key).map(normalizeFilterValue).toList();
+    if (filters.every((filter) => filter.isEmpty)) return true;
+    final segments = (value ?? '').split('.');
+    if (segments.length != 4) return false;
+    for (var index = 0; index < filters.length; index++) {
+      final filter = filters[index];
+      if (filter.isNotEmpty && !segments[index].startsWith(filter)) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
 List<String> uniqueColumnOptions<T>(
   List<T> rows,
   String? Function(T row) valueForRow,
@@ -273,6 +309,126 @@ class DateColumnFilter extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class IpColumnFilter extends StatefulWidget {
+  const IpColumnFilter({
+    super.key,
+    required this.label,
+    required this.values,
+    required this.onChanged,
+    this.width = 330,
+  });
+
+  final String label;
+  final List<String> values;
+  final void Function(int index, String value) onChanged;
+  final double width;
+
+  @override
+  State<IpColumnFilter> createState() => _IpColumnFilterState();
+}
+
+class _IpColumnFilterState extends State<IpColumnFilter> {
+  late final List<TextEditingController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = [
+      for (var index = 0; index < 4; index++)
+        TextEditingController(
+          text: index < widget.values.length ? widget.values[index] : '',
+        ),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant IpColumnFilter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    for (var index = 0; index < _controllers.length; index++) {
+      final value = index < widget.values.length ? widget.values[index] : '';
+      if (_controllers[index].text != value) {
+        _controllers[index]
+          ..text = value
+          ..selection = TextSelection.collapsed(offset: value.length);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.width,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: widget.label,
+          prefixIcon: const Icon(Icons.lan_outlined),
+          suffixIcon: _controllers.every((item) => item.text.isEmpty)
+              ? null
+              : IconButton(
+                  tooltip: 'Limpiar IP',
+                  onPressed: () {
+                    for (var index = 0; index < _controllers.length; index++) {
+                      _controllers[index].clear();
+                      widget.onChanged(index, '');
+                    }
+                  },
+                  icon: const Icon(Icons.close),
+                ),
+        ),
+        child: Row(
+          children: [
+            for (var index = 0; index < _controllers.length; index++) ...[
+              Expanded(
+                child: TextField(
+                  controller: _controllers[index],
+                  maxLength: 3,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: index == 0 ? '198' : '',
+                    isDense: true,
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    final digits = value.replaceAll(RegExp('[^0-9]'), '');
+                    final next = digits.length > 3
+                        ? digits.substring(0, 3)
+                        : digits;
+                    if (next != value) {
+                      _controllers[index]
+                        ..text = next
+                        ..selection = TextSelection.collapsed(
+                          offset: next.length,
+                        );
+                    }
+                    widget.onChanged(index, next);
+                  },
+                ),
+              ),
+              if (index < _controllers.length - 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Text(
+                    '.',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+            ],
+          ],
         ),
       ),
     );

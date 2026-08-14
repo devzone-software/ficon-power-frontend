@@ -32,17 +32,13 @@ class _IncidentsPageState extends State<IncidentsPage> {
   late Future<List<Incident>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
-  final Map<String, String> _textFilters = {};
-  final Map<String, DateTime?> _dateFilters = {};
+  final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
     _future = widget.getIncidents();
-    _autoRefreshTimer = Timer.periodic(
-      _autoRefreshInterval,
-      (_) => _refresh(),
-    );
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
 
   Future<void> _refresh() async {
@@ -83,9 +79,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
           final incidents = snapshot.data!;
           final filteredIncidents = incidents.where(_matchesFilters).toList();
           if (incidents.isEmpty) {
-            return const Center(
-              child: Text('No hay incidentes registrados.'),
-            );
+            return const Center(child: Text('No hay incidentes registrados.'));
           }
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -98,8 +92,9 @@ class _IncidentsPageState extends State<IncidentsPage> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(minWidth: constraints.maxWidth),
+                        constraints: BoxConstraints(
+                          minWidth: constraints.maxWidth,
+                        ),
                         child: _IncidentsTable(incidents: filteredIncidents),
                       ),
                     ),
@@ -114,41 +109,49 @@ class _IncidentsPageState extends State<IncidentsPage> {
   }
 
   List<Widget> _filters(List<Incident> incidents) => [
-        _textFilter(
-          keyName: 'device',
-          label: 'Dispositivo',
-          options: uniqueColumnOptions(incidents, (incident) => incident.deviceName),
-        ),
-        _textFilter(
-          keyName: 'site',
-          label: 'Sede',
-          options: uniqueColumnOptions(incidents, (incident) => incident.siteName),
-        ),
-        _textFilter(
-          keyName: 'status',
-          label: 'Estado',
-          options: uniqueColumnOptions(incidents, (incident) => _incidentStatusLabel(incident.status)),
-        ),
-        DateColumnFilter(
-          label: 'Inicio',
-          value: _dateFilters['startTime'],
-          onChanged: (value) => setState(() => _dateFilters['startTime'] = value),
-        ),
-        DateColumnFilter(
-          label: 'Fin',
-          value: _dateFilters['endTime'],
-          onChanged: (value) => setState(() => _dateFilters['endTime'] = value),
-        ),
-        _textFilter(
-          keyName: 'duration',
-          label: 'Duración',
-          options: uniqueColumnOptions(
-            incidents,
-            (incident) => formatDurationSeconds(incident.durationSeconds),
-          ),
-          width: 170,
-        ),
-      ];
+    _textFilter(
+      keyName: 'device',
+      label: 'Dispositivo',
+      options: uniqueColumnOptions(
+        incidents,
+        (incident) => incident.deviceName,
+      ),
+    ),
+    _textFilter(
+      keyName: 'site',
+      label: 'Sede',
+      options: uniqueColumnOptions(incidents, (incident) => incident.siteName),
+    ),
+    _textFilter(
+      keyName: 'status',
+      label: 'Estado',
+      options: uniqueColumnOptions(
+        incidents,
+        (incident) => _incidentStatusLabel(incident.status),
+      ),
+    ),
+    DateColumnFilter(
+      label: 'Inicio',
+      value: _columnFilters.date('startTime'),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setDate('startTime', value)),
+    ),
+    DateColumnFilter(
+      label: 'Fin',
+      value: _columnFilters.date('endTime'),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setDate('endTime', value)),
+    ),
+    _textFilter(
+      keyName: 'duration',
+      label: 'Duración',
+      options: uniqueColumnOptions(
+        incidents,
+        (incident) => formatDurationSeconds(incident.durationSeconds),
+      ),
+      width: 170,
+    ),
+  ];
 
   Widget _textFilter({
     required String keyName,
@@ -158,32 +161,36 @@ class _IncidentsPageState extends State<IncidentsPage> {
   }) {
     return TextColumnFilter(
       label: label,
-      value: _textFilters[keyName] ?? '',
+      value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setText(keyName, value)),
     );
   }
 
   bool _matchesFilters(Incident incident) {
-    return matchesTextFilter(incident.deviceName, _textFilters['device'] ?? '') &&
-        matchesTextFilter(incident.siteName, _textFilters['site'] ?? '') &&
-        matchesTextFilter(_incidentStatusLabel(incident.status), _textFilters['status'] ?? '') &&
-        matchesDateFilter(incident.startTime, _dateFilters['startTime']) &&
-        matchesDateFilter(incident.endTime, _dateFilters['endTime']) &&
-        matchesTextFilter(
+    return _columnFilters.matchesText('device', incident.deviceName) &&
+        _columnFilters.matchesText('site', incident.siteName) &&
+        _columnFilters.matchesText(
+          'status',
+          _incidentStatusLabel(incident.status),
+        ) &&
+        _columnFilters.matchesDate('startTime', incident.startTime) &&
+        _columnFilters.matchesDate('endTime', incident.endTime) &&
+        _columnFilters.matchesText(
+          'duration',
           formatDurationSeconds(incident.durationSeconds),
-          _textFilters['duration'] ?? '',
         );
   }
 }
 
 String _incidentStatusLabel(String status) => switch (status) {
-      'active' => 'Activo',
-      'acknowledged' => 'Atendido',
-      'resolved' => 'Resuelto',
-      _ => status,
-    };
+  'active' => 'Activo',
+  'acknowledged' => 'Atendido',
+  'resolved' => 'Resuelto',
+  _ => status,
+};
 
 class _IncidentsTable extends StatelessWidget {
   const _IncidentsTable({required this.incidents});
@@ -210,9 +217,7 @@ class _IncidentsTable extends StatelessWidget {
               DataCell(IncidentStatusChip(status: incident.status)),
               DataCell(Text(formatDateTime(incident.startTime))),
               DataCell(Text(formatDateTime(incident.endTime))),
-              DataCell(
-                Text(formatDurationSeconds(incident.durationSeconds)),
-              ),
+              DataCell(Text(formatDurationSeconds(incident.durationSeconds))),
             ],
           ),
       ],

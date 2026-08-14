@@ -8,8 +8,8 @@ import '../../domain/auth_user.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/table_filters.dart';
 
-part '../admin/admin_filters.dart';
 part '../admin/admin_tables.dart';
 part '../admin/admin_user_dialog.dart';
 
@@ -37,8 +37,7 @@ class _AdminPageState extends State<AdminPage> {
   Timer? _liveRefreshTimer;
   bool _loading = true;
   bool _refreshing = false;
-  final Map<String, String> _textFilters = {};
-  final Map<String, DateTime?> _dateFilters = {};
+  final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
@@ -501,53 +500,22 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   bool _matchesText(String keyName, String? value) {
-    final query = _normalize(_textFilters[keyName] ?? '');
-    if (query.isEmpty) return true;
-    return _normalize(value ?? '').contains(query);
+    return _columnFilters.matchesText(keyName, value);
   }
 
   bool _matchesDate(String keyName, DateTime? value) {
-    final selectedDate = _dateFilters[keyName];
-    if (selectedDate == null) return true;
-    if (value == null) return false;
-    return value.year == selectedDate.year &&
-        value.month == selectedDate.month &&
-        value.day == selectedDate.day;
+    return _columnFilters.matchesDate(keyName, value);
   }
 
   bool _matchesIp(String keyName, String? value) {
-    final filters = [
-      _textFilters['$keyName.0'] ?? '',
-      _textFilters['$keyName.1'] ?? '',
-      _textFilters['$keyName.2'] ?? '',
-      _textFilters['$keyName.3'] ?? '',
-    ].map(_normalize).toList();
-    if (filters.every((filter) => filter.isEmpty)) return true;
-    final segments = (value ?? '').split('.');
-    if (segments.length != 4) return false;
-    for (var index = 0; index < filters.length; index++) {
-      final filter = filters[index];
-      if (filter.isEmpty) continue;
-      if (!segments[index].startsWith(filter)) return false;
-    }
-    return true;
+    return _columnFilters.matchesIp(keyName, value);
   }
 
   List<String> _uniqueColumnOptions<T>(
     List<T> rows,
     String? Function(T row) valueForRow,
   ) {
-    final byNormalizedValue = <String, String>{};
-    for (final row in rows) {
-      final cleanValue = valueForRow(row)?.trim();
-      if (cleanValue == null || cleanValue.isEmpty || cleanValue == '—') {
-        continue;
-      }
-      byNormalizedValue.putIfAbsent(_normalize(cleanValue), () => cleanValue);
-    }
-    final options = byNormalizedValue.values.toList()
-      ..sort((a, b) => _normalize(a).compareTo(_normalize(b)));
-    return options;
+    return uniqueColumnOptions(rows, valueForRow);
   }
 
   Widget _textColumnFilter({
@@ -557,11 +525,13 @@ class _AdminPageState extends State<AdminPage> {
   }) {
     return SizedBox(
       width: 240,
-      child: _SearchableTableFilter(
+      child: TextColumnFilter(
         label: label,
-        value: _textFilters[keyName] ?? '',
+        value: _columnFilters.text(keyName),
         options: options,
-        onChanged: (value) => setState(() => _textFilters[keyName] = value),
+        onChanged: (value) =>
+            setState(() => _columnFilters.setText(keyName, value)),
+        width: 240,
       ),
     );
   }
@@ -569,10 +539,12 @@ class _AdminPageState extends State<AdminPage> {
   Widget _dateColumnFilter(String keyName, String label) {
     return SizedBox(
       width: 190,
-      child: _DateColumnFilter(
+      child: DateColumnFilter(
         label: label,
-        value: _dateFilters[keyName],
-        onChanged: (value) => setState(() => _dateFilters[keyName] = value),
+        value: _columnFilters.date(keyName),
+        onChanged: (value) =>
+            setState(() => _columnFilters.setDate(keyName, value)),
+        width: 190,
       ),
     );
   }
@@ -580,16 +552,12 @@ class _AdminPageState extends State<AdminPage> {
   Widget _ipColumnFilter(String keyName, String label) {
     return SizedBox(
       width: 330,
-      child: _IpColumnFilter(
+      child: IpColumnFilter(
         label: label,
-        values: [
-          _textFilters['$keyName.0'] ?? '',
-          _textFilters['$keyName.1'] ?? '',
-          _textFilters['$keyName.2'] ?? '',
-          _textFilters['$keyName.3'] ?? '',
-        ],
+        values: _columnFilters.ipSegments(keyName),
         onChanged: (index, value) =>
-            setState(() => _textFilters['$keyName.$index'] = value),
+            setState(() => _columnFilters.setIpSegment(keyName, index, value)),
+        width: 330,
       ),
     );
   }

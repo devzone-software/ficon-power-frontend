@@ -32,17 +32,13 @@ class _EventsPageState extends State<EventsPage> {
   late Future<List<Event>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
-  final Map<String, String> _textFilters = {};
-  final Map<String, DateTime?> _dateFilters = {};
+  final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
     _future = widget.getEvents();
-    _autoRefreshTimer = Timer.periodic(
-      _autoRefreshInterval,
-      (_) => _refresh(),
-    );
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
 
   Future<void> _refresh() async {
@@ -96,8 +92,9 @@ class _EventsPageState extends State<EventsPage> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(minWidth: constraints.maxWidth),
+                        constraints: BoxConstraints(
+                          minWidth: constraints.maxWidth,
+                        ),
                         child: _EventsTable(events: filteredEvents),
                       ),
                     ),
@@ -112,36 +109,37 @@ class _EventsPageState extends State<EventsPage> {
   }
 
   List<Widget> _filters(List<Event> events) => [
-        _textFilter(
-          keyName: 'type',
-          label: 'Tipo',
-          options: uniqueColumnOptions(events, (event) => event.eventType),
-        ),
-        _textFilter(
-          keyName: 'device',
-          label: 'Dispositivo',
-          options: uniqueColumnOptions(events, (event) => event.deviceName),
-        ),
-        _textFilter(
-          keyName: 'site',
-          label: 'Sede',
-          options: uniqueColumnOptions(events, (event) => event.siteName),
-        ),
-        DateColumnFilter(
-          label: 'Ocurrió',
-          value: _dateFilters['occurredAt'],
-          onChanged: (value) => setState(() => _dateFilters['occurredAt'] = value),
-        ),
-        _textFilter(
-          keyName: 'latency',
-          label: 'Latencia',
-          options: uniqueColumnOptions(
-            events,
-            (event) => '${event.deliveryLatencyMillis} ms',
-          ),
-          width: 170,
-        ),
-      ];
+    _textFilter(
+      keyName: 'type',
+      label: 'Tipo',
+      options: uniqueColumnOptions(events, (event) => event.eventType),
+    ),
+    _textFilter(
+      keyName: 'device',
+      label: 'Dispositivo',
+      options: uniqueColumnOptions(events, (event) => event.deviceName),
+    ),
+    _textFilter(
+      keyName: 'site',
+      label: 'Sede',
+      options: uniqueColumnOptions(events, (event) => event.siteName),
+    ),
+    DateColumnFilter(
+      label: 'Ocurrió',
+      value: _columnFilters.date('occurredAt'),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setDate('occurredAt', value)),
+    ),
+    _textFilter(
+      keyName: 'latency',
+      label: 'Latencia',
+      options: uniqueColumnOptions(
+        events,
+        (event) => '${event.deliveryLatencyMillis} ms',
+      ),
+      width: 170,
+    ),
+  ];
 
   Widget _textFilter({
     required String keyName,
@@ -151,21 +149,22 @@ class _EventsPageState extends State<EventsPage> {
   }) {
     return TextColumnFilter(
       label: label,
-      value: _textFilters[keyName] ?? '',
+      value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setText(keyName, value)),
     );
   }
 
   bool _matchesFilters(Event event) {
-    return matchesTextFilter(event.eventType, _textFilters['type'] ?? '') &&
-        matchesTextFilter(event.deviceName, _textFilters['device'] ?? '') &&
-        matchesTextFilter(event.siteName, _textFilters['site'] ?? '') &&
-        matchesDateFilter(event.occurredAt, _dateFilters['occurredAt']) &&
-        matchesTextFilter(
+    return _columnFilters.matchesText('type', event.eventType) &&
+        _columnFilters.matchesText('device', event.deviceName) &&
+        _columnFilters.matchesText('site', event.siteName) &&
+        _columnFilters.matchesDate('occurredAt', event.occurredAt) &&
+        _columnFilters.matchesText(
+          'latency',
           '${event.deliveryLatencyMillis} ms',
-          _textFilters['latency'] ?? '',
         );
   }
 }

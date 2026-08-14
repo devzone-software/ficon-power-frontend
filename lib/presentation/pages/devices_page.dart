@@ -47,8 +47,7 @@ class _DevicesPageState extends State<DevicesPage> {
   late Future<List<Device>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
-  final Map<String, String> _textFilters = {};
-  final Map<String, DateTime?> _dateFilters = {};
+  final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
@@ -197,9 +196,9 @@ class _DevicesPageState extends State<DevicesPage> {
     ),
     DateColumnFilter(
       label: 'Último cambio',
-      value: _dateFilters['lastStatusChange'],
+      value: _columnFilters.date('lastStatusChange'),
       onChanged: (value) =>
-          setState(() => _dateFilters['lastStatusChange'] = value),
+          setState(() => _columnFilters.setDate('lastStatusChange', value)),
     ),
     _textFilter(
       keyName: 'incidents',
@@ -220,35 +219,30 @@ class _DevicesPageState extends State<DevicesPage> {
   }) {
     return TextColumnFilter(
       label: label,
-      value: _textFilters[keyName] ?? '',
+      value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setText(keyName, value)),
     );
   }
 
   bool _matchesFilters(Device device) {
-    return matchesTextFilter(
+    return _columnFilters.matchesText(
+          'name',
           device.name.isNotEmpty ? device.name : device.externalId,
-          _textFilters['name'] ?? '',
         ) &&
-        matchesTextFilter(
-          device.externalId,
-          _textFilters['externalId'] ?? '',
-        ) &&
-        matchesTextFilter(device.siteName, _textFilters['site'] ?? '') &&
-        matchesTextFilter(device.district, _textFilters['district'] ?? '') &&
-        matchesTextFilter(
+        _columnFilters.matchesText('externalId', device.externalId) &&
+        _columnFilters.matchesText('site', device.siteName) &&
+        _columnFilters.matchesText('district', device.district) &&
+        _columnFilters.matchesText(
+          'status',
           device.isOnline ? 'En línea' : 'Fuera de línea',
-          _textFilters['status'] ?? '',
         ) &&
-        matchesDateFilter(
+        _columnFilters.matchesDate(
+          'lastStatusChange',
           device.lastStatusChange,
-          _dateFilters['lastStatusChange'],
         ) &&
-        matchesTextFilter(
-          '${device.incidentCount}',
-          _textFilters['incidents'] ?? '',
-        );
+        _columnFilters.matchesText('incidents', '${device.incidentCount}');
   }
 }
