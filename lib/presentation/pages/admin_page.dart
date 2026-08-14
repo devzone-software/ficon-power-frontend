@@ -4,10 +4,10 @@ import '../../adapters/http/ficon_monitoring_repository.dart';
 import '../../application/admin_activity_controller.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
+import '../admin/admin_table_filters.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
-import '../widgets/table_filters.dart';
 
 part '../admin/admin_tables.dart';
 part '../admin/admin_user_dialog.dart';
@@ -30,12 +30,13 @@ class AdminPage extends StatefulWidget {
 
 class _AdminPageState extends State<AdminPage> {
   late final AdminActivityController _activityController;
-  final ColumnFilterState _columnFilters = ColumnFilterState();
+  late final AdminTableFilters _filters;
 
   @override
   void initState() {
     super.initState();
     _activityController = AdminActivityController(load: _load)..start();
+    _filters = AdminTableFilters(onChanged: () => setState(() {}));
   }
 
   @override
@@ -145,15 +146,15 @@ class _AdminPageState extends State<AdminPage> {
     }
 
     final data = _activityController.data!;
-    final users = data.users.where(_matchesUserFilters).toList();
+    final users = data.users.where(_filters.matchesUser).toList();
     final blockedUsers = data.blockedUsers
-        .where(_matchesBlockedUserFilters)
+        .where(_filters.matchesBlockedUser)
         .toList();
-    final auditLogs = data.auditLogs.where(_matchesAuditLogFilters).toList();
+    final auditLogs = data.auditLogs.where(_filters.matchesAuditLog).toList();
     final loginAttempts = data.loginAttempts
-        .where(_matchesLoginAttemptFilters)
+        .where(_filters.matchesLoginAttempt)
         .toList();
-    final sessions = data.sessions.where(_matchesSessionFilters).toList();
+    final sessions = data.sessions.where(_filters.matchesSession).toList();
 
     return DefaultTabController(
       length: 5,
@@ -186,34 +187,34 @@ class _AdminPageState extends State<AdminPage> {
                   onEdit: _openUserDialog,
                   onRefresh: _activityController.refresh,
                   filters: [
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'users.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.users,
                         (user) => user.username,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'users.displayName',
                       label: 'Nombre',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.users,
                         (user) => user.displayName,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'users.role',
                       label: 'Rol',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.users,
                         (user) => user.role,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'users.status',
                       label: 'Estado',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.users,
                         (user) => user.active ? 'Activo' : 'Revocado',
                       ),
@@ -225,46 +226,46 @@ class _AdminPageState extends State<AdminPage> {
                   onUnblock: _unblockUser,
                   onRefresh: _activityController.refresh,
                   filters: [
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'blocked.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.blockedUsers,
                         (blocked) => blocked.username,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'blocked.displayName',
                       label: 'Nombre',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.blockedUsers,
                         (blocked) => blocked.displayName,
                       ),
                     ),
-                    _ipColumnFilter('blocked.ip', 'IP'),
-                    _textColumnFilter(
+                    _filters.ip('blocked.ip', 'IP'),
+                    _filters.text(
                       keyName: 'blocked.failedAttempts',
                       label: 'Fallos',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.blockedUsers,
                         (blocked) => '${blocked.failedAttempts}',
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'blocked.status',
                       label: 'Estado',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.blockedUsers,
                         (blocked) =>
                             blocked.active ? 'Bloqueado' : 'Liberado/expirado',
                       ),
                     ),
-                    _dateColumnFilter('blocked.blockedAt', 'Bloqueado'),
-                    _dateColumnFilter('blocked.expiresAt', 'Expira'),
-                    _textColumnFilter(
+                    _filters.date('blocked.blockedAt', 'Bloqueado'),
+                    _filters.date('blocked.expiresAt', 'Expira'),
+                    _filters.text(
                       keyName: 'blocked.unblockedBy',
                       label: 'Desbloqueado por',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.blockedUsers,
                         (blocked) => blocked.unblockedByUsername,
                       ),
@@ -275,37 +276,37 @@ class _AdminPageState extends State<AdminPage> {
                   logs: auditLogs,
                   onRefresh: _activityController.refresh,
                   filters: [
-                    _dateColumnFilter('audit.createdAt', 'Fecha'),
-                    _textColumnFilter(
+                    _filters.date('audit.createdAt', 'Fecha'),
+                    _filters.text(
                       keyName: 'audit.actor',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.auditLogs,
                         (log) =>
                             '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'audit.action',
                       label: 'Acción',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.auditLogs,
                         (log) => log.action,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'audit.entity',
                       label: 'Entidad',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.auditLogs,
                         (log) => '${log.entityType} ${log.entityId ?? ''}',
                       ),
                     ),
-                    _ipColumnFilter('audit.ip', 'IP'),
-                    _textColumnFilter(
+                    _filters.ip('audit.ip', 'IP'),
+                    _filters.text(
                       keyName: 'audit.userAgent',
                       label: 'Navegador',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.auditLogs,
                         (log) => log.userAgent,
                       ),
@@ -316,36 +317,36 @@ class _AdminPageState extends State<AdminPage> {
                   attempts: loginAttempts,
                   onRefresh: _activityController.refresh,
                   filters: [
-                    _dateColumnFilter('logins.createdAt', 'Fecha'),
-                    _textColumnFilter(
+                    _filters.date('logins.createdAt', 'Fecha'),
+                    _filters.text(
                       keyName: 'logins.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.loginAttempts,
                         (attempt) => attempt.username,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'logins.result',
                       label: 'Resultado',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.loginAttempts,
                         (attempt) => attempt.success ? 'Correcto' : 'Fallido',
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'logins.reason',
                       label: 'Motivo',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.loginAttempts,
                         (attempt) => attempt.reason,
                       ),
                     ),
-                    _ipColumnFilter('logins.ip', 'IP'),
-                    _textColumnFilter(
+                    _filters.ip('logins.ip', 'IP'),
+                    _filters.text(
                       keyName: 'logins.userAgent',
                       label: 'Navegador',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.loginAttempts,
                         (attempt) => attempt.userAgent,
                       ),
@@ -356,38 +357,38 @@ class _AdminPageState extends State<AdminPage> {
                   sessions: sessions,
                   onRefresh: _activityController.refresh,
                   filters: [
-                    _dateColumnFilter('sessions.createdAt', 'Creada'),
-                    _textColumnFilter(
+                    _filters.date('sessions.createdAt', 'Creada'),
+                    _filters.text(
                       keyName: 'sessions.username',
                       label: 'Usuario',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.sessions,
                         (session) => session.username,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'sessions.role',
                       label: 'Rol',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.sessions,
                         (session) => session.role,
                       ),
                     ),
-                    _textColumnFilter(
+                    _filters.text(
                       keyName: 'sessions.status',
                       label: 'Estado',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.sessions,
                         (session) =>
                             session.active ? 'Activa' : 'Cerrada/expirada',
                       ),
                     ),
-                    _dateColumnFilter('sessions.expiresAt', 'Expira'),
-                    _ipColumnFilter('sessions.ip', 'IP'),
-                    _textColumnFilter(
+                    _filters.date('sessions.expiresAt', 'Expira'),
+                    _filters.ip('sessions.ip', 'IP'),
+                    _filters.text(
                       keyName: 'sessions.userAgent',
                       label: 'Navegador',
-                      options: _uniqueColumnOptions(
+                      options: _filters.options(
                         data.sessions,
                         (session) => session.userAgent,
                       ),
@@ -398,133 +399,6 @@ class _AdminPageState extends State<AdminPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  bool _matchesUserFilters(ManagedUser user) {
-    return _matchesText('users.username', user.username) &&
-        _matchesText('users.displayName', user.displayName) &&
-        _matchesText('users.role', user.role) &&
-        _matchesText('users.status', user.active ? 'Activo' : 'Revocado');
-  }
-
-  bool _matchesBlockedUserFilters(BlockedLoginUser blockedUser) {
-    return _matchesText('blocked.username', blockedUser.username) &&
-        _matchesText('blocked.displayName', blockedUser.displayName) &&
-        _matchesIp('blocked.ip', blockedUser.ipAddress) &&
-        _matchesText(
-          'blocked.failedAttempts',
-          '${blockedUser.failedAttempts}',
-        ) &&
-        _matchesText(
-          'blocked.status',
-          blockedUser.active ? 'Bloqueado' : 'Liberado/expirado',
-        ) &&
-        _matchesDate('blocked.blockedAt', blockedUser.blockedAt) &&
-        _matchesDate('blocked.expiresAt', blockedUser.expiresAt) &&
-        _matchesText('blocked.unblockedBy', blockedUser.unblockedByUsername);
-  }
-
-  bool _matchesAuditLogFilters(AuditLogEntry log) {
-    return _matchesDate('audit.createdAt', log.createdAt) &&
-        _matchesText(
-          'audit.actor',
-          '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
-        ) &&
-        _matchesText('audit.action', log.action) &&
-        _matchesText(
-          'audit.entity',
-          '${log.entityType} ${log.entityId ?? ''}',
-        ) &&
-        _matchesIp('audit.ip', log.ipAddress) &&
-        _matchesText('audit.userAgent', log.userAgent);
-  }
-
-  bool _matchesLoginAttemptFilters(LoginAttempt attempt) {
-    return _matchesDate('logins.createdAt', attempt.createdAt) &&
-        _matchesText('logins.username', attempt.username) &&
-        _matchesText(
-          'logins.result',
-          attempt.success ? 'Correcto' : 'Fallido',
-        ) &&
-        _matchesText('logins.reason', attempt.reason) &&
-        _matchesIp('logins.ip', attempt.ipAddress) &&
-        _matchesText('logins.userAgent', attempt.userAgent);
-  }
-
-  bool _matchesSessionFilters(AdminSession session) {
-    return _matchesDate('sessions.createdAt', session.createdAt) &&
-        _matchesText('sessions.username', session.username) &&
-        _matchesText('sessions.role', session.role) &&
-        _matchesText(
-          'sessions.status',
-          session.active ? 'Activa' : 'Cerrada/expirada',
-        ) &&
-        _matchesDate('sessions.expiresAt', session.expiresAt) &&
-        _matchesIp('sessions.ip', session.ipAddress) &&
-        _matchesText('sessions.userAgent', session.userAgent);
-  }
-
-  bool _matchesText(String keyName, String? value) {
-    return _columnFilters.matchesText(keyName, value);
-  }
-
-  bool _matchesDate(String keyName, DateTime? value) {
-    return _columnFilters.matchesDate(keyName, value);
-  }
-
-  bool _matchesIp(String keyName, String? value) {
-    return _columnFilters.matchesIp(keyName, value);
-  }
-
-  List<String> _uniqueColumnOptions<T>(
-    List<T> rows,
-    String? Function(T row) valueForRow,
-  ) {
-    return uniqueColumnOptions(rows, valueForRow);
-  }
-
-  Widget _textColumnFilter({
-    required String keyName,
-    required String label,
-    required List<String> options,
-  }) {
-    return SizedBox(
-      width: 240,
-      child: TextColumnFilter(
-        label: label,
-        value: _columnFilters.text(keyName),
-        options: options,
-        onChanged: (value) =>
-            setState(() => _columnFilters.setText(keyName, value)),
-        width: 240,
-      ),
-    );
-  }
-
-  Widget _dateColumnFilter(String keyName, String label) {
-    return SizedBox(
-      width: 190,
-      child: DateColumnFilter(
-        label: label,
-        value: _columnFilters.date(keyName),
-        onChanged: (value) =>
-            setState(() => _columnFilters.setDate(keyName, value)),
-        width: 190,
-      ),
-    );
-  }
-
-  Widget _ipColumnFilter(String keyName, String label) {
-    return SizedBox(
-      width: 330,
-      child: IpColumnFilter(
-        label: label,
-        values: _columnFilters.ipSegments(keyName),
-        onChanged: (index, value) =>
-            setState(() => _columnFilters.setIpSegment(keyName, index, value)),
-        width: 330,
       ),
     );
   }
