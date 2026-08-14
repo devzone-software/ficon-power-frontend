@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
+import '../../application/admin_activity_controller.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../theme/ficon_theme.dart';
@@ -30,29 +29,22 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  static const _liveRefreshInterval = Duration(seconds: 5);
-
-  _AdminData? _data;
-  Object? _error;
-  Timer? _liveRefreshTimer;
-  bool _loading = true;
-  bool _refreshing = false;
+  late final AdminActivityController _activityController;
   final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
-    _refresh(showLoading: true);
-    _liveRefreshTimer = Timer.periodic(_liveRefreshInterval, (_) => _refresh());
+    _activityController = AdminActivityController(load: _load)..start();
   }
 
   @override
   void dispose() {
-    _liveRefreshTimer?.cancel();
+    _activityController.dispose();
     super.dispose();
   }
 
-  Future<_AdminData> _load() async {
+  Future<AdminActivityData> _load() async {
     final results = await Future.wait([
       widget.repository.fetchUsers(),
       widget.repository.fetchAuditLogs(),
@@ -60,41 +52,13 @@ class _AdminPageState extends State<AdminPage> {
       widget.repository.fetchAdminSessions(),
       widget.repository.fetchBlockedUsers(),
     ]);
-    return _AdminData(
+    return AdminActivityData(
       users: results[0] as List<ManagedUser>,
       auditLogs: results[1] as List<AuditLogEntry>,
       loginAttempts: results[2] as List<LoginAttempt>,
       sessions: results[3] as List<AdminSession>,
       blockedUsers: results[4] as List<BlockedLoginUser>,
     );
-  }
-
-  Future<void> _refresh({bool showLoading = false}) async {
-    if (_refreshing) return;
-    _refreshing = true;
-    if (showLoading && mounted) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-    }
-    try {
-      final data = await _load();
-      if (!mounted) return;
-      setState(() {
-        _data = data;
-        _error = null;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e;
-        _loading = false;
-      });
-    } finally {
-      _refreshing = false;
-    }
   }
 
   Future<void> _openUserDialog([ManagedUser? user]) async {
@@ -114,7 +78,7 @@ class _AdminPageState extends State<AdminPage> {
           ),
         ),
       );
-      await _refresh();
+      await _activityController.refresh();
     }
   }
 
@@ -146,7 +110,7 @@ class _AdminPageState extends State<AdminPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${blockedUser.username} desbloqueado.')),
       );
-      await _refresh();
+      await _activityController.refresh();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -162,22 +126,25 @@ class _AdminPageState extends State<AdminPage> {
       title: 'Administración',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
-      body: _buildBody(),
+      body: AnimatedBuilder(
+        animation: _activityController,
+        builder: (context, _) => _buildBody(),
+      ),
     );
   }
 
   Widget _buildBody() {
-    if (_loading && _data == null) {
+    if (_activityController.loading && _activityController.data == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_error != null && _data == null) {
+    if (_activityController.error != null && _activityController.data == null) {
       return ErrorView(
-        error: _error,
-        onRetry: () => _refresh(showLoading: true),
+        error: _activityController.error,
+        onRetry: () => _activityController.refresh(showLoading: true),
       );
     }
 
-    final data = _data!;
+    final data = _activityController.data!;
     final users = data.users.where(_matchesUserFilters).toList();
     final blockedUsers = data.blockedUsers
         .where(_matchesBlockedUserFilters)
@@ -217,7 +184,7 @@ class _AdminPageState extends State<AdminPage> {
                   users: users,
                   onCreate: () => _openUserDialog(),
                   onEdit: _openUserDialog,
-                  onRefresh: _refresh,
+                  onRefresh: _activityController.refresh,
                   filters: [
                     _textColumnFilter(
                       keyName: 'users.username',
@@ -256,7 +223,7 @@ class _AdminPageState extends State<AdminPage> {
                 _BlockedUsersTab(
                   blockedUsers: blockedUsers,
                   onUnblock: _unblockUser,
-                  onRefresh: _refresh,
+                  onRefresh: _activityController.refresh,
                   filters: [
                     _textColumnFilter(
                       keyName: 'blocked.username',
@@ -306,7 +273,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 _AuditTab(
                   logs: auditLogs,
-                  onRefresh: _refresh,
+                  onRefresh: _activityController.refresh,
                   filters: [
                     _dateColumnFilter('audit.createdAt', 'Fecha'),
                     _textColumnFilter(
@@ -347,7 +314,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 _LoginAttemptsTab(
                   attempts: loginAttempts,
-                  onRefresh: _refresh,
+                  onRefresh: _activityController.refresh,
                   filters: [
                     _dateColumnFilter('logins.createdAt', 'Fecha'),
                     _textColumnFilter(
@@ -387,7 +354,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 _SessionsTab(
                   sessions: sessions,
-                  onRefresh: _refresh,
+                  onRefresh: _activityController.refresh,
                   filters: [
                     _dateColumnFilter('sessions.createdAt', 'Creada'),
                     _textColumnFilter(
@@ -561,20 +528,4 @@ class _AdminPageState extends State<AdminPage> {
       ),
     );
   }
-}
-
-class _AdminData {
-  const _AdminData({
-    required this.users,
-    required this.auditLogs,
-    required this.loginAttempts,
-    required this.sessions,
-    required this.blockedUsers,
-  });
-
-  final List<ManagedUser> users;
-  final List<AuditLogEntry> auditLogs;
-  final List<LoginAttempt> loginAttempts;
-  final List<AdminSession> sessions;
-  final List<BlockedLoginUser> blockedUsers;
 }
