@@ -1,4 +1,4 @@
-part of '../pages/devices_page.dart';
+part of '../devices_page.dart';
 
 class _EditDeviceDialog extends StatefulWidget {
   const _EditDeviceDialog({
