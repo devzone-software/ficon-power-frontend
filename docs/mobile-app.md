@@ -57,6 +57,38 @@ FIREBASE_MESSAGING_SENDER_ID=...
 FIREBASE_PROJECT_ID=...
 ```
 
+Para no escribirlas en cada build, cree un archivo local ignorado por Git:
+
+```bash
+cp .env.mobile.example .env.mobile
+nano .env.mobile
+```
+
+Contenido esperado:
+
+```env
+API_BASE_URL=http://179.197.74.30:3000
+MOBILE_APK_URL=http://179.197.74.30:3000/mobile/ficon-power.apk
+MOBILE_UPDATE_MANIFEST_URL=http://179.197.74.30:3000/mobile/version.json
+
+FIREBASE_API_KEY=AIzaSy...
+FIREBASE_APP_ID=1:123456789012:android:...
+FIREBASE_MESSAGING_SENDER_ID=123456789012
+FIREBASE_PROJECT_ID=ficon-power-test
+```
+
+Compilar cargando `.env.mobile`:
+
+```bash
+set -a
+source .env.mobile
+set +a
+bash scripts/build-mobile-apk.sh
+```
+
+El script lee esas variables del entorno y las inyecta en la APK mediante
+`--dart-define`.
+
 Variables backend necesarias:
 
 ```env
@@ -155,6 +187,15 @@ FIREBASE_API_KEY=... \
 FIREBASE_APP_ID=... \
 FIREBASE_MESSAGING_SENDER_ID=... \
 FIREBASE_PROJECT_ID=... \
+./scripts/build-mobile-apk.sh
+```
+
+Forma recomendada usando `.env.mobile`:
+
+```bash
+set -a
+source .env.mobile
+set +a
 ./scripts/build-mobile-apk.sh
 ```
 
