@@ -20,10 +20,11 @@ Incluido:
 - Firma release persistente para actualizar sobre la app instalada.
 - Manifiesto de actualización `version.json`.
 - Entry point móvil independiente: `lib/main_mobile.dart`.
+- Registro de token FCM contra el backend cuando Firebase está configurado.
+- Push FCM para recibir alertas aunque Android cierre la app.
 
 No incluido todavía:
 
-- Notificaciones push con la app completamente cerrada.
 - Pantallas móviles rediseñadas desde cero.
 - Offline mode.
 - Gestión móvil de usuarios.
@@ -39,10 +40,35 @@ nuevo, muestra una notificación local:
 - `deviceOnline`: Retorno detectado.
 - otros eventos: Nuevo evento FICON Power.
 
-Esta fase es suficiente para pruebas internas con la app abierta o viva en
-memoria. Para recibir alertas cuando Android haya cerrado la app por completo,
-la siguiente fase debe integrar Firebase Cloud Messaging y registrar tokens
-móviles en el backend.
+Este polling queda como fallback de desarrollo cuando Firebase no está
+configurado.
+
+Cuando Firebase Cloud Messaging está configurado, la app registra su token FCM
+en el backend y deja de hacer polling periódico para notificaciones locales. En
+ese modo, el backend envía la alerta push y Android puede mostrarla aunque la
+app esté cerrada o fuera de memoria.
+
+Variables móviles necesarias en build:
+
+```bash
+FIREBASE_API_KEY=...
+FIREBASE_APP_ID=...
+FIREBASE_MESSAGING_SENDER_ID=...
+FIREBASE_PROJECT_ID=...
+```
+
+Variables backend necesarias:
+
+```env
+FCM_ENABLED=true
+FCM_PROJECT_ID=...
+FCM_CREDENTIALS_PATH=/home/admsupport/app/secrets/firebase-service-account.json
+FCM_CREDENTIALS_JSON=
+FCM_DRY_RUN=false
+```
+
+El backend registra cada intento en `notification_deliveries` y guarda tokens
+activos/revocados en `mobile_device_tokens`.
 
 ## Sesión móvil persistente
 
@@ -121,6 +147,17 @@ Para compilar contra otra URL:
 API_BASE_URL=http://IP_O_DOMINIO:3000 ./scripts/build-mobile-apk.sh
 ```
 
+Para compilar con push FCM:
+
+```bash
+API_BASE_URL=http://IP_O_DOMINIO:3000 \
+FIREBASE_API_KEY=... \
+FIREBASE_APP_ID=... \
+FIREBASE_MESSAGING_SENDER_ID=... \
+FIREBASE_PROJECT_ID=... \
+./scripts/build-mobile-apk.sh
+```
+
 El APK queda en:
 
 ```text
@@ -152,8 +189,6 @@ tiene instalado, muestra “Actualización disponible”.
    - Dispositivos
    - Incidentes
    - Perfil
-2. Agregar Firebase Cloud Messaging para notificaciones push reales.
-3. Registrar tokens móviles en backend.
-4. Enviar push ante corte y retorno de energía.
-5. Agregar detalle móvil de incidente/dispositivo.
-6. Preparar permisos por organización/sede para futura app de clientes.
+2. Agregar detalle móvil de incidente/dispositivo.
+3. Preparar permisos por organización/sede para futura app de clientes.
+4. Reemplazar el polling web/admin por SSE para actividad en vivo.

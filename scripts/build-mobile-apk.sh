@@ -20,12 +20,20 @@ APP_VERSION_CODE="${VERSION_LINE##*+}"
 API_BASE_URL_CLEAN="${API_BASE_URL%/}"
 MOBILE_UPDATE_MANIFEST_URL="${MOBILE_UPDATE_MANIFEST_URL:-${API_BASE_URL_CLEAN}/mobile/version.json}"
 MOBILE_APK_URL="${MOBILE_APK_URL:-${API_BASE_URL_CLEAN}/mobile/ficon-power.apk}"
+FIREBASE_API_KEY="${FIREBASE_API_KEY:-}"
+FIREBASE_APP_ID="${FIREBASE_APP_ID:-}"
+FIREBASE_MESSAGING_SENDER_ID="${FIREBASE_MESSAGING_SENDER_ID:-}"
+FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-}"
 
 APP_VERSION_NAME="$(printf '%s' "${APP_VERSION_NAME}" | tr -d '\r')"
 APP_VERSION_CODE="$(printf '%s' "${APP_VERSION_CODE}" | tr -d '\r')"
 API_BASE_URL_CLEAN="$(printf '%s' "${API_BASE_URL_CLEAN}" | tr -d '\r')"
 MOBILE_UPDATE_MANIFEST_URL="$(printf '%s' "${MOBILE_UPDATE_MANIFEST_URL}" | tr -d '\r')"
 MOBILE_APK_URL="$(printf '%s' "${MOBILE_APK_URL}" | tr -d '\r')"
+FIREBASE_API_KEY="$(printf '%s' "${FIREBASE_API_KEY}" | tr -d '\r')"
+FIREBASE_APP_ID="$(printf '%s' "${FIREBASE_APP_ID}" | tr -d '\r')"
+FIREBASE_MESSAGING_SENDER_ID="$(printf '%s' "${FIREBASE_MESSAGING_SENDER_ID}" | tr -d '\r')"
+FIREBASE_PROJECT_ID="$(printf '%s' "${FIREBASE_PROJECT_ID}" | tr -d '\r')"
 
 if [[ ! -f "${KEY_PROPERTIES}" ]]; then
   echo "No existe android/key.properties para firmar actualizaciones."
@@ -63,7 +71,7 @@ docker run --rm \
   -e GRADLE_USER_HOME=/tmp/gradle \
   -w /app \
   "${FLUTTER_DOCKER_IMAGE}" \
-  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
+  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' --dart-define=FIREBASE_API_KEY='${FIREBASE_API_KEY}' --dart-define=FIREBASE_APP_ID='${FIREBASE_APP_ID}' --dart-define=FIREBASE_MESSAGING_SENDER_ID='${FIREBASE_MESSAGING_SENDER_ID}' --dart-define=FIREBASE_PROJECT_ID='${FIREBASE_PROJECT_ID}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
 
 cp "${APK_SOURCE}" "${APK_TARGET}"
 cp "${APK_SOURCE}" "${MOBILE_APK_TARGET}"

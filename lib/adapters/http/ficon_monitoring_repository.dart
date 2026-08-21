@@ -70,6 +70,24 @@ class FiconMonitoringRepository
     }
   }
 
+  Future<void> registerMobilePushToken({
+    required String token,
+    required String platform,
+    String? deviceName,
+    String? appVersion,
+  }) async {
+    await _api.postJson('/api/mobile/device-tokens', {
+      'token': token,
+      'platform': platform,
+      if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
+      if (appVersion != null && appVersion.isNotEmpty) 'appVersion': appVersion,
+    });
+  }
+
+  Future<void> revokeMobilePushToken(String token) async {
+    await _api.deleteJson('/api/mobile/device-tokens', {'token': token});
+  }
+
   Future<List<ManagedUser>> fetchUsers() async {
     final data = await _api.getList('/api/users');
     return data.map(ManagedUser.fromJson).toList();

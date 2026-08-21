@@ -57,6 +57,18 @@ class FiconApiClient {
     Map<String, dynamic> payload,
   ) => _sendJson('PUT', path, payload);
 
+  Future<void> deleteJson(String path, Map<String, dynamic> payload) async {
+    final uri = Uri.parse('$_baseUrl$path');
+    final response = await _request(
+      () => _client.delete(
+        uri,
+        headers: {..._headers, 'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      ),
+    );
+    _requireStatus(response, path, const {200, 204});
+  }
+
   Future<Map<String, dynamic>> _sendJson(
     String method,
     String path,
