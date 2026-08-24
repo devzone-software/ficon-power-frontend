@@ -84,12 +84,14 @@ flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:8080
 ```
 
-La guía completa está en [`docs/mobile-app.md`](docs/mobile-app.md).
+La guía completa está en [`docs/mobile-app.md`](docs/mobile-app.md). La
+configuración de push se documenta por separado en
+[`docs/firebase-mobile.md`](docs/firebase-mobile.md).
 
-La app móvil solicita permiso de notificaciones en Android y muestra alertas
-locales al detectar eventos nuevos mientras la app está autenticada. Para
-notificaciones con la app cerrada se requiere la siguiente fase con Firebase
-Cloud Messaging.
+La app móvil solicita permiso de notificaciones en Android. Cuando Firebase
+Cloud Messaging está configurado, registra el token en el backend y recibe
+alertas aunque la aplicación esté cerrada. El sondeo local permanece únicamente
+como fallback cuando la APK fue compilada sin Firebase.
 
 La sesión móvil se guarda en almacenamiento seguro del celular y se restaura al
 abrir la app hasta que el usuario cierre sesión.

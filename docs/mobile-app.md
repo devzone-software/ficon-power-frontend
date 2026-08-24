@@ -22,15 +22,20 @@ Incluido:
 - Entry point móvil independiente: `lib/main_mobile.dart`.
 - Registro de token FCM contra el backend cuando Firebase está configurado.
 - Push FCM para recibir alertas aunque Android cierre la app.
+- Navegación inferior adaptativa y panel lateral de cuenta.
+- Vistas móviles compactas para dashboard, dispositivos, incidentes y eventos.
+- Consola administrativa condicionada por rol.
+- Exportación de dispositivos, incidentes y eventos en CSV/XLSX.
 
 No incluido todavía:
 
-- Pantallas móviles rediseñadas desde cero.
 - Offline mode.
-- Gestión móvil de usuarios.
 - Publicación en Play Store/App Store.
 
 ## Notificaciones
+
+La configuración completa, desde el registro Android hasta el diagnóstico en
+PostgreSQL, está en [`firebase-mobile.md`](firebase-mobile.md).
 
 La app solicita permiso de notificaciones en Android y consulta eventos nuevos
 cada 20 segundos mientras el usuario está autenticado. Si detecta un evento
@@ -94,7 +99,7 @@ Variables backend necesarias:
 ```env
 FCM_ENABLED=true
 FCM_PROJECT_ID=...
-FCM_CREDENTIALS_PATH=/home/admsupport/app/secrets/firebase-service-account.json
+FCM_CREDENTIALS_PATH=/app/secrets/firebase-service-account.json
 FCM_CREDENTIALS_JSON=
 FCM_DRY_RUN=false
 ```
@@ -223,13 +228,30 @@ http://TU_VPS:3000/mobile/version.json
 La app móvil consulta `version.json`; si detecta un `versionCode` mayor al que
 tiene instalado, muestra “Actualización disponible”.
 
+## Navegación y cuenta
+
+La barra inferior contiene Resumen, Dispositivos, Incidentes y Eventos. Para
+los roles `ADMIN` y `SUPERADMIN` agrega Administración como quinto destino.
+Las operaciones de usuarios, bloqueos, auditoría y sesiones continúan visibles
+exclusivamente para `SUPERADMIN`; `ADMIN` conserva únicamente las herramientas
+operativas autorizadas.
+
+El avatar abre un panel lateral con cuenta, nivel de acceso, estado del sistema,
+accesos rápidos, versión instalada y cierre de sesión.
+
+## Exportación
+
+La acción del encabezado permite seleccionar Dispositivos, Incidentes o Eventos
+y genera únicamente archivos `.csv` o `.xlsx`. CSV usa UTF-8 con BOM y escapado
+RFC 4180 para abrir correctamente en Excel. XLSX genera un libro nativo con una
+hoja nombrada según el conjunto elegido. Los archivos se crean en memoria y se
+entregan al selector de compartir de Android sin solicitar acceso general al
+almacenamiento.
+
 ## Siguiente fase recomendada
 
-1. Rediseñar navegación móvil:
-   - Inicio
-   - Dispositivos
-   - Incidentes
-   - Perfil
-2. Agregar detalle móvil de incidente/dispositivo.
+1. Definir atención y asignación de incidentes para técnicos.
+2. Agregar modo offline controlado para consultas recientes.
 3. Preparar permisos por organización/sede para futura app de clientes.
-4. Reemplazar el polling web/admin por SSE para actividad en vivo.
+4. Publicar mediante un canal administrado o tienda cuando finalice la fase
+   interna.
