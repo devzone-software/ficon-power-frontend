@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'adapters/http/ficon_monitoring_repository.dart';
 import 'application/ficon_app_router.dart';
 import 'application/ficon_dependencies.dart';
+import 'application/ficon_repository_scope.dart';
 import 'config/auth_session.dart';
 import 'presentation/theme/ficon_theme.dart';
 
@@ -58,19 +59,22 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
         debugShowCheckedModeBanner: false,
         theme: buildFiconTheme(),
         builder: (context, child) {
-          if (!widget.showBetaBanner || child == null) {
-            return child ?? const SizedBox.shrink();
-          }
-          return Banner(
-            message: 'BETA',
-            location: BannerLocation.topEnd,
-            color: FiconColors.cyan,
-            textStyle: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-            child: child,
+          final content = child ?? const SizedBox.shrink();
+          return FiconRepositoryScope(
+            repository: widget.repository,
+            child: !widget.showBetaBanner
+                ? content
+                : Banner(
+                    message: 'BETA',
+                    location: BannerLocation.topEnd,
+                    color: FiconColors.cyan,
+                    textStyle: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    child: content,
+                  ),
           );
         },
         initialRoute: _router.initialRoute,

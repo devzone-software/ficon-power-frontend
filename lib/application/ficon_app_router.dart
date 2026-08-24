@@ -54,7 +54,7 @@ class FiconAppRouter {
         onLogout: logout,
       ),
     ),
-    AppRoutes.admin: (_) => _superadminOnly(
+    AppRoutes.admin: (_) => _adminOnly(
       () => AdminPage(
         repository: repository,
         currentUser: session.user!,
@@ -81,9 +81,9 @@ class FiconAppRouter {
     return session.isAuthenticated ? pageBuilder() : _loginPage();
   }
 
-  Widget _superadminOnly(Widget Function() pageBuilder) {
+  Widget _adminOnly(Widget Function() pageBuilder) {
     final user = session.user;
-    if (session.isAuthenticated && user != null && user.canManageUsers) {
+    if (session.isAuthenticated && user != null && user.canAccessAdmin) {
       return pageBuilder();
     }
     return session.isAuthenticated ? _dashboardPage() : _loginPage();

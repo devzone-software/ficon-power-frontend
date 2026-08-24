@@ -34,7 +34,10 @@ class _AdminPageState extends State<AdminPage> {
   @override
   void initState() {
     super.initState();
-    _activityController = AdminActivityController(load: _load)..start();
+    _activityController = AdminActivityController(load: _load);
+    if (widget.currentUser.canManageUsers) {
+      _activityController.start();
+    }
     _filters = AdminTableFilters(onChanged: () => setState(() {}));
   }
 
@@ -171,6 +174,9 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Widget _buildBody() {
+    if (!widget.currentUser.canManageUsers) {
+      return const _AdminRoleOverview();
+    }
     if (_activityController.loading && _activityController.data == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -189,6 +195,42 @@ class _AdminPageState extends State<AdminPage> {
       onUnblockUser: _unblockUser,
       onRevokeSession: _revokeSession,
       onRefresh: _activityController.refresh,
+    );
+  }
+}
+
+class _AdminRoleOverview extends StatelessWidget {
+  const _AdminRoleOverview();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Text(
+          'Herramientas administrativas',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'El rol ADMIN puede editar la información operativa de los '
+          'medidores. Usuarios, auditoría, bloqueos y sesiones permanecen '
+          'reservados para SUPERADMIN.',
+        ),
+        const SizedBox(height: 18),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.router_outlined),
+            title: const Text('Gestión de medidores'),
+            subtitle: const Text('Editar nombre, sede y datos autorizados.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () =>
+                Navigator.pushReplacementNamed(context, AppRoutes.devices),
+          ),
+        ),
+      ],
     );
   }
 }

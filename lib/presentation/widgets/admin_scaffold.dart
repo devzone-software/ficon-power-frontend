@@ -1,43 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
+import '../../application/ficon_repository_scope.dart';
+import '../mobile/shell/mobile_navigation_shell.dart';
+import '../navigation/app_routes.dart';
 import '../theme/ficon_theme.dart';
 
-/// Rutas definidas en la aplicación.
-class AppRoutes {
-  AppRoutes._();
-
-  static const dashboard = '/dashboard';
-  static const login = '/login';
-  static const devices = '/dispositivos';
-  static const incidents = '/incidentes';
-  static const events = '/eventos';
-  static const admin = '/admin';
-
-  /// Ruta a la que se redirige cualquier ruta desconocida.
-  static const fallback = dashboard;
-}
-
-/// Sección del menú de navegación del encabezado.
-class NavItem {
-  const NavItem({
-    required this.route,
-    required this.label,
-    this.superadminOnly = false,
-  });
-
-  final String route;
-  final String label;
-  final bool superadminOnly;
-}
-
-const navItems = [
-  NavItem(route: AppRoutes.dashboard, label: 'Resumen'),
-  NavItem(route: AppRoutes.devices, label: 'Dispositivos'),
-  NavItem(route: AppRoutes.incidents, label: 'Incidentes'),
-  NavItem(route: AppRoutes.events, label: 'Eventos'),
-  NavItem(route: AppRoutes.admin, label: 'Admin', superadminOnly: true),
-];
+export '../navigation/app_routes.dart' show AppRoutes;
 
 /// Scaffold común con el encabezado de navegación entre rutas.
 /// En pantallas anchas muestra los enlaces en la barra superior;
@@ -65,6 +34,17 @@ class AdminScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).width < 720) {
+      return MobileNavigationShell(
+        currentRoute: currentRoute,
+        title: title,
+        body: body,
+        currentUser: currentUser,
+        repository: FiconRepositoryScope.of(context),
+        onLogout: onLogout,
+        onNavigate: (route) => _goTo(context, route),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
@@ -93,8 +73,7 @@ class AdminScaffold extends StatelessWidget {
               final wide = MediaQuery.of(context).size.width >= 720;
               final visibleItems = navItems
                   .where(
-                    (item) =>
-                        !item.superadminOnly || currentUser.canManageUsers,
+                    (item) => !item.adminOnly || currentUser.canAccessAdmin,
                   )
                   .toList();
               if (!wide) {
