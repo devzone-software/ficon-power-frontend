@@ -1,3 +1,4 @@
+// Registro y revocación del token FCM asociado a la sesión móvil.
 import 'dart:async';
 import 'dart:io';
 
@@ -5,10 +6,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
-import '../adapters/http/ficon_monitoring_repository.dart';
-import '../config/app_config.dart';
-import '../config/auth_session.dart';
-import 'mobile_firebase_config.dart';
+import '../../adapters/http/ficon_monitoring_repository.dart';
+import '../../config/app_config.dart';
+import '../../config/auth_session.dart';
+import '../config/mobile_firebase_config.dart';
 
 class MobilePushRegistration extends StatefulWidget {
   const MobilePushRegistration({

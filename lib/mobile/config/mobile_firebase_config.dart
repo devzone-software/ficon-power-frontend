@@ -1,6 +1,7 @@
+// Configuración Firebase compilada en la variante móvil.
 import 'package:firebase_core/firebase_core.dart';
 
-import '../config/app_config.dart';
+import '../../config/app_config.dart';
 
 class MobileFirebaseConfig {
   MobileFirebaseConfig._();

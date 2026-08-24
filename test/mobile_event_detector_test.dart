@@ -1,5 +1,5 @@
 import 'package:ficon_power_frontend/domain/event.dart';
-import 'package:ficon_power_frontend/mobile/mobile_event_detector.dart';
+import 'package:ficon_power_frontend/mobile/notifications/mobile_event_detector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

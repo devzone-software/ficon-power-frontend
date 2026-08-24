@@ -7,11 +7,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'adapters/http/ficon_monitoring_repository.dart';
 import 'config/auth_session.dart';
 import 'main.dart';
-import 'mobile/mobile_event_notification_watcher.dart';
-import 'mobile/mobile_firebase_config.dart';
-import 'mobile/mobile_push_registration.dart';
-import 'mobile/mobile_session_storage.dart';
-import 'mobile/mobile_update_checker.dart';
+import 'mobile/config/mobile_firebase_config.dart';
+import 'mobile/notifications/mobile_event_notification_watcher.dart';
+import 'mobile/notifications/mobile_push_registration.dart';
+import 'mobile/session/mobile_session_storage.dart';
+import 'mobile/updates/mobile_update_checker.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {

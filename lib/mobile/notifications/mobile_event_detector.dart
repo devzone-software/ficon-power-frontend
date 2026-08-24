@@ -1,4 +1,5 @@
-import '../domain/event.dart';
+// Traducción de eventos de dominio a contenido de notificación.
+import '../../domain/event.dart';
 
 class EventNotificationContent {
   const EventNotificationContent({required this.title, required this.body});

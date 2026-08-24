@@ -1,11 +1,12 @@
+// Fallback de notificaciones locales cuando FCM no está configurado.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../adapters/http/ficon_monitoring_repository.dart';
-import '../config/auth_session.dart';
-import '../domain/event.dart';
+import '../../adapters/http/ficon_monitoring_repository.dart';
+import '../../config/auth_session.dart';
+import '../../domain/event.dart';
 import 'mobile_event_detector.dart';
 
 /// Observa eventos nuevos desde el backend y los muestra como notificaciones

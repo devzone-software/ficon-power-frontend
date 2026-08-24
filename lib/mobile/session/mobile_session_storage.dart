@@ -1,9 +1,10 @@
+/// Persistencia segura del estado de autenticación móvil.
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../config/auth_session.dart';
-import '../domain/auth_user.dart';
+import '../../config/auth_session.dart';
+import '../../domain/auth_user.dart';
 
 /// Persiste la sesión móvil hasta que el usuario cierre sesión.
 ///

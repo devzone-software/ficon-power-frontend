@@ -1,3 +1,4 @@
+// Consulta y validación del manifiesto de actualización móvil.
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;

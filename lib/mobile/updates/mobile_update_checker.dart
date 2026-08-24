@@ -1,10 +1,11 @@
+// Coordinación visual de actualizaciones disponibles para Android.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../config/app_config.dart';
-import '../config/auth_session.dart';
+import '../../config/app_config.dart';
+import '../../config/auth_session.dart';
 import 'mobile_update_service.dart';
 
 class MobileUpdateChecker extends StatefulWidget {
