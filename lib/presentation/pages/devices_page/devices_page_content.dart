@@ -6,12 +6,14 @@ class _DevicesPageContent extends StatelessWidget {
     required this.filters,
     required this.canEdit,
     required this.onEdit,
+    required this.onOpenGuide,
   });
 
   final List<Device> devices;
   final List<Widget> filters;
   final bool canEdit;
   final void Function(Device device) onEdit;
+  final VoidCallback onOpenGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +24,17 @@ class _DevicesPageContent extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: onOpenGuide,
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('Cómo agregar un medidor'),
+                  ),
+                ),
+              ),
               TableFiltersBar(filters: filters),
               if (devices.isEmpty)
                 const Padding(

@@ -11,6 +11,7 @@ import '../../ports/input/get_sites.dart';
 import '../../ports/input/update_device_details.dart';
 import '../devices/devices_compact_list.dart';
 import '../devices/devices_table.dart';
+import '../devices/onboarding/tuya_spatial_guide.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
@@ -103,6 +104,12 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
+  void _openTuyaSpatialGuide() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const TuyaSpatialGuidePage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
@@ -121,11 +128,6 @@ class _DevicesPageState extends State<DevicesPage> {
           }
           final devices = snapshot.data!;
           final filteredDevices = devices.where(_matchesFilters).toList();
-          if (devices.isEmpty) {
-            return const Center(
-              child: Text('No hay dispositivos registrados.'),
-            );
-          }
           return RefreshIndicator(
             onRefresh: _refresh,
             child: _DevicesPageContent(
@@ -133,6 +135,7 @@ class _DevicesPageState extends State<DevicesPage> {
               filters: _filters(devices),
               canEdit: widget.currentUser.canEditDevices,
               onEdit: _edit,
+              onOpenGuide: _openTuyaSpatialGuide,
             ),
           );
         },
