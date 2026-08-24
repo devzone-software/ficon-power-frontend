@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../ports/input/get_incidents.dart';
+import '../incidents/mobile/incident_cards.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
@@ -89,15 +90,18 @@ class _IncidentsPageState extends State<IncidentsPage> {
                 child: Column(
                   children: [
                     TableFiltersBar(filters: _filters(incidents)),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: constraints.maxWidth,
+                    if (constraints.maxWidth < 720)
+                      MobileIncidentList(incidents: filteredIncidents)
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: _IncidentsTable(incidents: filteredIncidents),
                         ),
-                        child: _IncidentsTable(incidents: filteredIncidents),
                       ),
-                    ),
                   ],
                 ),
               ),

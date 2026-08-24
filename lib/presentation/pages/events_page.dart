@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/event.dart';
 import '../../ports/input/get_events.dart';
+import '../events/mobile/event_cards.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
@@ -89,15 +90,18 @@ class _EventsPageState extends State<EventsPage> {
                 child: Column(
                   children: [
                     TableFiltersBar(filters: _filters(events)),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minWidth: constraints.maxWidth,
+                    if (constraints.maxWidth < 720)
+                      MobileEventList(events: filteredEvents)
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: _EventsTable(events: filteredEvents),
                         ),
-                        child: _EventsTable(events: filteredEvents),
                       ),
-                    ),
                   ],
                 ),
               ),
