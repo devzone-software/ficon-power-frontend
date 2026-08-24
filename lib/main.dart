@@ -6,6 +6,7 @@ import 'application/ficon_dependencies.dart';
 import 'application/ficon_repository_scope.dart';
 import 'config/auth_session.dart';
 import 'presentation/theme/ficon_theme.dart';
+import 'presentation/navigation/app_routes.dart';
 
 void main() {
   final session = AuthSession();
@@ -36,17 +37,39 @@ class FiconPowerApp extends StatefulWidget {
 class _FiconPowerAppState extends State<FiconPowerApp> {
   late final GlobalKey<NavigatorState> _navigatorKey;
   late final FiconAppRouter _router;
+  late bool _wasAuthenticated;
 
   @override
   void initState() {
     super.initState();
     _navigatorKey = widget.navigatorKey ?? GlobalKey<NavigatorState>();
+    _wasAuthenticated = widget.session.isAuthenticated;
+    widget.session.addListener(_handleSessionChange);
     _router = FiconAppRouter(
       repository: widget.repository,
       session: widget.session,
       dependencies: FiconDependencies(widget.repository),
       navigatorKey: _navigatorKey,
     );
+  }
+
+  void _handleSessionChange() {
+    final authenticated = widget.session.isAuthenticated;
+    if (_wasAuthenticated && !authenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          AppRoutes.login,
+          (route) => false,
+        );
+      });
+    }
+    _wasAuthenticated = authenticated;
+  }
+
+  @override
+  void dispose() {
+    widget.session.removeListener(_handleSessionChange);
+    super.dispose();
   }
 
   @override

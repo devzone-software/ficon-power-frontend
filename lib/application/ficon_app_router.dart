@@ -71,10 +71,6 @@ class FiconAppRouter {
   Future<void> logout() async {
     await repository.logout();
     session.clear();
-    navigatorKey.currentState?.pushNamedAndRemoveUntil(
-      AppRoutes.login,
-      (route) => false,
-    );
   }
 
   Widget _protected(Widget Function() pageBuilder) {
