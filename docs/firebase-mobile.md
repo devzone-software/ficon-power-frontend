@@ -149,6 +149,14 @@ set +a
 bash scripts/build-mobile-apk.sh
 ```
 
+La compilación predeterminada es Android `arm64-v8a`. Firebase y el registro de
+tokens funcionan igual que en la APK universal. Si una prueba de compatibilidad
+falla, se reconstruye el respaldo sin cambiar credenciales:
+
+```bash
+ANDROID_APK_VARIANT=universal bash scripts/build-mobile-apk.sh
+```
+
 Los valores se inyectan en la variante móvil. No quedan guardados en
 `version.json`. El script genera:
 

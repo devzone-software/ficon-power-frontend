@@ -108,7 +108,11 @@ Para generar el APK firmado contra el VPS:
 ./scripts/build-mobile-apk.sh
 ```
 
-El script usa Docker con cachés persistentes en `.mobile-build-cache/`, por lo que las siguientes compilaciones reutilizan dependencias de Pub, Gradle, NDK y CMake. El APK generado queda en `dist/ficon-power.apk` y el publicable para el VPS en `dist/mobile/ficon-power.apk`.
+El script genera por defecto una APK Android ARM64 y usa cachés persistentes en
+`.mobile-build-cache/` para Pub, Gradle, Android SDK, Build Tools, NDK y CMake.
+El APK queda en `dist/ficon-power.apk` y el publicable para el VPS en
+`dist/mobile/ficon-power.apk`. El respaldo universal se construye con
+`ANDROID_APK_VARIANT=universal bash scripts/build-mobile-apk.sh`.
 
 ### Sistema completo con Docker
 

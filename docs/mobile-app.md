@@ -176,7 +176,35 @@ Si el host no tiene Flutter/Java, se puede usar Docker:
 ./scripts/build-mobile-apk.sh
 ```
 
-El script usa cachés persistentes en `.mobile-build-cache/` para reutilizar paquetes Pub, Gradle, NDK y CMake entre compilaciones. Esa carpeta está ignorada por Git.
+El wrapper delega la implementación a
+`scripts/mobile/android/build-apk.sh`. Por defecto genera exclusivamente
+`arm64-v8a`, arquitectura confirmada para los teléfonos internos:
+
+```bash
+ANDROID_APK_VARIANT=arm64 bash scripts/build-mobile-apk.sh
+```
+
+Para recuperar la APK universal compatible con ARM64, ARMv7 y emuladores x86:
+
+```bash
+ANDROID_APK_VARIANT=universal bash scripts/build-mobile-apk.sh
+```
+
+El modo universal conserva el mismo nombre y sistema de actualización. Debe
+usarse como respaldo si un dispositivo objetivo no informa `arm64-v8a` en:
+
+```bash
+adb shell getprop ro.product.cpu.abilist
+```
+
+La variante optimizada combina `--target-platform android-arm64` con un filtro
+Gradle de ABI y exclusiones de librerías JNI transitivas. Así se evita que
+plugins multiplataforma vuelvan a empaquetar binarios ARMv7 o x86. El modo
+universal no aplica estos filtros.
+
+El script usa cachés persistentes en `.mobile-build-cache/` para reutilizar
+paquetes Pub, Gradle, Android SDK Platforms, Build Tools, NDK y CMake entre
+compilaciones. Esa carpeta está ignorada por Git.
 
 Para compilar contra otra URL:
 
@@ -227,6 +255,9 @@ http://TU_VPS:3000/mobile/version.json
 
 La app móvil consulta `version.json`; si detecta un `versionCode` mayor al que
 tiene instalado, muestra “Actualización disponible”.
+
+El manifest incorpora `architecture` con `arm64-v8a` o `universal` para dejar
+trazabilidad del artefacto publicado. La aplicación tolera este campo adicional.
 
 ## Navegación y cuenta
 
