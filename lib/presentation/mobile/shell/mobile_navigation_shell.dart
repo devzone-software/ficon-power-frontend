@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../adapters/http/ficon_monitoring_repository.dart';
 import '../../../application/mobile_notification_controller.dart';
+import '../../../application/mobile_data_export.dart';
 import '../../../domain/auth_user.dart';
 import '../../../domain/mobile_notification.dart';
 import '../overlays/mobile_account_panel.dart';
+import '../overlays/mobile_export_sheet.dart';
 import '../../theme/ficon_theme.dart';
 import '../../navigation/app_routes.dart';
 
@@ -85,6 +87,11 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Exportar datos',
+            onPressed: _exportData,
+            icon: const Icon(Icons.ios_share_outlined),
+          ),
           AnimatedBuilder(
             animation: _notifications,
             builder: (context, _) => Badge(
@@ -180,6 +187,23 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
             _NotificationHistorySheet(controller: _notifications),
       ),
     );
+  }
+
+  Future<void> _exportData() async {
+    final request = await showModalBottomSheet<MobileExportRequest>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const MobileExportSheet(),
+    );
+    if (request == null) return;
+    try {
+      await MobileDataExportService(widget.repository).share(request);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudieron exportar los datos: $error')),
+      );
+    }
   }
 }
 
