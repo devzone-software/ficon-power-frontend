@@ -4,6 +4,7 @@ import '../../domain/admin_models.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 import 'admin_table_shell.dart';
+import 'mobile/admin_record_card.dart';
 
 class UsersTab extends StatelessWidget {
   const UsersTab({
@@ -30,6 +31,25 @@ class UsersTab extends StatelessWidget {
         onPressed: onCreate,
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Crear usuario'),
+      ),
+      mobileChild: Column(
+        children: [
+          for (final user in users)
+            AdminRecordCard(
+              title: user.displayName,
+              subtitle: user.username,
+              status: StatusChip(
+                label: user.active ? 'Activo' : 'Revocado',
+                color: user.active ? FiconColors.cyan : FiconColors.deepAlt,
+              ),
+              fields: {'Rol': user.role},
+              action: IconButton.filledTonal(
+                tooltip: 'Editar usuario',
+                onPressed: () => onEdit(user),
+                icon: const Icon(Icons.manage_accounts_outlined),
+              ),
+            ),
+        ],
       ),
       child: DataTable(
         columns: const [

@@ -4,6 +4,7 @@ import '../../domain/admin_models.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 import 'admin_table_shell.dart';
+import 'mobile/admin_record_card.dart';
 
 class BlockedUsersTab extends StatelessWidget {
   const BlockedUsersTab({
@@ -24,6 +25,33 @@ class BlockedUsersTab extends StatelessWidget {
     return AdminTableShell(
       onRefresh: onRefresh,
       filters: filters,
+      mobileChild: Column(
+        children: [
+          for (final blocked in blockedUsers)
+            AdminRecordCard(
+              title: blocked.username,
+              subtitle: blocked.displayName,
+              status: StatusChip(
+                label: blocked.active ? 'Bloqueado' : 'Liberado',
+                color: blocked.active
+                    ? FiconColors.logoBlue
+                    : FiconColors.deepAlt,
+              ),
+              fields: {
+                'IP': blocked.ipAddress ?? '—',
+                'Fallos': '${blocked.failedAttempts}',
+                'Bloqueado': formatDateTime(blocked.blockedAt),
+                'Expira': formatDateTime(blocked.expiresAt),
+                'Liberado por': blocked.unblockedByUsername ?? '—',
+              },
+              action: FilledButton.tonalIcon(
+                onPressed: blocked.active ? () => onUnblock(blocked) : null,
+                icon: const Icon(Icons.lock_open_outlined),
+                label: const Text('Desbloquear'),
+              ),
+            ),
+        ],
+      ),
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Usuario')),

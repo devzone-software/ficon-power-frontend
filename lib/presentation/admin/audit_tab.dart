@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/admin_models.dart';
 import '../widgets/common.dart';
 import 'admin_table_shell.dart';
+import 'mobile/admin_record_card.dart';
 
 class AuditTab extends StatelessWidget {
   const AuditTab({
@@ -21,6 +22,22 @@ class AuditTab extends StatelessWidget {
     return AdminTableShell(
       onRefresh: onRefresh,
       filters: filters,
+      mobileChild: Column(
+        children: [
+          for (final log in logs)
+            AdminRecordCard(
+              title: log.action,
+              subtitle: formatDateTime(log.createdAt),
+              fields: {
+                'Usuario':
+                    '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
+                'Entidad': '${log.entityType} ${log.entityId ?? ''}',
+                'IP': log.ipAddress ?? '—',
+                'Navegador': log.userAgent ?? '—',
+              },
+            ),
+        ],
+      ),
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Fecha')),

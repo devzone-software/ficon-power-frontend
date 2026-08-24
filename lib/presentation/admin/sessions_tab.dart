@@ -4,6 +4,7 @@ import '../../domain/admin_models.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 import 'admin_table_shell.dart';
+import 'mobile/admin_record_card.dart';
 
 class SessionsTab extends StatelessWidget {
   const SessionsTab({
@@ -24,6 +25,32 @@ class SessionsTab extends StatelessWidget {
     return AdminTableShell(
       onRefresh: onRefresh,
       filters: filters,
+      mobileChild: Column(
+        children: [
+          for (final session in sessions)
+            AdminRecordCard(
+              title: session.username,
+              subtitle: session.role,
+              status: StatusChip(
+                label: session.active ? 'Activa' : 'Cerrada',
+                color: session.active ? FiconColors.cyan : FiconColors.deepAlt,
+              ),
+              fields: {
+                'Creada': formatDateTime(session.createdAt),
+                'Expira': formatDateTime(session.expiresAt),
+                'IP': session.ipAddress ?? '—',
+                'Navegador': session.userAgent ?? '—',
+              },
+              action: session.active
+                  ? FilledButton.tonalIcon(
+                      onPressed: () => onRevoke(session),
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Revocar'),
+                    )
+                  : null,
+            ),
+        ],
+      ),
       child: DataTable(
         columns: const [
           DataColumn(label: Text('Creada')),

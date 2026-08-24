@@ -41,6 +41,8 @@ class AdminTabs extends StatelessWidget {
           const Material(
             color: Colors.white,
             child: TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
               labelColor: FiconColors.logoBlue,
               unselectedLabelColor: FiconColors.deepAlt,
               tabs: [
