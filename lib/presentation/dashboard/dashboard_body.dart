@@ -29,6 +29,7 @@ class DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 720;
     final offlineDevices = data.devices
         .where((device) => !device.isOnline && device.active)
         .toList();
@@ -36,7 +37,7 @@ class DashboardBody extends StatelessWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(mobile ? 12 : 24),
       children: [
         Align(
           alignment: Alignment.topCenter,
@@ -49,28 +50,28 @@ class DashboardBody extends StatelessWidget {
                   total: data.devices.length,
                   openIncidents: data.openIncidents,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: mobile ? 14 : 24),
                 _KpiGrid(data: data),
-                const SizedBox(height: 24),
+                SizedBox(height: mobile ? 14 : 24),
                 FleetHealthCard(
                   online: data.onlineCount,
                   total: data.devices.length,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: mobile ? 14 : 24),
                 DashboardAnalyticsSection(
                   stats: DashboardStatistics.from(data),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: mobile ? 14 : 24),
                 _StatusLists(
                   offlineDevices: offlineDevices,
                   recentIncidents: recentIncidents,
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: mobile ? 14 : 24),
                 NotificationTemplatesCard(
                   getNotificationTemplates: getNotificationTemplates,
                 ),
                 if (kIsWeb) ...[
-                  const SizedBox(height: 24),
+                  SizedBox(height: mobile ? 14 : 24),
                   const MobileAppDownloadCard(),
                 ],
               ],

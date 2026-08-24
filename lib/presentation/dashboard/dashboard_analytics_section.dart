@@ -32,12 +32,14 @@ class DashboardAnalyticsSection extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Wrap(
-              spacing: 16,
-              runSpacing: 16,
+              spacing: constraints.maxWidth < 720 ? 10 : 16,
+              runSpacing: constraints.maxWidth < 720 ? 10 : 16,
               children: _metricCards(metricWidth),
             ),
             const SizedBox(height: 16),
-            if (constraints.maxWidth >= 1000)
+            if (constraints.maxWidth < 720)
+              _MobileChartCarousel(charts: charts)
+            else if (constraints.maxWidth >= 1000)
               _WideChartGrid(charts: charts)
             else
               _NarrowChartList(charts: charts),
@@ -50,7 +52,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
   double _metricWidth(double availableWidth) {
     if (availableWidth >= 1000) return (availableWidth - 48) / 4;
     if (availableWidth >= 720) return (availableWidth - 16) / 2;
-    return availableWidth;
+    return (availableWidth - 10) / 2;
   }
 
   List<Widget> _metricCards(double width) => [
@@ -141,6 +143,30 @@ class DashboardAnalyticsSection extends StatelessWidget {
       points: stats.timeOfDayIncidents,
     ),
   ];
+}
+
+class _MobileChartCarousel extends StatelessWidget {
+  const _MobileChartCarousel({required this.charts});
+
+  final List<Widget> charts;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width - 48;
+    return SizedBox(
+      height: 310,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(bottom: 8),
+        itemCount: charts.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (context, index) => SizedBox(
+          width: width.clamp(280.0, 420.0).toDouble(),
+          child: charts[index],
+        ),
+      ),
+    );
+  }
 }
 
 class _WideChartGrid extends StatelessWidget {

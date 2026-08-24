@@ -47,10 +47,10 @@ class DashboardOverviewHeader extends StatelessWidget {
               bottom: 0,
               child: Container(width: 4, color: FiconColors.logoBlue),
             ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: LayoutBuilder(
-                builder: (context, constraints) => _HeaderContent(
+            LayoutBuilder(
+              builder: (context, constraints) => Padding(
+                padding: EdgeInsets.all(constraints.maxWidth < 720 ? 16 : 24),
+                child: _HeaderContent(
                   compact: constraints.maxWidth < 720,
                   textTheme: textTheme,
                   onlineText: onlineText,
