@@ -119,6 +119,43 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
+  Future<void> _revokeSession(AdminSession session) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Revocar sesión'),
+        content: Text(
+          '¿Cerrar la sesión activa de ${session.username} en '
+          '${session.ipAddress ?? 'IP desconocida'}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Revocar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.repository.revokeAdminSession(session.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sesión de ${session.username} revocada.')),
+      );
+      await _activityController.refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo revocar la sesión: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
@@ -150,6 +187,7 @@ class _AdminPageState extends State<AdminPage> {
       onCreateUser: _openUserDialog,
       onEditUser: _openUserDialog,
       onUnblockUser: _unblockUser,
+      onRevokeSession: _revokeSession,
       onRefresh: _activityController.refresh,
     );
   }

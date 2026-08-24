@@ -156,6 +156,10 @@ class FiconMonitoringRepository
     return data.map(AdminSession.fromJson).toList();
   }
 
+  Future<void> revokeAdminSession(String id) async {
+    await _api.postJson('/api/admin/sessions/$id/revoke', const {});
+  }
+
   Future<List<BlockedLoginUser>> fetchBlockedUsers({int limit = 100}) async {
     final data = await _api.getList('/api/admin/blocked-users?limit=$limit');
     return data.map(BlockedLoginUser.fromJson).toList();

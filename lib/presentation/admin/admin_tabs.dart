@@ -19,6 +19,7 @@ class AdminTabs extends StatelessWidget {
     required this.onCreateUser,
     required this.onEditUser,
     required this.onUnblockUser,
+    required this.onRevokeSession,
     required this.onRefresh,
   });
 
@@ -27,6 +28,7 @@ class AdminTabs extends StatelessWidget {
   final VoidCallback onCreateUser;
   final ValueChanged<ManagedUser> onEditUser;
   final ValueChanged<BlockedLoginUser> onUnblockUser;
+  final ValueChanged<AdminSession> onRevokeSession;
   final Future<void> Function() onRefresh;
 
   @override
@@ -85,6 +87,7 @@ class AdminTabs extends StatelessWidget {
                       .where(filters.matchesSession)
                       .toList(),
                   onRefresh: onRefresh,
+                  onRevoke: onRevokeSession,
                   filters: definitions.sessions,
                 ),
               ],

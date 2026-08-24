@@ -10,11 +10,13 @@ class SessionsTab extends StatelessWidget {
     super.key,
     required this.sessions,
     required this.onRefresh,
+    required this.onRevoke,
     required this.filters,
   });
 
   final List<AdminSession> sessions;
   final Future<void> Function() onRefresh;
+  final ValueChanged<AdminSession> onRevoke;
   final List<Widget> filters;
 
   @override
@@ -31,6 +33,7 @@ class SessionsTab extends StatelessWidget {
           DataColumn(label: Text('Expira')),
           DataColumn(label: Text('IP')),
           DataColumn(label: Text('Navegador')),
+          DataColumn(label: Text('Acciones')),
         ],
         rows: [
           for (final session in sessions)
@@ -50,6 +53,15 @@ class SessionsTab extends StatelessWidget {
                 DataCell(Text(formatDateTime(session.expiresAt))),
                 DataCell(Text(session.ipAddress ?? '—')),
                 DataCell(AdminEllipsisText(session.userAgent ?? '—')),
+                DataCell(
+                  session.active
+                      ? IconButton(
+                          tooltip: 'Revocar sesión',
+                          onPressed: () => onRevoke(session),
+                          icon: const Icon(Icons.logout),
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ],
             ),
         ],
