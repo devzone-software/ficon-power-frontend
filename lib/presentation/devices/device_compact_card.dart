@@ -89,6 +89,16 @@ class DeviceCompactCard extends StatelessWidget {
                   icon: Icons.map_outlined,
                   label: _present(device.district, 'Sin distrito'),
                 ),
+                if (device.category?.trim().isNotEmpty == true)
+                  DeviceMiniChip(
+                    icon: Icons.category_outlined,
+                    label: device.category!,
+                  ),
+                if (device.model?.trim().isNotEmpty == true)
+                  DeviceMiniChip(
+                    icon: Icons.memory_outlined,
+                    label: device.model!,
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -105,6 +115,13 @@ class DeviceCompactCard extends StatelessWidget {
                   child: DeviceStatTile(
                     label: 'Incidentes',
                     value: '${device.incidentCount}',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DeviceStatTile(
+                    label: 'Eventos',
+                    value: '${device.eventCount}',
                   ),
                 ),
               ],

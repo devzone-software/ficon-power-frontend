@@ -26,13 +26,21 @@ class _DevicesPageContent extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: onOpenGuide,
-                    icon: const Icon(Icons.menu_book_outlined),
-                    label: const Text('Cómo agregar un medidor'),
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${devices.length} medidor${devices.length == 1 ? '' : 'es'}',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onOpenGuide,
+                      icon: const Icon(Icons.menu_book_outlined),
+                      label: Text(compact ? 'Guía' : 'Cómo agregar un medidor'),
+                    ),
+                  ],
                 ),
               ),
               TableFiltersBar(filters: filters),
