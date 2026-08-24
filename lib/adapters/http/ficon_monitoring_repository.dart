@@ -6,6 +6,7 @@ import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
+import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
 import '../../domain/site.dart';
 import '../../ports/output/device_repository.dart';
@@ -103,6 +104,26 @@ class FiconMonitoringRepository
 
   Future<void> revokeMobilePushToken(String token) async {
     await _api.deleteJson('/api/mobile/device-tokens', {'token': token});
+  }
+
+  Future<List<MobileNotification>> fetchMobileNotifications({
+    int limit = 100,
+  }) async {
+    final data = await _api.getList('/api/mobile/notifications?limit=$limit');
+    return data.map(MobileNotification.fromJson).toList();
+  }
+
+  Future<int> fetchMobileUnreadNotificationCount() async {
+    final data = await _api.getJson('/api/mobile/notifications/unread-count');
+    return data['unreadCount'] as int? ?? 0;
+  }
+
+  Future<void> markMobileNotificationRead(String id) async {
+    await _api.patchJson('/api/mobile/notifications/$id/read');
+  }
+
+  Future<void> markAllMobileNotificationsRead() async {
+    await _api.patchJson('/api/mobile/notifications/read-all');
   }
 
   Future<List<ManagedUser>> fetchUsers() async {

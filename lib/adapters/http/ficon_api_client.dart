@@ -47,6 +47,18 @@ class FiconApiClient {
     return decoded.cast<Map<String, dynamic>>();
   }
 
+  Future<Map<String, dynamic>> getJson(String path) async {
+    final response = await _requestWithRefresh(
+      () => _client.get(Uri.parse('$_baseUrl$path'), headers: _headers),
+    );
+    _requireStatus(response, path, const {200});
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is! Map<String, dynamic>) {
+      throw ApiException('Respuesta inesperada en $path');
+    }
+    return decoded;
+  }
+
   Future<Map<String, dynamic>> postJson(
     String path,
     Map<String, dynamic> payload, {
@@ -57,6 +69,11 @@ class FiconApiClient {
     String path,
     Map<String, dynamic> payload,
   ) => _sendJson('PUT', path, payload);
+
+  Future<Map<String, dynamic>> patchJson(
+    String path, [
+    Map<String, dynamic> payload = const {},
+  ]) => _sendJson('PATCH', path, payload);
 
   Future<void> deleteJson(String path, Map<String, dynamic> payload) async {
     final uri = Uri.parse('$_baseUrl$path');
@@ -90,7 +107,13 @@ class FiconApiClient {
                     headers: {..._headers, 'Content-Type': 'application/json'},
                     body: body,
                   )
-                : _client.put(
+                : method == 'PUT'
+                ? _client.put(
+                    uri,
+                    headers: {..._headers, 'Content-Type': 'application/json'},
+                    body: body,
+                  )
+                : _client.patch(
                     uri,
                     headers: {..._headers, 'Content-Type': 'application/json'},
                     body: body,
@@ -99,7 +122,9 @@ class FiconApiClient {
         : await _request(
             () => method == 'POST'
                 ? _client.post(uri, headers: headers, body: body)
-                : _client.put(uri, headers: headers, body: body),
+                : method == 'PUT'
+                ? _client.put(uri, headers: headers, body: body)
+                : _client.patch(uri, headers: headers, body: body),
           );
     _requireStatus(response, path, const {200, 201});
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
