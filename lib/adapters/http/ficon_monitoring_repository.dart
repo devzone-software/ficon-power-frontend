@@ -17,9 +17,18 @@ import 'ficon_api_client.dart';
 export 'ficon_api_client.dart' show ApiException;
 
 class LoginResult {
-  const LoginResult({required this.token, required this.user});
+  const LoginResult({
+    required this.token,
+    required this.refreshToken,
+    required this.expiresAt,
+    required this.refreshExpiresAt,
+    required this.user,
+  });
 
   final String token;
+  final String refreshToken;
+  final DateTime? expiresAt;
+  final DateTime? refreshExpiresAt;
   final AuthUser user;
 }
 
@@ -55,6 +64,11 @@ class FiconMonitoringRepository
     }, authenticated: false);
     return LoginResult(
       token: data['token'] as String? ?? '',
+      refreshToken: data['refreshToken'] as String? ?? '',
+      expiresAt: DateTime.tryParse(data['expiresAt'] as String? ?? ''),
+      refreshExpiresAt: DateTime.tryParse(
+        data['refreshExpiresAt'] as String? ?? '',
+      ),
       user: AuthUser.fromJson(
         (data['user'] as Map<dynamic, dynamic>? ?? const {})
             .cast<String, dynamic>(),
@@ -64,7 +78,10 @@ class FiconMonitoringRepository
 
   Future<void> logout() async {
     try {
-      await _api.postJson('/api/auth/logout', const {});
+      await _api.postJson('/api/auth/logout', {
+        if (session?.refreshToken != null)
+          'refreshToken': session!.refreshToken,
+      });
     } catch (_) {
       // El cierre local de sesión no debe bloquearse por red.
     }

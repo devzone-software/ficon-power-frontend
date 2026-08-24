@@ -27,6 +27,7 @@ class FiconApiClient {
   final http.Client _client;
   final String _baseUrl;
   final AuthSession? session;
+  Future<bool>? _refreshing;
 
   Map<String, String> get _headers => {
     'Accept': 'application/json',
@@ -35,7 +36,7 @@ class FiconApiClient {
   };
 
   Future<List<Map<String, dynamic>>> getList(String path) async {
-    final response = await _request(
+    final response = await _requestWithRefresh(
       () => _client.get(Uri.parse('$_baseUrl$path'), headers: _headers),
     );
     _requireStatus(response, path, const {200});
@@ -59,7 +60,7 @@ class FiconApiClient {
 
   Future<void> deleteJson(String path, Map<String, dynamic> payload) async {
     final uri = Uri.parse('$_baseUrl$path');
-    final response = await _request(
+    final response = await _requestWithRefresh(
       () => _client.delete(
         uri,
         headers: {..._headers, 'Content-Type': 'application/json'},
@@ -81,11 +82,25 @@ class FiconApiClient {
       'Content-Type': 'application/json',
     };
     final body = jsonEncode(payload);
-    final response = await _request(
-      () => method == 'POST'
-          ? _client.post(uri, headers: headers, body: body)
-          : _client.put(uri, headers: headers, body: body),
-    );
+    final response = authenticated
+        ? await _requestWithRefresh(
+            () => method == 'POST'
+                ? _client.post(
+                    uri,
+                    headers: {..._headers, 'Content-Type': 'application/json'},
+                    body: body,
+                  )
+                : _client.put(
+                    uri,
+                    headers: {..._headers, 'Content-Type': 'application/json'},
+                    body: body,
+                  ),
+          )
+        : await _request(
+            () => method == 'POST'
+                ? _client.post(uri, headers: headers, body: body)
+                : _client.put(uri, headers: headers, body: body),
+          );
     _requireStatus(response, path, const {200, 201});
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is! Map<String, dynamic>) {
@@ -100,6 +115,68 @@ class FiconApiClient {
     } catch (error) {
       throw ApiException('No se pudo conectar con $_baseUrl: $error');
     }
+  }
+
+  Future<http.Response> _requestWithRefresh(
+    Future<http.Response> Function() send,
+  ) async {
+    final response = await _request(send);
+    if (response.statusCode != 401 || session?.canRefresh != true) {
+      return response;
+    }
+    if (await _refreshSession()) {
+      return _request(send);
+    }
+    return response;
+  }
+
+  Future<bool> _refreshSession() {
+    final active = _refreshing;
+    if (active != null) return active;
+    final refresh = _performRefresh();
+    _refreshing = refresh;
+    return refresh.whenComplete(() => _refreshing = null);
+  }
+
+  Future<bool> _performRefresh() async {
+    final current = session;
+    final refreshToken = current?.refreshToken;
+    if (current == null || refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+    final response = await _request(
+      () => _client.post(
+        Uri.parse('$_baseUrl/api/auth/refresh'),
+        headers: const {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'refreshToken': refreshToken}),
+      ),
+    );
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      current.clear();
+      return false;
+    }
+    _requireStatus(response, '/api/auth/refresh', const {200});
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    if (data is! Map<String, dynamic>) {
+      throw ApiException('Respuesta inesperada en /api/auth/refresh');
+    }
+    final nextToken = data['token'] as String? ?? '';
+    final nextRefreshToken = data['refreshToken'] as String? ?? '';
+    if (nextToken.isEmpty || nextRefreshToken.isEmpty) {
+      throw ApiException('La renovación no devolvió credenciales válidas');
+    }
+    current.renew(
+      token: nextToken,
+      refreshToken: nextRefreshToken,
+      expiresAt: DateTime.tryParse(data['expiresAt'] as String? ?? ''),
+      refreshExpiresAt: DateTime.tryParse(
+        data['refreshExpiresAt'] as String? ?? '',
+      ),
+    );
+    return true;
   }
 
   void _requireStatus(http.Response response, String path, Set<int> accepted) {

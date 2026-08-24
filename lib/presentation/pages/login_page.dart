@@ -7,11 +7,7 @@ import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({
-    super.key,
-    required this.repository,
-    required this.session,
-  });
+  const LoginPage({super.key, required this.repository, required this.session});
 
   final FiconMonitoringRepository repository;
   final AuthSession session;
@@ -44,7 +40,13 @@ class _LoginPageState extends State<LoginPage> {
         username: _usernameController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      widget.session.start(token: result.token, user: result.user);
+      widget.session.start(
+        token: result.token,
+        refreshToken: result.refreshToken,
+        expiresAt: result.expiresAt,
+        refreshExpiresAt: result.refreshExpiresAt,
+        user: result.user,
+      );
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -54,12 +56,14 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        setState(() => _error = switch (e.statusCode) {
-              401 => 'Usuario o contraseña incorrectos.',
-              403 => e.message,
-              429 => 'Demasiados intentos fallidos. Espera unos minutos.',
-              _ => 'No se pudo iniciar sesión: $e',
-            });
+        setState(
+          () => _error = switch (e.statusCode) {
+            401 => 'Usuario o contraseña incorrectos.',
+            403 => e.message,
+            429 => 'Demasiados intentos fallidos. Espera unos minutos.',
+            _ => 'No se pudo iniciar sesión: $e',
+          },
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -89,9 +93,9 @@ class _LoginPageState extends State<LoginPage> {
                     'Ingreso al dashboard',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: FiconColors.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: FiconColors.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -118,8 +122,8 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _loading
                             ? null
                             : () => setState(
-                                  () => _showPassword = !_showPassword,
-                                ),
+                                () => _showPassword = !_showPassword,
+                              ),
                         icon: Icon(
                           _showPassword
                               ? Icons.visibility_off_outlined
@@ -130,10 +134,13 @@ class _LoginPageState extends State<LoginPage> {
                     onSubmitted: (_) => _login(),
                   ),
                   const SizedBox(height: 8),
-                  
+
                   if (_error != null) ...[
                     const SizedBox(height: 12),
-                    Text(_error!, style: TextStyle(color: StatusColors.offline)),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: StatusColors.offline),
+                    ),
                   ],
                   const SizedBox(height: 18),
                   FilledButton(
