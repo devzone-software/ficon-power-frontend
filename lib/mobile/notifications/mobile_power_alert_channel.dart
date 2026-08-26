@@ -4,7 +4,7 @@ class MobilePowerAlertChannel {
   MobilePowerAlertChannel({FlutterLocalNotificationsPlugin? notifications})
     : _notifications = notifications ?? FlutterLocalNotificationsPlugin();
 
-  static const id = 'ficon_power_power_alerts';
+  static const id = 'ficon_power_power_alerts_alarm';
   static const name = 'Cortes de energia';
   static const description =
       'Alertas sonoras para cortes de energia pendientes de revision.';
@@ -28,6 +28,7 @@ class MobilePowerAlertChannel {
         description: description,
         importance: Importance.max,
         playSound: true,
+        sound: RawResourceAndroidNotificationSound('power_alarm'),
         enableVibration: true,
       ),
     );
