@@ -11,12 +11,58 @@ class AdminTableFilters {
 
   List<String> options<T>(List<T> rows, String? Function(T row) valueForRow) =>
       uniqueColumnOptions(rows, valueForRow);
+  List<String> mergedOptions(Iterable<Iterable<String>> groups) =>
+      mergeFilterOptions(groups);
 
   Widget text({
     required String keyName,
     required String label,
     required List<String> options,
+    bool wideOnMobile = false,
+    String? hint,
   }) => TextColumnFilter(
+    label: label,
+    value: state.text(keyName),
+    options: options,
+    wideOnMobile: wideOnMobile,
+    hint: hint,
+    onChanged: (value) {
+      state.setText(keyName, value);
+      onChanged();
+    },
+    width: 240,
+  );
+
+  Widget sort(String keyName, String label) => SortColumnControl(
+    label: label,
+    value: state.sort(keyName),
+    onChanged: (value) {
+      state.setSort(keyName, value);
+      onChanged();
+    },
+  );
+
+  Widget choice({
+    required String keyName,
+    required String label,
+    required List<String> options,
+    Map<String, String> labels = const {},
+  }) => ChoiceColumnFilter(
+    label: label,
+    value: state.text(keyName),
+    options: options,
+    labels: labels,
+    onChanged: (value) {
+      state.setText(keyName, value);
+      onChanged();
+    },
+  );
+
+  Widget select({
+    required String keyName,
+    required String label,
+    required List<String> options,
+  }) => SelectColumnFilter(
     label: label,
     value: state.text(keyName),
     options: options,
@@ -27,15 +73,17 @@ class AdminTableFilters {
     width: 240,
   );
 
-  Widget date(String keyName, String label) => DateColumnFilter(
-    label: label,
-    value: state.date(keyName),
-    onChanged: (value) {
-      state.setDate(keyName, value);
-      onChanged();
-    },
-    width: 190,
-  );
+  Widget date(String keyName, String label, {bool wideOnMobile = false}) =>
+      DateColumnFilter(
+        label: label,
+        value: state.date(keyName),
+        wideOnMobile: wideOnMobile,
+        onChanged: (value) {
+          state.setDate(keyName, value);
+          onChanged();
+        },
+        width: 190,
+      );
 
   Widget ip(String keyName, String label) => IpColumnFilter(
     label: label,
@@ -48,18 +96,34 @@ class AdminTableFilters {
   );
 
   bool matchesUser(ManagedUser user) {
-    return state.matchesText('users.username', user.username) &&
+    return state.matchesAnyText('users.query', [
+          user.username,
+          user.displayName,
+        ]) &&
+        state.matchesText('users.username', user.username) &&
         state.matchesText('users.displayName', user.displayName) &&
-        state.matchesText('users.role', user.role) &&
-        state.matchesText('users.status', user.active ? 'Activo' : 'Revocado');
+        state.matchesChoice('users.role', user.role) &&
+        state.matchesChoice(
+          'users.status',
+          user.active ? 'Activo' : 'Revocado',
+        );
   }
 
   bool matchesBlockedUser(BlockedLoginUser user) {
-    return state.matchesText('blocked.username', user.username) &&
+    return state.matchesAnyText('blocked.query', [
+          user.username,
+          user.displayName,
+          user.ipAddress,
+          user.unblockedByUsername,
+        ]) &&
+        state.matchesText('blocked.username', user.username) &&
         state.matchesText('blocked.displayName', user.displayName) &&
         state.matchesIp('blocked.ip', user.ipAddress) &&
-        state.matchesText('blocked.failedAttempts', '${user.failedAttempts}') &&
-        state.matchesText(
+        state.matchesChoice(
+          'blocked.failedAttempts',
+          '${user.failedAttempts}',
+        ) &&
+        state.matchesChoice(
           'blocked.status',
           user.active ? 'Bloqueado' : 'Liberado/expirado',
         ) &&
@@ -69,13 +133,22 @@ class AdminTableFilters {
   }
 
   bool matchesAuditLog(AuditLogEntry log) {
-    return state.matchesDate('audit.createdAt', log.createdAt) &&
+    return state.matchesAnyText('audit.query', [
+          log.actorUsername,
+          log.actorRole,
+          log.action,
+          log.entityType,
+          log.entityId,
+          log.ipAddress,
+          log.userAgent,
+        ]) &&
+        state.matchesDate('audit.createdAt', log.createdAt) &&
         state.matchesText(
           'audit.actor',
           '${log.actorUsername ?? '—'} · ${log.actorRole ?? '—'}',
         ) &&
-        state.matchesText('audit.action', log.action) &&
-        state.matchesText(
+        state.matchesChoice('audit.action', log.action) &&
+        state.matchesChoice(
           'audit.entity',
           '${log.entityType} ${log.entityId ?? ''}',
         ) &&
@@ -84,22 +157,34 @@ class AdminTableFilters {
   }
 
   bool matchesLoginAttempt(LoginAttempt attempt) {
-    return state.matchesDate('logins.createdAt', attempt.createdAt) &&
+    return state.matchesAnyText('logins.query', [
+          attempt.username,
+          attempt.reason,
+          attempt.ipAddress,
+          attempt.userAgent,
+        ]) &&
+        state.matchesDate('logins.createdAt', attempt.createdAt) &&
         state.matchesText('logins.username', attempt.username) &&
-        state.matchesText(
+        state.matchesChoice(
           'logins.result',
           attempt.success ? 'Correcto' : 'Fallido',
         ) &&
-        state.matchesText('logins.reason', attempt.reason) &&
+        state.matchesChoice('logins.reason', attempt.reason) &&
         state.matchesIp('logins.ip', attempt.ipAddress) &&
         state.matchesText('logins.userAgent', attempt.userAgent);
   }
 
   bool matchesSession(AdminSession session) {
-    return state.matchesDate('sessions.createdAt', session.createdAt) &&
+    return state.matchesAnyText('sessions.query', [
+          session.username,
+          session.role,
+          session.ipAddress,
+          session.userAgent,
+        ]) &&
+        state.matchesDate('sessions.createdAt', session.createdAt) &&
         state.matchesText('sessions.username', session.username) &&
-        state.matchesText('sessions.role', session.role) &&
-        state.matchesText(
+        state.matchesChoice('sessions.role', session.role) &&
+        state.matchesChoice(
           'sessions.status',
           session.active ? 'Activa' : 'Cerrada/expirada',
         ) &&
@@ -107,4 +192,11 @@ class AdminTableFilters {
         state.matchesIp('sessions.ip', session.ipAddress) &&
         state.matchesText('sessions.userAgent', session.userAgent);
   }
+
+  List<BlockedLoginUser> sortBlockedUsers(Iterable<BlockedLoginUser> users) =>
+      state.sortedNumeric(
+        'blocked.failedAttemptsSort',
+        users,
+        (user) => user.failedAttempts,
+      );
 }

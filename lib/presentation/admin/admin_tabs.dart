@@ -33,7 +33,12 @@ class AdminTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final definitions = AdminFilterDefinitions(filters: filters, data: data);
+    final compact = MediaQuery.sizeOf(context).width < 720;
+    final definitions = AdminFilterDefinitions(
+      filters: filters,
+      data: data,
+      compact: compact,
+    );
     return DefaultTabController(
       length: 5,
       child: Column(
@@ -65,9 +70,9 @@ class AdminTabs extends StatelessWidget {
                   filters: definitions.users,
                 ),
                 BlockedUsersTab(
-                  blockedUsers: data.blockedUsers
-                      .where(filters.matchesBlockedUser)
-                      .toList(),
+                  blockedUsers: filters.sortBlockedUsers(
+                    data.blockedUsers.where(filters.matchesBlockedUser),
+                  ),
                   onUnblock: onUnblockUser,
                   onRefresh: onRefresh,
                   filters: definitions.blockedUsers,
