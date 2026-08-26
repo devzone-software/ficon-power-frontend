@@ -1,23 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'adapters/http/ficon_monitoring_repository.dart';
+import 'application/ficon_app_router.dart';
+import 'application/ficon_dependencies.dart';
+import 'application/ficon_repository_scope.dart';
 import 'config/auth_session.dart';
-import 'presentation/pages/admin_page.dart';
-import 'presentation/pages/dashboard_page.dart';
-import 'presentation/pages/devices_page.dart';
-import 'presentation/pages/events_page.dart';
-import 'presentation/pages/incidents_page.dart';
-import 'presentation/pages/login_page.dart';
 import 'presentation/theme/ficon_theme.dart';
-import 'presentation/widgets/admin_scaffold.dart';
-import 'usecase/create_site_service.dart';
-import 'usecase/get_devices_service.dart';
-import 'usecase/get_events_service.dart';
-import 'usecase/get_incidents_service.dart';
-import 'usecase/get_monitoring_overview_service.dart';
-import 'usecase/get_notification_templates_service.dart';
-import 'usecase/get_sites_service.dart';
-import 'usecase/update_device_details_service.dart';
+import 'presentation/navigation/app_routes.dart';
 
 void main() {
   final session = AuthSession();
@@ -47,29 +36,40 @@ class FiconPowerApp extends StatefulWidget {
 
 class _FiconPowerAppState extends State<FiconPowerApp> {
   late final GlobalKey<NavigatorState> _navigatorKey;
-  late final GetMonitoringOverviewService getOverview;
-  late final GetDevicesService getDevices;
-  late final GetIncidentsService getIncidents;
-  late final GetEventsService getEvents;
-  late final GetNotificationTemplatesService getNotificationTemplates;
-  late final GetSitesService getSites;
-  late final UpdateDeviceDetailsService updateDeviceDetails;
-  late final CreateSiteService createSite;
+  late final FiconAppRouter _router;
+  late bool _wasAuthenticated;
 
   @override
   void initState() {
     super.initState();
     _navigatorKey = widget.navigatorKey ?? GlobalKey<NavigatorState>();
-    getOverview = GetMonitoringOverviewService(widget.repository);
-    getDevices = GetDevicesService(widget.repository);
-    getIncidents = GetIncidentsService(widget.repository);
-    getEvents = GetEventsService(widget.repository);
-    getNotificationTemplates = GetNotificationTemplatesService(
-      widget.repository,
+    _wasAuthenticated = widget.session.isAuthenticated;
+    widget.session.addListener(_handleSessionChange);
+    _router = FiconAppRouter(
+      repository: widget.repository,
+      session: widget.session,
+      dependencies: FiconDependencies(widget.repository),
+      navigatorKey: _navigatorKey,
     );
-    getSites = GetSitesService(widget.repository);
-    updateDeviceDetails = UpdateDeviceDetailsService(widget.repository);
-    createSite = CreateSiteService(widget.repository);
+  }
+
+  void _handleSessionChange() {
+    final authenticated = widget.session.isAuthenticated;
+    if (_wasAuthenticated && !authenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          AppRoutes.login,
+          (route) => false,
+        );
+      });
+    }
+    _wasAuthenticated = authenticated;
+  }
+
+  @override
+  void dispose() {
+    widget.session.removeListener(_handleSessionChange);
+    super.dispose();
   }
 
   @override
@@ -82,103 +82,28 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
         debugShowCheckedModeBanner: false,
         theme: buildFiconTheme(),
         builder: (context, child) {
-          if (!widget.showBetaBanner || child == null) return child ?? const SizedBox.shrink();
-          return Banner(
-            message: 'BETA',
-            location: BannerLocation.topEnd,
-            color: FiconColors.cyan,
-            textStyle: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-            child: child,
+          final content = child ?? const SizedBox.shrink();
+          return FiconRepositoryScope(
+            repository: widget.repository,
+            child: !widget.showBetaBanner
+                ? content
+                : Banner(
+                    message: 'BETA',
+                    location: BannerLocation.topEnd,
+                    color: FiconColors.cyan,
+                    textStyle: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    child: content,
+                  ),
           );
         },
-        initialRoute: widget.session.isAuthenticated
-            ? AppRoutes.dashboard
-            : AppRoutes.login,
-        routes: {
-          AppRoutes.login: (_) =>
-              LoginPage(repository: widget.repository, session: widget.session),
-          AppRoutes.dashboard: (_) => _protected(
-                () => DashboardPage(
-                  getOverview: getOverview,
-                  getNotificationTemplates: getNotificationTemplates,
-                  currentUser: widget.session.user!,
-                  onLogout: _logout,
-                ),
-              ),
-          AppRoutes.devices: (_) => _protected(
-                () => DevicesPage(
-                  getDevices: getDevices,
-                  getSites: getSites,
-                  updateDeviceDetails: updateDeviceDetails,
-                  createSite: createSite,
-                  currentUser: widget.session.user!,
-                  onLogout: _logout,
-                ),
-              ),
-          AppRoutes.incidents: (_) => _protected(
-                () => IncidentsPage(
-                  getIncidents: getIncidents,
-                  currentUser: widget.session.user!,
-                  onLogout: _logout,
-                ),
-              ),
-          AppRoutes.events: (_) => _protected(
-                () => EventsPage(
-                  getEvents: getEvents,
-                  currentUser: widget.session.user!,
-                  onLogout: _logout,
-                ),
-              ),
-          AppRoutes.admin: (_) => _superadminOnly(
-                () => AdminPage(
-                  repository: widget.repository,
-                  currentUser: widget.session.user!,
-                  onLogout: _logout,
-                ),
-              ),
-        },
-        onUnknownRoute: (_) => MaterialPageRoute(
-          builder: (_) => widget.session.isAuthenticated
-              ? _dashboardPage()
-              : LoginPage(repository: widget.repository, session: widget.session),
-        ),
+        initialRoute: _router.initialRoute,
+        routes: _router.routes,
+        onUnknownRoute: _router.unknownRoute,
       ),
-    );
-  }
-
-  Widget _protected(Widget Function() pageBuilder) {
-    if (widget.session.isAuthenticated) return pageBuilder();
-    return LoginPage(repository: widget.repository, session: widget.session);
-  }
-
-  Widget _superadminOnly(Widget Function() pageBuilder) {
-    final user = widget.session.user;
-    if (widget.session.isAuthenticated && user != null && user.canManageUsers) {
-      return pageBuilder();
-    }
-    if (widget.session.isAuthenticated) return _dashboardPage();
-    return LoginPage(repository: widget.repository, session: widget.session);
-  }
-
-  DashboardPage _dashboardPage() {
-    return DashboardPage(
-      getOverview: getOverview,
-      getNotificationTemplates: getNotificationTemplates,
-      currentUser: widget.session.user!,
-      onLogout: _logout,
-    );
-  }
-
-  Future<void> _logout() async {
-    await widget.repository.logout();
-    widget.session.clear();
-    _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-      AppRoutes.login,
-      (route) => false,
     );
   }
 }

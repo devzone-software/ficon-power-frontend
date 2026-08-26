@@ -34,11 +34,7 @@ class FiconGradients {
   );
 
   static const LinearGradient signal = LinearGradient(
-    colors: [
-      FiconColors.logoBlue,
-      FiconColors.cyanSoft,
-      FiconColors.cyan,
-    ],
+    colors: [FiconColors.logoBlue, FiconColors.cyanSoft, FiconColors.cyan],
   );
 }
 
@@ -88,6 +84,34 @@ ThemeData buildFiconTheme() {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? Colors.white
+              : FiconColors.deepAlt,
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? FiconColors.logoBlue
+              : Colors.white,
+        ),
+        side: const WidgetStatePropertyAll(
+          BorderSide(color: FiconColors.cardBorder),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: Colors.white,
+      selectedColor: FiconColors.logoBlue,
+      labelStyle: const TextStyle(color: FiconColors.deepAlt),
+      secondaryLabelStyle: const TextStyle(color: Colors.white),
+      side: const BorderSide(color: FiconColors.cardBorder),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
@@ -136,10 +160,10 @@ class FiconBrandMark extends StatelessWidget {
           Text(
             'Power',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
+            ),
           ),
         ],
       ],

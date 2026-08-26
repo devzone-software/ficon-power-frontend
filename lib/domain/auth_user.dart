@@ -13,6 +13,7 @@ class AuthUser {
 
   bool get canEditMessages => role == 'ADMIN' || role == 'SUPERADMIN';
   bool get canEditDevices => role == 'ADMIN' || role == 'SUPERADMIN';
+  bool get canAccessAdmin => role == 'ADMIN' || role == 'SUPERADMIN';
   bool get canManageUsers => role == 'SUPERADMIN';
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
