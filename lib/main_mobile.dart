@@ -9,6 +9,7 @@ import 'config/auth_session.dart';
 import 'main.dart';
 import 'mobile/config/mobile_firebase_config.dart';
 import 'mobile/notifications/mobile_event_notification_watcher.dart';
+import 'mobile/notifications/mobile_power_alert_channel.dart';
 import 'mobile/notifications/mobile_push_registration.dart';
 import 'mobile/session/mobile_session_storage.dart';
 import 'mobile/updates/mobile_update_checker.dart';
@@ -29,6 +30,7 @@ Future<void> main() async {
   if (MobileFirebaseConfig.isConfigured) {
     await Firebase.initializeApp(options: MobileFirebaseConfig.options);
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await MobilePowerAlertChannel().ensureCreated();
   }
 
   final session = AuthSession();
