@@ -35,6 +35,23 @@ List<String> uniqueColumnOptions<T>(
   );
 }
 
+List<String> mergeFilterOptions(Iterable<Iterable<String>> groups) {
+  final byNormalizedValue = <String, String>{};
+  for (final group in groups) {
+    for (final value in group) {
+      final cleanValue = value.trim();
+      if (cleanValue.isEmpty || cleanValue == '—') continue;
+      byNormalizedValue.putIfAbsent(
+        normalizeFilterValue(cleanValue),
+        () => cleanValue,
+      );
+    }
+  }
+  return byNormalizedValue.values.toList()..sort(
+    (a, b) => normalizeFilterValue(a).compareTo(normalizeFilterValue(b)),
+  );
+}
+
 Iterable<String> rankedFilterMatches(List<String> options, String query) {
   final normalizedQuery = normalizeFilterValue(query);
   if (normalizedQuery.isEmpty) return options.take(30);
