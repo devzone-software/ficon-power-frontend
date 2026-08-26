@@ -1,38 +1,35 @@
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 
-import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
+import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
 import '../../domain/site.dart';
 import '../../ports/output/device_repository.dart';
 import '../../ports/output/monitoring_query_repository.dart';
 import '../../ports/output/notification_template_repository.dart';
 import '../../ports/output/site_repository.dart';
+import 'ficon_api_client.dart';
 
-/// Error de comunicación con la API de FICON Power.
-class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode, this.details});
-
-  final String message;
-  final int? statusCode;
-  final String? details;
-
-  @override
-  String toString() =>
-      'ApiException(${statusCode ?? 'sin respuesta'}): $message';
-}
+export 'ficon_api_client.dart' show ApiException;
 
 class LoginResult {
-  const LoginResult({required this.token, required this.user});
+  const LoginResult({
+    required this.token,
+    required this.refreshToken,
+    required this.expiresAt,
+    required this.refreshExpiresAt,
+    required this.user,
+  });
 
   final String token;
+  final String refreshToken;
+  final DateTime? expiresAt;
+  final DateTime? refreshExpiresAt;
   final AuthUser user;
 }
 
@@ -49,29 +46,30 @@ class FiconMonitoringRepository
     http.Client? client,
     String? baseUrl,
     this.session,
-  }) : _client = client ?? http.Client(),
-       _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+  }) : _api = FiconApiClient(
+         client: client,
+         baseUrl: baseUrl,
+         session: session,
+       );
 
-  final http.Client _client;
-  final String _baseUrl;
+  final FiconApiClient _api;
   final AuthSession? session;
-
-  Map<String, String> get _headers => {
-    'Accept': 'application/json',
-    if (session?.token != null) 'Authorization': 'Bearer ${session!.token}',
-    if (AppConfig.apiKey.isNotEmpty) 'X-API-Key': AppConfig.apiKey,
-  };
 
   Future<LoginResult> login({
     required String username,
     required String password,
   }) async {
-    final data = await _sendJson('POST', '/api/auth/login', {
+    final data = await _api.postJson('/api/auth/login', {
       'username': username,
       'password': password,
     }, authenticated: false);
     return LoginResult(
       token: data['token'] as String? ?? '',
+      refreshToken: data['refreshToken'] as String? ?? '',
+      expiresAt: DateTime.tryParse(data['expiresAt'] as String? ?? ''),
+      refreshExpiresAt: DateTime.tryParse(
+        data['refreshExpiresAt'] as String? ?? '',
+      ),
       user: AuthUser.fromJson(
         (data['user'] as Map<dynamic, dynamic>? ?? const {})
             .cast<String, dynamic>(),
@@ -81,14 +79,55 @@ class FiconMonitoringRepository
 
   Future<void> logout() async {
     try {
-      await _sendJson('POST', '/api/auth/logout', const {});
+      await _api.postJson('/api/auth/logout', {
+        if (session?.refreshToken != null)
+          'refreshToken': session!.refreshToken,
+      });
     } catch (_) {
       // El cierre local de sesión no debe bloquearse por red.
     }
   }
 
+  Future<void> registerMobilePushToken({
+    required String token,
+    required String platform,
+    String? deviceName,
+    String? appVersion,
+  }) async {
+    await _api.postJson('/api/mobile/device-tokens', {
+      'token': token,
+      'platform': platform,
+      if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
+      if (appVersion != null && appVersion.isNotEmpty) 'appVersion': appVersion,
+    });
+  }
+
+  Future<void> revokeMobilePushToken(String token) async {
+    await _api.deleteJson('/api/mobile/device-tokens', {'token': token});
+  }
+
+  Future<List<MobileNotification>> fetchMobileNotifications({
+    int limit = 100,
+  }) async {
+    final data = await _api.getList('/api/mobile/notifications?limit=$limit');
+    return data.map(MobileNotification.fromJson).toList();
+  }
+
+  Future<int> fetchMobileUnreadNotificationCount() async {
+    final data = await _api.getJson('/api/mobile/notifications/unread-count');
+    return data['unreadCount'] as int? ?? 0;
+  }
+
+  Future<void> markMobileNotificationRead(String id) async {
+    await _api.patchJson('/api/mobile/notifications/$id/read');
+  }
+
+  Future<void> markAllMobileNotificationsRead() async {
+    await _api.patchJson('/api/mobile/notifications/read-all');
+  }
+
   Future<List<ManagedUser>> fetchUsers() async {
-    final data = await _getList('/api/users');
+    final data = await _api.getList('/api/users');
     return data.map(ManagedUser.fromJson).toList();
   }
 
@@ -98,7 +137,7 @@ class FiconMonitoringRepository
     required String role,
     required String displayName,
   }) async {
-    final data = await _postJson('/api/users', {
+    final data = await _api.postJson('/api/users', {
       'username': username,
       'password': password,
       'role': role,
@@ -114,7 +153,7 @@ class FiconMonitoringRepository
     required bool active,
     String? password,
   }) async {
-    final data = await _putJson('/api/users/$id', {
+    final data = await _api.putJson('/api/users/$id', {
       'role': role,
       'displayName': displayName,
       'active': active,
@@ -124,22 +163,26 @@ class FiconMonitoringRepository
   }
 
   Future<List<AuditLogEntry>> fetchAuditLogs({int limit = 100}) async {
-    final data = await _getList('/api/admin/audit-logs?limit=$limit');
+    final data = await _api.getList('/api/admin/audit-logs?limit=$limit');
     return data.map(AuditLogEntry.fromJson).toList();
   }
 
   Future<List<LoginAttempt>> fetchLoginAttempts({int limit = 100}) async {
-    final data = await _getList('/api/admin/login-attempts?limit=$limit');
+    final data = await _api.getList('/api/admin/login-attempts?limit=$limit');
     return data.map(LoginAttempt.fromJson).toList();
   }
 
   Future<List<AdminSession>> fetchAdminSessions({int limit = 100}) async {
-    final data = await _getList('/api/admin/sessions?limit=$limit');
+    final data = await _api.getList('/api/admin/sessions?limit=$limit');
     return data.map(AdminSession.fromJson).toList();
   }
 
+  Future<void> revokeAdminSession(String id) async {
+    await _api.postJson('/api/admin/sessions/$id/revoke', const {});
+  }
+
   Future<List<BlockedLoginUser>> fetchBlockedUsers({int limit = 100}) async {
-    final data = await _getList('/api/admin/blocked-users?limit=$limit');
+    final data = await _api.getList('/api/admin/blocked-users?limit=$limit');
     return data.map(BlockedLoginUser.fromJson).toList();
   }
 
@@ -147,7 +190,7 @@ class FiconMonitoringRepository
     String id, {
     String reason = 'manual_superadmin_unlock',
   }) async {
-    final data = await _postJson('/api/admin/blocked-users/$id/unblock', {
+    final data = await _api.postJson('/api/admin/blocked-users/$id/unblock', {
       'reason': reason,
     });
     return BlockedLoginUser.fromJson(data);
@@ -155,31 +198,31 @@ class FiconMonitoringRepository
 
   @override
   Future<List<Site>> fetchSites() async {
-    final data = await _getList('/api/sites');
+    final data = await _api.getList('/api/sites');
     return data.map(Site.fromJson).toList();
   }
 
   @override
   Future<List<Device>> fetchDevices() async {
-    final data = await _getList('/api/devices');
+    final data = await _api.getList('/api/devices');
     return data.map(Device.fromJson).toList();
   }
 
   @override
   Future<List<Incident>> fetchIncidents({int limit = 100}) async {
-    final data = await _getList('/api/incidents?limit=$limit');
+    final data = await _api.getList('/api/incidents?limit=$limit');
     return data.map(Incident.fromJson).toList();
   }
 
   @override
   Future<List<Event>> fetchEvents({int limit = 100}) async {
-    final data = await _getList('/api/events?limit=$limit');
+    final data = await _api.getList('/api/events?limit=$limit');
     return data.map(Event.fromJson).toList();
   }
 
   @override
   Future<List<NotificationTemplate>> fetchNotificationTemplates() async {
-    final data = await _getList('/api/notification-templates');
+    final data = await _api.getList('/api/notification-templates');
     return data.map(NotificationTemplate.fromJson).toList();
   }
 
@@ -189,7 +232,7 @@ class FiconMonitoringRepository
     required String name,
     required String siteId,
   }) async {
-    final data = await _putJson('/api/devices/$id', {
+    final data = await _api.putJson('/api/devices/$id', {
       'name': name,
       'siteId': siteId,
     });
@@ -202,7 +245,7 @@ class FiconMonitoringRepository
     String? district,
     String? province,
   }) async {
-    final data = await _postJson('/api/sites', {
+    final data = await _api.postJson('/api/sites', {
       'name': name,
       if (district != null && district.isNotEmpty) 'district': district,
       if (province != null && province.isNotEmpty) 'province': province,
@@ -210,88 +253,5 @@ class FiconMonitoringRepository
     return Site.fromJson(data);
   }
 
-  Future<List<Map<String, dynamic>>> _getList(String path) async {
-    final http.Response response;
-    try {
-      response = await _client
-          .get(Uri.parse('$_baseUrl$path'), headers: _headers)
-          .timeout(const Duration(seconds: 15));
-    } catch (e) {
-      throw ApiException('No se pudo conectar con $_baseUrl: $e');
-    }
-    if (response.statusCode != 200) {
-      throw ApiException(
-        _errorMessage(response, path),
-        statusCode: response.statusCode,
-        details: utf8.decode(response.bodyBytes),
-      );
-    }
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    if (decoded is! List) {
-      throw ApiException('Respuesta inesperada en $path');
-    }
-    return decoded.cast<Map<String, dynamic>>();
-  }
-
-  Future<Map<String, dynamic>> _putJson(
-    String path,
-    Map<String, dynamic> payload,
-  ) => _sendJson('PUT', path, payload);
-
-  Future<Map<String, dynamic>> _postJson(
-    String path,
-    Map<String, dynamic> payload,
-  ) => _sendJson('POST', path, payload);
-
-  Future<Map<String, dynamic>> _sendJson(
-    String method,
-    String path,
-    Map<String, dynamic> payload, {
-    bool authenticated = true,
-  }) async {
-    final uri = Uri.parse('$_baseUrl$path');
-    final headers = {
-      if (authenticated) ..._headers else 'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    };
-    final body = jsonEncode(payload);
-    final http.Response response;
-    try {
-      response =
-          await (method == 'POST'
-                  ? _client.post(uri, headers: headers, body: body)
-                  : _client.put(uri, headers: headers, body: body))
-              .timeout(const Duration(seconds: 15));
-    } catch (e) {
-      throw ApiException('No se pudo conectar con $_baseUrl: $e');
-    }
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw ApiException(
-        _errorMessage(response, path),
-        statusCode: response.statusCode,
-        details: utf8.decode(response.bodyBytes),
-      );
-    }
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    if (decoded is! Map<String, dynamic>) {
-      throw ApiException('Respuesta inesperada en $path');
-    }
-    return decoded;
-  }
-
-  void dispose() => _client.close();
-
-  String _errorMessage(http.Response response, String path) {
-    final body = utf8.decode(response.bodyBytes);
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final error = decoded['error'] ?? decoded['message'];
-        if (error is String && error.isNotEmpty) return error;
-      }
-    } catch (_) {
-      // Si no es JSON, cae al mensaje genérico.
-    }
-    return 'El backend respondió con un error en $path';
-  }
+  void dispose() => _api.dispose();
 }

@@ -17,6 +17,8 @@ services:
     env_file:
       - path: ../ficon-power-backend/.env
         required: false
+    volumes:
+      - ../ficon-power-backend/secrets:/app/secrets:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
       interval: 10s

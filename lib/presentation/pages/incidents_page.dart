@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../ports/input/get_incidents.dart';
+import '../incidents/mobile/incident_cards.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
@@ -32,17 +33,13 @@ class _IncidentsPageState extends State<IncidentsPage> {
   late Future<List<Incident>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
-  final Map<String, String> _textFilters = {};
-  final Map<String, DateTime?> _dateFilters = {};
+  final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
     _future = widget.getIncidents();
-    _autoRefreshTimer = Timer.periodic(
-      _autoRefreshInterval,
-      (_) => _refresh(),
-    );
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
 
   Future<void> _refresh() async {
@@ -81,11 +78,13 @@ class _IncidentsPageState extends State<IncidentsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final incidents = snapshot.data!;
-          final filteredIncidents = incidents.where(_matchesFilters).toList();
+          final filteredIncidents = _columnFilters.sortedNumeric(
+            'duration',
+            incidents.where(_matchesFilters),
+            (incident) => incident.durationSeconds ?? 0,
+          );
           if (incidents.isEmpty) {
-            return const Center(
-              child: Text('No hay incidentes registrados.'),
-            );
+            return const Center(child: Text('No hay incidentes registrados.'));
           }
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -95,14 +94,18 @@ class _IncidentsPageState extends State<IncidentsPage> {
                 child: Column(
                   children: [
                     TableFiltersBar(filters: _filters(incidents)),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(minWidth: constraints.maxWidth),
-                        child: _IncidentsTable(incidents: filteredIncidents),
+                    if (constraints.maxWidth < 720)
+                      MobileIncidentList(incidents: filteredIncidents)
+                    else
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: _IncidentsTable(incidents: filteredIncidents),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -113,42 +116,95 @@ class _IncidentsPageState extends State<IncidentsPage> {
     );
   }
 
-  List<Widget> _filters(List<Incident> incidents) => [
-        _textFilter(
-          keyName: 'device',
-          label: 'Dispositivo',
-          options: uniqueColumnOptions(incidents, (incident) => incident.deviceName),
+  List<Widget> _filters(List<Incident> incidents) {
+    if (MediaQuery.sizeOf(context).width < 720) {
+      return [
+        TextColumnFilter(
+          label: 'Buscar incidente',
+          hint: 'Dispositivo o sede',
+          value: _columnFilters.text('query'),
+          options: mergeFilterOptions([
+            uniqueColumnOptions(incidents, (incident) => incident.deviceName),
+            uniqueColumnOptions(incidents, (incident) => incident.siteName),
+          ]),
+          wideOnMobile: true,
+          onChanged: (value) =>
+              setState(() => _columnFilters.setText('query', value)),
         ),
-        _textFilter(
-          keyName: 'site',
+        _statusFilter(),
+        OptionsChipFilter(
           label: 'Sede',
-          options: uniqueColumnOptions(incidents, (incident) => incident.siteName),
-        ),
-        _textFilter(
-          keyName: 'status',
-          label: 'Estado',
-          options: uniqueColumnOptions(incidents, (incident) => _incidentStatusLabel(incident.status)),
+          value: _columnFilters.text('site'),
+          options: uniqueColumnOptions(
+            incidents,
+            (incident) => incident.siteName,
+          ),
+          onChanged: (value) =>
+              setState(() => _columnFilters.setText('site', value)),
         ),
         DateColumnFilter(
           label: 'Inicio',
-          value: _dateFilters['startTime'],
-          onChanged: (value) => setState(() => _dateFilters['startTime'] = value),
+          value: _columnFilters.date('startTime'),
+          onChanged: (value) =>
+              setState(() => _columnFilters.setDate('startTime', value)),
         ),
         DateColumnFilter(
           label: 'Fin',
-          value: _dateFilters['endTime'],
-          onChanged: (value) => setState(() => _dateFilters['endTime'] = value),
+          value: _columnFilters.date('endTime'),
+          onChanged: (value) =>
+              setState(() => _columnFilters.setDate('endTime', value)),
         ),
-        _textFilter(
-          keyName: 'duration',
-          label: 'Duración',
-          options: uniqueColumnOptions(
-            incidents,
-            (incident) => formatDurationSeconds(incident.durationSeconds),
-          ),
-          width: 170,
-        ),
+        _durationSort(),
       ];
+    }
+    return [
+      _textFilter(
+        keyName: 'device',
+        label: 'Dispositivo',
+        options: uniqueColumnOptions(
+          incidents,
+          (incident) => incident.deviceName,
+        ),
+      ),
+      _selectFilter(
+        keyName: 'site',
+        label: 'Sede',
+        options: uniqueColumnOptions(
+          incidents,
+          (incident) => incident.siteName,
+        ),
+      ),
+      _statusFilter(),
+      DateColumnFilter(
+        label: 'Inicio',
+        value: _columnFilters.date('startTime'),
+        onChanged: (value) =>
+            setState(() => _columnFilters.setDate('startTime', value)),
+      ),
+      DateColumnFilter(
+        label: 'Fin',
+        value: _columnFilters.date('endTime'),
+        onChanged: (value) =>
+            setState(() => _columnFilters.setDate('endTime', value)),
+      ),
+      _durationSort(),
+    ];
+  }
+
+  Widget _statusFilter() => ChoiceColumnFilter(
+    label: 'Estado',
+    value: _columnFilters.text('status'),
+    options: const ['Activo', 'Atendido', 'Resuelto'],
+    onChanged: (value) =>
+        setState(() => _columnFilters.setText('status', value)),
+  );
+
+  Widget _durationSort() => SortColumnControl(
+    label: 'Ordenar por duración',
+    value: _columnFilters.sort('duration'),
+    onChanged: (value) =>
+        setState(() => _columnFilters.setSort('duration', value)),
+  );
 
   Widget _textFilter({
     required String keyName,
@@ -158,32 +214,52 @@ class _IncidentsPageState extends State<IncidentsPage> {
   }) {
     return TextColumnFilter(
       label: label,
-      value: _textFilters[keyName] ?? '',
+      value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+      onChanged: (value) =>
+          setState(() => _columnFilters.setText(keyName, value)),
+    );
+  }
+
+  Widget _selectFilter({
+    required String keyName,
+    required String label,
+    required List<String> options,
+    double width = 220,
+  }) {
+    return SelectColumnFilter(
+      label: label,
+      value: _columnFilters.text(keyName),
+      options: options,
+      width: width,
+      onChanged: (value) =>
+          setState(() => _columnFilters.setText(keyName, value)),
     );
   }
 
   bool _matchesFilters(Incident incident) {
-    return matchesTextFilter(incident.deviceName, _textFilters['device'] ?? '') &&
-        matchesTextFilter(incident.siteName, _textFilters['site'] ?? '') &&
-        matchesTextFilter(_incidentStatusLabel(incident.status), _textFilters['status'] ?? '') &&
-        matchesDateFilter(incident.startTime, _dateFilters['startTime']) &&
-        matchesDateFilter(incident.endTime, _dateFilters['endTime']) &&
-        matchesTextFilter(
-          formatDurationSeconds(incident.durationSeconds),
-          _textFilters['duration'] ?? '',
-        );
+    return _columnFilters.matchesAnyText('query', [
+          incident.deviceName,
+          incident.siteName,
+        ]) &&
+        _columnFilters.matchesText('device', incident.deviceName) &&
+        _columnFilters.matchesChoice('site', incident.siteName) &&
+        _columnFilters.matchesChoice(
+          'status',
+          _incidentStatusLabel(incident.status),
+        ) &&
+        _columnFilters.matchesDate('startTime', incident.startTime) &&
+        _columnFilters.matchesDate('endTime', incident.endTime);
   }
 }
 
 String _incidentStatusLabel(String status) => switch (status) {
-      'active' => 'Activo',
-      'acknowledged' => 'Atendido',
-      'resolved' => 'Resuelto',
-      _ => status,
-    };
+  'active' => 'Activo',
+  'acknowledged' => 'Atendido',
+  'resolved' => 'Resuelto',
+  _ => status,
+};
 
 class _IncidentsTable extends StatelessWidget {
   const _IncidentsTable({required this.incidents});
@@ -210,9 +286,7 @@ class _IncidentsTable extends StatelessWidget {
               DataCell(IncidentStatusChip(status: incident.status)),
               DataCell(Text(formatDateTime(incident.startTime))),
               DataCell(Text(formatDateTime(incident.endTime))),
-              DataCell(
-                Text(formatDurationSeconds(incident.durationSeconds)),
-              ),
+              DataCell(Text(formatDurationSeconds(incident.durationSeconds))),
             ],
           ),
       ],

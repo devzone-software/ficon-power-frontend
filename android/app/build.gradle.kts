@@ -13,6 +13,9 @@ val hasReleaseKeystore = keystorePropertiesFile.exists()
 if (hasReleaseKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val ficonAndroidAbiFilter = providers
+    .environmentVariable("FICON_ANDROID_ABI_FILTER")
+    .orNull
 
 android {
     namespace = "com.devzonesoft.ficon_power_frontend"
@@ -34,6 +37,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        if (!ficonAndroidAbiFilter.isNullOrBlank()) {
+            ndk {
+                abiFilters += ficonAndroidAbiFilter
+            }
+        }
     }
 
     signingConfigs {
@@ -53,6 +61,18 @@ android {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    packaging {
+        jniLibs {
+            if (ficonAndroidAbiFilter == "arm64-v8a") {
+                excludes += setOf(
+                    "**/armeabi-v7a/*.so",
+                    "**/x86/*.so",
+                    "**/x86_64/*.so",
+                )
             }
         }
     }
