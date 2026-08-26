@@ -80,6 +80,10 @@ class _DevicesPageState extends State<DevicesPage> {
     setState(() => _columnFilters.setDate(keyName, value));
   }
 
+  void _setSortFilter(String keyName, ColumnSortDirection? value) {
+    setState(() => _columnFilters.setSort(keyName, value));
+  }
+
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
@@ -127,7 +131,9 @@ class _DevicesPageState extends State<DevicesPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final devices = snapshot.data!;
-          final filteredDevices = devices.where(_matchesFilters).toList();
+          final filteredDevices = _sortedDevices(
+            devices.where(_matchesFilters),
+          );
           return RefreshIndicator(
             onRefresh: _refresh,
             child: _DevicesPageContent(

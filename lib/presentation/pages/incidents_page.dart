@@ -78,7 +78,11 @@ class _IncidentsPageState extends State<IncidentsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final incidents = snapshot.data!;
-          final filteredIncidents = incidents.where(_matchesFilters).toList();
+          final filteredIncidents = _columnFilters.sortedNumeric(
+            'duration',
+            incidents.where(_matchesFilters),
+            (incident) => incident.durationSeconds ?? 0,
+          );
           if (incidents.isEmpty) {
             return const Center(child: Text('No hay incidentes registrados.'));
           }
@@ -112,50 +116,95 @@ class _IncidentsPageState extends State<IncidentsPage> {
     );
   }
 
-  List<Widget> _filters(List<Incident> incidents) => [
-    _textFilter(
-      keyName: 'device',
-      label: 'Dispositivo',
-      options: uniqueColumnOptions(
-        incidents,
-        (incident) => incident.deviceName,
+  List<Widget> _filters(List<Incident> incidents) {
+    if (MediaQuery.sizeOf(context).width < 720) {
+      return [
+        TextColumnFilter(
+          label: 'Buscar incidente',
+          hint: 'Dispositivo o sede',
+          value: _columnFilters.text('query'),
+          options: mergeFilterOptions([
+            uniqueColumnOptions(incidents, (incident) => incident.deviceName),
+            uniqueColumnOptions(incidents, (incident) => incident.siteName),
+          ]),
+          wideOnMobile: true,
+          onChanged: (value) =>
+              setState(() => _columnFilters.setText('query', value)),
+        ),
+        _statusFilter(),
+        OptionsChipFilter(
+          label: 'Sede',
+          value: _columnFilters.text('site'),
+          options: uniqueColumnOptions(
+            incidents,
+            (incident) => incident.siteName,
+          ),
+          onChanged: (value) =>
+              setState(() => _columnFilters.setText('site', value)),
+        ),
+        DateColumnFilter(
+          label: 'Inicio',
+          value: _columnFilters.date('startTime'),
+          onChanged: (value) =>
+              setState(() => _columnFilters.setDate('startTime', value)),
+        ),
+        DateColumnFilter(
+          label: 'Fin',
+          value: _columnFilters.date('endTime'),
+          onChanged: (value) =>
+              setState(() => _columnFilters.setDate('endTime', value)),
+        ),
+        _durationSort(),
+      ];
+    }
+    return [
+      _textFilter(
+        keyName: 'device',
+        label: 'Dispositivo',
+        options: uniqueColumnOptions(
+          incidents,
+          (incident) => incident.deviceName,
+        ),
       ),
-    ),
-    _textFilter(
-      keyName: 'site',
-      label: 'Sede',
-      options: uniqueColumnOptions(incidents, (incident) => incident.siteName),
-    ),
-    _textFilter(
-      keyName: 'status',
-      label: 'Estado',
-      options: uniqueColumnOptions(
-        incidents,
-        (incident) => _incidentStatusLabel(incident.status),
+      _selectFilter(
+        keyName: 'site',
+        label: 'Sede',
+        options: uniqueColumnOptions(
+          incidents,
+          (incident) => incident.siteName,
+        ),
       ),
-    ),
-    DateColumnFilter(
-      label: 'Inicio',
-      value: _columnFilters.date('startTime'),
-      onChanged: (value) =>
-          setState(() => _columnFilters.setDate('startTime', value)),
-    ),
-    DateColumnFilter(
-      label: 'Fin',
-      value: _columnFilters.date('endTime'),
-      onChanged: (value) =>
-          setState(() => _columnFilters.setDate('endTime', value)),
-    ),
-    _textFilter(
-      keyName: 'duration',
-      label: 'Duración',
-      options: uniqueColumnOptions(
-        incidents,
-        (incident) => formatDurationSeconds(incident.durationSeconds),
+      _statusFilter(),
+      DateColumnFilter(
+        label: 'Inicio',
+        value: _columnFilters.date('startTime'),
+        onChanged: (value) =>
+            setState(() => _columnFilters.setDate('startTime', value)),
       ),
-      width: 170,
-    ),
-  ];
+      DateColumnFilter(
+        label: 'Fin',
+        value: _columnFilters.date('endTime'),
+        onChanged: (value) =>
+            setState(() => _columnFilters.setDate('endTime', value)),
+      ),
+      _durationSort(),
+    ];
+  }
+
+  Widget _statusFilter() => ChoiceColumnFilter(
+    label: 'Estado',
+    value: _columnFilters.text('status'),
+    options: const ['Activo', 'Atendido', 'Resuelto'],
+    onChanged: (value) =>
+        setState(() => _columnFilters.setText('status', value)),
+  );
+
+  Widget _durationSort() => SortColumnControl(
+    label: 'Ordenar por duración',
+    value: _columnFilters.sort('duration'),
+    onChanged: (value) =>
+        setState(() => _columnFilters.setSort('duration', value)),
+  );
 
   Widget _textFilter({
     required String keyName,
@@ -173,19 +222,35 @@ class _IncidentsPageState extends State<IncidentsPage> {
     );
   }
 
+  Widget _selectFilter({
+    required String keyName,
+    required String label,
+    required List<String> options,
+    double width = 220,
+  }) {
+    return SelectColumnFilter(
+      label: label,
+      value: _columnFilters.text(keyName),
+      options: options,
+      width: width,
+      onChanged: (value) =>
+          setState(() => _columnFilters.setText(keyName, value)),
+    );
+  }
+
   bool _matchesFilters(Incident incident) {
-    return _columnFilters.matchesText('device', incident.deviceName) &&
-        _columnFilters.matchesText('site', incident.siteName) &&
-        _columnFilters.matchesText(
+    return _columnFilters.matchesAnyText('query', [
+          incident.deviceName,
+          incident.siteName,
+        ]) &&
+        _columnFilters.matchesText('device', incident.deviceName) &&
+        _columnFilters.matchesChoice('site', incident.siteName) &&
+        _columnFilters.matchesChoice(
           'status',
           _incidentStatusLabel(incident.status),
         ) &&
         _columnFilters.matchesDate('startTime', incident.startTime) &&
-        _columnFilters.matchesDate('endTime', incident.endTime) &&
-        _columnFilters.matchesText(
-          'duration',
-          formatDurationSeconds(incident.durationSeconds),
-        );
+        _columnFilters.matchesDate('endTime', incident.endTime);
   }
 }
 
