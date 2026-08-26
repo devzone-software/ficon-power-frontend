@@ -13,22 +13,29 @@ class TableFiltersBar extends StatelessWidget {
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 640;
         final content = Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: compact ? 8 : 12,
+          runSpacing: compact ? 8 : 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [...filters, ?trailing],
         );
 
         if (compact) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
             child: Card(
               child: ExpansionTile(
-                tilePadding: const EdgeInsets.symmetric(horizontal: 14),
-                childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                leading: const Icon(Icons.filter_alt_outlined),
-                title: const Text('Filtros'),
-                subtitle: Text('${filters.length} disponibles'),
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+                childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                leading: Icon(
+                  Icons.tune_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: const Text(
+                  'Filtrar y ordenar',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 initiallyExpanded: false,
                 children: [
                   Align(alignment: Alignment.centerLeft, child: content),

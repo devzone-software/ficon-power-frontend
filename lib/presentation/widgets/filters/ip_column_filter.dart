@@ -56,10 +56,13 @@ class _IpColumnFilterState extends State<IpColumnFilter> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final compact = screenWidth < 720;
     return SizedBox(
-      width: widget.width,
+      width: compact ? screenWidth - 56 : widget.width,
       child: InputDecorator(
         decoration: InputDecoration(
+          isDense: compact,
           labelText: widget.label,
           prefixIcon: const Icon(Icons.lan_outlined),
           suffixIcon: _controllers.every((item) => item.text.isEmpty)

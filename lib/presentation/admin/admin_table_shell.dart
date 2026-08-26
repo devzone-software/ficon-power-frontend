@@ -32,16 +32,28 @@ class AdminTableShell extends StatelessWidget {
                   if (filters.isNotEmpty)
                     Card(
                       child: ExpansionTile(
-                        leading: const Icon(Icons.filter_alt_outlined),
-                        title: const Text('Filtros'),
-                        subtitle: Text('${filters.length} disponibles'),
-                        childrenPadding: const EdgeInsets.all(12),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        leading: Icon(
+                          Icons.tune_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        title: const Text(
+                          'Filtrar y ordenar',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          10,
+                          0,
+                          10,
+                          10,
+                        ),
                         children: [
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
+                              spacing: 8,
+                              runSpacing: 8,
                               children: filters,
                             ),
                           ),
