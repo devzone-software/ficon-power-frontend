@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -34,10 +35,16 @@ class MobileEventNotificationWatcher extends StatefulWidget {
 
 class _MobileEventNotificationWatcherState
     extends State<MobileEventNotificationWatcher> {
-  static const _channelId = 'ficon_power_events';
+  static const _channelId = 'ficon_power_events_vibration';
   static const _channelName = 'Eventos FICON Power';
   static const _channelDescription =
-      'Alertas locales cuando se detectan eventos nuevos.';
+      'Alertas locales con vibración cuando se detectan eventos nuevos.';
+  static final _vibrationPattern = Int64List.fromList([
+    0,
+    900,
+    350,
+    900,
+  ]);
 
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
@@ -156,6 +163,8 @@ class _MobileEventNotificationWatcherState
         importance: Importance.high,
         priority: Priority.high,
         category: AndroidNotificationCategory.status,
+        enableVibration: true,
+        vibrationPattern: _vibrationPattern,
       ),
     );
 
