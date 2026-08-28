@@ -34,6 +34,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
 
   late Future<PagedResult<Incident>> _future;
   Timer? _autoRefreshTimer;
+  Timer? _filterDebounce;
   bool _refreshing = false;
   int _page = 0;
   final Map<String, String> _textFilters = {};
@@ -65,6 +66,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _filterDebounce?.cancel();
     super.dispose();
   }
 
@@ -143,9 +145,22 @@ class _IncidentsPageState extends State<IncidentsPage> {
   }
 
   void _updateTextFilter(String keyName, String value) {
+    _filterDebounce?.cancel();
     setState(() {
       _page = 0;
       _textFilters[keyName] = value;
+    });
+    _filterDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      setState(() {
+        _future = _loadPage();
+      });
+    });
+  }
+
+  void _applyFiltersNow() {
+    _filterDebounce?.cancel();
+    setState(() {
       _future = _loadPage();
     });
   }
@@ -154,8 +169,8 @@ class _IncidentsPageState extends State<IncidentsPage> {
     setState(() {
       _page = 0;
       _dateFilters[keyName] = value;
-      _future = _loadPage();
     });
+    _applyFiltersNow();
   }
 
   List<Widget> _filters(List<Incident> incidents) => [
