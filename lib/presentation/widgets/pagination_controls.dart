@@ -23,21 +23,25 @@ class PaginationControls<T> extends StatelessWidget {
     final to = (from + page.items.length - 1).clamp(0, page.totalItems);
     final compact = MediaQuery.sizeOf(context).width < 640;
     final label = compact
-        ? '$from-$to / ${page.totalItems}'
+        ? '${page.page + 1}/${page.totalPages} · $from-$to'
         : 'Mostrando $from-$to de ${page.totalItems}';
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(compact ? 12 : 24, 10, compact ? 12 : 24, 20),
+      padding: EdgeInsets.fromLTRB(compact ? 10 : 24, 8, compact ? 10 : 24, 18),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: FiconColors.cardBorderSoft),
-          borderRadius: BorderRadius.circular(12),
+          color: compact ? FiconColors.deep : Colors.white,
+          border: Border.all(
+            color: compact
+                ? FiconColors.cyan.withValues(alpha: 0.28)
+                : FiconColors.cardBorderSoft,
+          ),
+          borderRadius: BorderRadius.circular(compact ? 14 : 12),
           boxShadow: [
             BoxShadow(
-              color: FiconColors.ink.withValues(alpha: 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: FiconColors.ink.withValues(alpha: compact ? 0.10 : 0.04),
+              blurRadius: compact ? 18 : 14,
+              offset: Offset(0, compact ? 8 : 6),
             ),
           ],
         ),
@@ -47,14 +51,23 @@ class PaginationControls<T> extends StatelessWidget {
             vertical: compact ? 8 : 9,
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.max,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                constraints: BoxConstraints(maxWidth: compact ? 96 : 220),
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 8 : 10,
+                  vertical: compact ? 7 : 6,
+                ),
                 decoration: BoxDecoration(
-                  color: FiconColors.cyan.withValues(alpha: 0.10),
+                  color: compact
+                      ? FiconColors.cyan.withValues(alpha: 0.16)
+                      : FiconColors.cyan.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: FiconColors.cyan.withValues(alpha: 0.22),
+                    color: FiconColors.cyan.withValues(
+                      alpha: compact ? 0.36 : 0.22,
+                    ),
                   ),
                 ),
                 child: Text(
@@ -62,12 +75,13 @@ class PaginationControls<T> extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: FiconColors.ink,
+                    color: compact ? Colors.white : FiconColors.ink,
                     fontWeight: FontWeight.w800,
+                    fontSize: compact ? 11.5 : null,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: compact ? 6 : 10),
               Expanded(
                 child: Align(
                   alignment: Alignment.centerRight,
@@ -81,28 +95,37 @@ class PaginationControls<T> extends StatelessWidget {
                           label: '«',
                           enabled: page.hasPrevious,
                           onTap: () => onPageChanged(0),
+                          compact: compact,
                         ),
                         _PageButton(
                           label: '‹',
                           enabled: page.hasPrevious,
                           onTap: () => onPageChanged(_currentPage - 1),
+                          compact: compact,
                         ),
                         for (final number
-                            in visiblePageNumbers(page.page, page.totalPages))
+                            in visiblePageNumbers(
+                              page.page,
+                              page.totalPages,
+                              maxVisible: compact ? 3 : 5,
+                            ))
                           _PageButton(
                             label: '${number + 1}',
                             selected: number == page.page,
                             onTap: () => onPageChanged(number),
+                            compact: compact,
                           ),
                         _PageButton(
                           label: '›',
                           enabled: page.hasNext,
                           onTap: () => onPageChanged(_currentPage + 1),
+                          compact: compact,
                         ),
                         _PageButton(
                           label: '»',
                           enabled: page.hasNext,
                           onTap: () => onPageChanged(_lastPage),
+                          compact: compact,
                         ),
                       ],
                     ),
@@ -117,14 +140,18 @@ class PaginationControls<T> extends StatelessWidget {
   }
 }
 
-List<int> visiblePageNumbers(int currentPage, int totalPages) {
+List<int> visiblePageNumbers(
+  int currentPage,
+  int totalPages, {
+  int maxVisible = 5,
+}) {
   if (totalPages <= 0) return const [];
-  const maxVisible = 5;
   if (totalPages <= maxVisible) {
     return [for (var index = 0; index < totalPages; index++) index];
   }
-  var start = currentPage - 2;
-  var end = currentPage + 2;
+  final side = maxVisible ~/ 2;
+  var start = currentPage - side;
+  var end = start + maxVisible - 1;
   if (start < 0) {
     end += -start;
     start = 0;
@@ -142,45 +169,66 @@ class _PageButton extends StatelessWidget {
     this.enabled = true,
     this.selected = false,
     this.onTap,
+    this.compact = false,
   });
 
   final String label;
   final bool enabled;
   final bool selected;
   final VoidCallback? onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final active = enabled || selected;
-    final background = selected
+    final background = compact
+        ? selected
+            ? FiconColors.cyan
+            : active
+            ? FiconColors.deepAlt
+            : FiconColors.deepAlt.withValues(alpha: 0.55)
+        : selected
         ? FiconColors.cyan
         : active
-            ? FiconColors.cyan.withValues(alpha: 0.08)
-            : FiconColors.cardBorderSoft.withValues(alpha: 0.35);
-    final foreground = selected
+        ? FiconColors.cyan.withValues(alpha: 0.08)
+        : FiconColors.cardBorderSoft.withValues(alpha: 0.35);
+    final foreground = compact
+        ? selected
+            ? FiconColors.ink
+            : active
+            ? Colors.white
+            : Colors.white.withValues(alpha: 0.34)
+        : selected
         ? FiconColors.ink
         : active
-            ? FiconColors.deepAlt
-            : FiconColors.slate.withValues(alpha: 0.45);
+        ? FiconColors.deepAlt
+        : FiconColors.slate.withValues(alpha: 0.45);
     return Padding(
-      padding: const EdgeInsets.only(left: 5),
+      padding: EdgeInsets.only(left: compact ? 3 : 5),
       child: OutlinedButton(
         onPressed: enabled || selected ? onTap : null,
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(34, 32),
+          minimumSize: compact ? const Size(30, 36) : const Size(34, 32),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 9),
           foregroundColor: foreground,
           backgroundColor: background,
           side: BorderSide(
             color: selected
                 ? FiconColors.cyan
+                : compact
+                ? FiconColors.cyan.withValues(alpha: active ? 0.32 : 0.10)
                 : FiconColors.cardBorder.withValues(
                     alpha: active ? 0.75 : 0.25,
                   ),
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(compact ? 11 : 9),
+          ),
+          textStyle: TextStyle(
+            fontSize: compact ? 12 : 13,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         child: Text(label),
       ),
