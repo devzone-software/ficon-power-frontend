@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
 import '../../domain/event.dart';
+import '../../domain/paged_result.dart';
 import '../../ports/input/get_events.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/pagination_controls.dart';
 import '../widgets/table_filters.dart';
 
 /// Tabla de eventos Tuya recibidos por el backend.
@@ -28,17 +30,19 @@ class EventsPage extends StatefulWidget {
 
 class _EventsPageState extends State<EventsPage> {
   static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _pageSize = 10;
 
-  late Future<List<Event>> _future;
+  late Future<PagedResult<Event>> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
+  int _page = 0;
   final Map<String, String> _textFilters = {};
   final Map<String, DateTime?> _dateFilters = {};
 
   @override
   void initState() {
     super.initState();
-    _future = widget.getEvents();
+    _future = _loadPage();
     _autoRefreshTimer = Timer.periodic(
       _autoRefreshInterval,
       (_) => _refresh(),
@@ -48,7 +52,7 @@ class _EventsPageState extends State<EventsPage> {
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = widget.getEvents());
+    setState(() => _future = _loadPage());
     try {
       await _future;
     } catch (_) {
@@ -71,7 +75,7 @@ class _EventsPageState extends State<EventsPage> {
       title: 'Eventos',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
-      body: FutureBuilder<List<Event>>(
+      body: FutureBuilder<PagedResult<Event>>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -80,9 +84,9 @@ class _EventsPageState extends State<EventsPage> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final events = snapshot.data!;
-          final filteredEvents = events.where(_matchesFilters).toList();
-          if (events.isEmpty) {
+          final result = snapshot.data!;
+          final events = result.items;
+          if (events.isEmpty && result.totalItems == 0) {
             return const Center(child: Text('No hay eventos registrados.'));
           }
           return RefreshIndicator(
@@ -98,8 +102,12 @@ class _EventsPageState extends State<EventsPage> {
                       child: ConstrainedBox(
                         constraints:
                             BoxConstraints(minWidth: constraints.maxWidth),
-                        child: _EventsTable(events: filteredEvents),
+                        child: _EventsTable(events: events),
                       ),
+                    ),
+                    PaginationControls<Event>(
+                      page: result,
+                      onPageChanged: _changePage,
                     ),
                   ],
                 ),
@@ -111,7 +119,51 @@ class _EventsPageState extends State<EventsPage> {
     );
   }
 
+  Future<PagedResult<Event>> _loadPage() {
+    return widget.getEvents.page(
+      page: _page,
+      size: _pageSize,
+      search: _textFilters['search'] ?? '',
+      eventType: _textFilters['type'] ?? '',
+      deviceName: _textFilters['device'] ?? '',
+      siteName: _textFilters['site'] ?? '',
+      occurredDate: _dateFilters['occurredAt'],
+    );
+  }
+
+  void _changePage(int page) {
+    if (page == _page || page < 0) return;
+    setState(() {
+      _page = page;
+      _future = _loadPage();
+    });
+  }
+
+  void _updateTextFilter(String keyName, String value) {
+    setState(() {
+      _page = 0;
+      _textFilters[keyName] = value;
+      _future = _loadPage();
+    });
+  }
+
+  void _updateDateFilter(String keyName, DateTime? value) {
+    setState(() {
+      _page = 0;
+      _dateFilters[keyName] = value;
+      _future = _loadPage();
+    });
+  }
+
   List<Widget> _filters(List<Event> events) => [
+        _textFilter(
+          keyName: 'search',
+          label: 'Buscar',
+          options: uniqueColumnOptions(
+            events,
+            (event) => '${event.eventType} ${event.deviceName ?? ''} ${event.siteName ?? ''}',
+          ),
+        ),
         _textFilter(
           keyName: 'type',
           label: 'Tipo',
@@ -130,16 +182,7 @@ class _EventsPageState extends State<EventsPage> {
         DateColumnFilter(
           label: 'Ocurrió',
           value: _dateFilters['occurredAt'],
-          onChanged: (value) => setState(() => _dateFilters['occurredAt'] = value),
-        ),
-        _textFilter(
-          keyName: 'latency',
-          label: 'Latencia',
-          options: uniqueColumnOptions(
-            events,
-            (event) => '${event.deliveryLatencyMillis} ms',
-          ),
-          width: 170,
+          onChanged: (value) => _updateDateFilter('occurredAt', value),
         ),
       ];
 
@@ -154,19 +197,8 @@ class _EventsPageState extends State<EventsPage> {
       value: _textFilters[keyName] ?? '',
       options: options,
       width: width,
-      onChanged: (value) => setState(() => _textFilters[keyName] = value),
+      onChanged: (value) => _updateTextFilter(keyName, value),
     );
-  }
-
-  bool _matchesFilters(Event event) {
-    return matchesTextFilter(event.eventType, _textFilters['type'] ?? '') &&
-        matchesTextFilter(event.deviceName, _textFilters['device'] ?? '') &&
-        matchesTextFilter(event.siteName, _textFilters['site'] ?? '') &&
-        matchesDateFilter(event.occurredAt, _dateFilters['occurredAt']) &&
-        matchesTextFilter(
-          '${event.deliveryLatencyMillis} ms',
-          _textFilters['latency'] ?? '',
-        );
   }
 }
 

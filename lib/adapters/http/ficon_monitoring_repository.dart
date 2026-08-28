@@ -10,6 +10,7 @@ import '../../domain/device.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/notification_template.dart';
+import '../../domain/paged_result.dart';
 import '../../domain/site.dart';
 import '../../ports/output/device_repository.dart';
 import '../../ports/output/monitoring_query_repository.dart';
@@ -172,9 +173,59 @@ class FiconMonitoringRepository
   }
 
   @override
+  Future<PagedResult<Incident>> fetchIncidentsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String status = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final data = await _getMap(
+      _pathWithQuery('/api/incidents', {
+        'page': '$page',
+        'size': '$size',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (status.trim().isNotEmpty) 'status': status.trim(),
+        if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
+        if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (startDate != null) 'startDate': _dateQueryValue(startDate),
+        if (endDate != null) 'endDate': _dateQueryValue(endDate),
+      }),
+    );
+    return PagedResult.fromJson(data, Incident.fromJson);
+  }
+
+  @override
   Future<List<Event>> fetchEvents({int limit = 100}) async {
     final data = await _getList('/api/events?limit=$limit');
     return data.map(Event.fromJson).toList();
+  }
+
+  @override
+  Future<PagedResult<Event>> fetchEventsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String eventType = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? occurredDate,
+  }) async {
+    final data = await _getMap(
+      _pathWithQuery('/api/events', {
+        'page': '$page',
+        'size': '$size',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (eventType.trim().isNotEmpty) 'eventType': eventType.trim(),
+        if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
+        if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (occurredDate != null) 'occurredDate': _dateQueryValue(occurredDate),
+      }),
+    );
+    return PagedResult.fromJson(data, Event.fromJson);
   }
 
   @override
@@ -211,6 +262,22 @@ class FiconMonitoringRepository
   }
 
   Future<List<Map<String, dynamic>>> _getList(String path) async {
+    final decoded = await _getDecoded(path);
+    if (decoded is! List) {
+      throw ApiException('Respuesta inesperada en $path');
+    }
+    return decoded.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> _getMap(String path) async {
+    final decoded = await _getDecoded(path);
+    if (decoded is! Map) {
+      throw ApiException('Respuesta inesperada en $path');
+    }
+    return decoded.cast<String, dynamic>();
+  }
+
+  Future<dynamic> _getDecoded(String path) async {
     final http.Response response;
     try {
       response = await _client
@@ -226,11 +293,19 @@ class FiconMonitoringRepository
         details: utf8.decode(response.bodyBytes),
       );
     }
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    if (decoded is! List) {
-      throw ApiException('Respuesta inesperada en $path');
-    }
-    return decoded.cast<Map<String, dynamic>>();
+    return jsonDecode(utf8.decode(response.bodyBytes));
+  }
+
+  String _pathWithQuery(String path, Map<String, String> query) {
+    final uri = Uri(path: path, queryParameters: query);
+    return uri.toString();
+  }
+
+  String _dateQueryValue(DateTime value) {
+    final local = value.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
   }
 
   Future<Map<String, dynamic>> _putJson(
