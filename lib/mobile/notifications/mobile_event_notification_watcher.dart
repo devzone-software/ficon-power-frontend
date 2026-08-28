@@ -150,6 +150,8 @@ class _MobileEventNotificationWatcherState
         importance: Importance.high,
         priority: Priority.high,
         category: AndroidNotificationCategory.status,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('power_alarm'),
         enableVibration: true,
         vibrationPattern: _vibrationPattern,
       ),
