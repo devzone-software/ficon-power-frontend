@@ -126,7 +126,7 @@ class _PageButton extends StatelessWidget {
         foregroundColor: foreground,
         backgroundColor: background,
         side: BorderSide(
-          color: selected ? FiconColors.cyan : FiconColors.border,
+          color: selected ? FiconColors.cyan : FiconColors.cardBorder,
         ),
       ),
       child: Text(label),
