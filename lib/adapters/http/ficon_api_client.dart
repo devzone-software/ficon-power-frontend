@@ -23,6 +23,7 @@ class FiconApiClient {
       _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   static const _timeout = Duration(seconds: 15);
+  static const _refreshThreshold = Duration(minutes: 5);
 
   final http.Client _client;
   final String _baseUrl;
@@ -145,14 +146,22 @@ class FiconApiClient {
   Future<http.Response> _requestWithRefresh(
     Future<http.Response> Function() send,
   ) async {
+    if (session?.shouldRefreshWithin(_refreshThreshold) == true) {
+      await _refreshSession();
+    }
     final response = await _request(send);
-    if (response.statusCode != 401 || session?.canRefresh != true) {
+    if (!_shouldAttemptRefresh(response)) {
       return response;
     }
     if (await _refreshSession()) {
       return _request(send);
     }
     return response;
+  }
+
+  bool _shouldAttemptRefresh(http.Response response) {
+    return session?.canRefresh == true &&
+        (response.statusCode == 401 || response.statusCode == 403);
   }
 
   Future<bool> _refreshSession() {

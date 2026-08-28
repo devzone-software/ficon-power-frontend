@@ -131,6 +131,94 @@ void main() {
     },
   );
 
+  test(
+    'renueva la sesión cuando el backend responde 403 por token vencido',
+    () async {
+      final session = AuthSession()
+        ..start(
+          token: 'expired-access-token',
+          refreshToken: 'refresh-token',
+          refreshExpiresAt: DateTime.utc(2026, 12, 1),
+          user: const AuthUser(
+            id: 'user-1',
+            username: 'admin',
+            role: 'ADMIN',
+            displayName: 'Admin',
+          ),
+        );
+      var deviceRequests = 0;
+      final client = FiconApiClient(
+        baseUrl: 'https://ficon.test',
+        session: session,
+        client: MockClient((request) async {
+          if (request.url.path == '/api/auth/refresh') {
+            return http.Response(
+              jsonEncode({
+                'token': 'renewed-access-token',
+                'expiresAt': '2026-08-25T12:00:00Z',
+                'refreshToken': 'rotated-refresh-token',
+                'refreshExpiresAt': '2026-11-23T12:00:00Z',
+              }),
+              200,
+            );
+          }
+          deviceRequests++;
+          if (deviceRequests == 1) {
+            return http.Response('', 403);
+          }
+          expect(
+            request.headers['authorization'],
+            'Bearer renewed-access-token',
+          );
+          return http.Response(jsonEncode(<Object>[]), 200);
+        }),
+      );
+
+      expect(await client.getList('/api/devices'), isEmpty);
+      expect(deviceRequests, 2);
+      expect(session.token, 'renewed-access-token');
+      expect(session.refreshToken, 'rotated-refresh-token');
+    },
+  );
+
+  test('renueva preventivamente una sesión cercana a vencer', () async {
+    final session = AuthSession()
+      ..start(
+        token: 'almost-expired-token',
+        refreshToken: 'refresh-token',
+        expiresAt: DateTime.now().add(const Duration(minutes: 2)),
+        refreshExpiresAt: DateTime.utc(2026, 12, 1),
+        user: const AuthUser(
+          id: 'user-1',
+          username: 'admin',
+          role: 'ADMIN',
+          displayName: 'Admin',
+        ),
+      );
+    final client = FiconApiClient(
+      baseUrl: 'https://ficon.test',
+      session: session,
+      client: MockClient((request) async {
+        if (request.url.path == '/api/auth/refresh') {
+          return http.Response(
+            jsonEncode({
+              'token': 'renewed-access-token',
+              'expiresAt': '2026-08-25T12:00:00Z',
+              'refreshToken': 'rotated-refresh-token',
+              'refreshExpiresAt': '2026-11-23T12:00:00Z',
+            }),
+            200,
+          );
+        }
+        expect(request.headers['authorization'], 'Bearer renewed-access-token');
+        return http.Response(jsonEncode(<Object>[]), 200);
+      }),
+    );
+
+    expect(await client.getList('/api/devices'), isEmpty);
+    expect(session.token, 'renewed-access-token');
+  });
+
   test('limpia la sesión cuando el refresh token fue revocado', () async {
     final session = AuthSession()
       ..start(

@@ -16,6 +16,12 @@ class AuthSession extends ChangeNotifier {
   AuthUser? get user => _user;
   bool get isAuthenticated => _token != null && _user != null;
   bool get canRefresh => _refreshToken != null && _refreshToken!.isNotEmpty;
+  bool shouldRefreshWithin(Duration threshold) {
+    final expiresAt = _expiresAt;
+    return canRefresh &&
+        expiresAt != null &&
+        expiresAt.isBefore(DateTime.now().add(threshold));
+  }
 
   void start({
     required String token,
