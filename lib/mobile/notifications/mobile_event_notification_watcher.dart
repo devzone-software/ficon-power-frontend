@@ -142,7 +142,7 @@ class _MobileEventNotificationWatcherState
   Future<void> _showEventNotification(Event event) async {
     if (!_notificationsReady) return;
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
         _channelName,
