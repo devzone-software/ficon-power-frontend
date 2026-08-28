@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
+import '../../domain/paged_result.dart';
 import '../../ports/input/get_incidents.dart';
 import '../incidents/mobile/incident_cards.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/pagination_controls.dart';
 import '../widgets/table_filters.dart';
 
 /// Tabla de incidentes de corte de energía.
@@ -29,23 +31,26 @@ class IncidentsPage extends StatefulWidget {
 
 class _IncidentsPageState extends State<IncidentsPage> {
   static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _pageSize = 10;
 
-  late Future<List<Incident>> _future;
+  late Future<PagedResult<Incident>> _future;
   Timer? _autoRefreshTimer;
+  Timer? _filterDebounce;
   bool _refreshing = false;
+  int _page = 0;
   final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
-    _future = widget.getIncidents();
+    _future = _loadPage();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
 
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = widget.getIncidents());
+    setState(() => _future = _loadPage());
     try {
       await _future;
     } catch (_) {
@@ -58,6 +63,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _filterDebounce?.cancel();
     super.dispose();
   }
 
@@ -68,7 +74,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
       title: 'Incidentes',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
-      body: FutureBuilder<List<Incident>>(
+      body: FutureBuilder<PagedResult<Incident>>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -77,15 +83,13 @@ class _IncidentsPageState extends State<IncidentsPage> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final incidents = snapshot.data!;
+          final result = snapshot.data!;
+          final incidents = result.items;
           final filteredIncidents = _columnFilters.sortedNumeric(
             'duration',
-            incidents.where(_matchesFilters),
+            incidents,
             (incident) => incident.durationSeconds ?? 0,
           );
-          if (incidents.isEmpty) {
-            return const Center(child: Text('No hay incidentes registrados.'));
-          }
           return RefreshIndicator(
             onRefresh: _refresh,
             child: LayoutBuilder(
@@ -94,7 +98,12 @@ class _IncidentsPageState extends State<IncidentsPage> {
                 child: Column(
                   children: [
                     TableFiltersBar(filters: _filters(incidents)),
-                    if (constraints.maxWidth < 720)
+                    if (incidents.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('No hay incidentes registrados.'),
+                      )
+                    else if (constraints.maxWidth < 720)
                       MobileIncidentList(incidents: filteredIncidents)
                     else
                       SingleChildScrollView(
@@ -106,6 +115,10 @@ class _IncidentsPageState extends State<IncidentsPage> {
                           child: _IncidentsTable(incidents: filteredIncidents),
                         ),
                       ),
+                    PaginationControls<Incident>(
+                      page: result,
+                      onPageChanged: _changePage,
+                    ),
                   ],
                 ),
               ),
@@ -128,8 +141,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
             uniqueColumnOptions(incidents, (incident) => incident.siteName),
           ]),
           wideOnMobile: true,
-          onChanged: (value) =>
-              setState(() => _columnFilters.setText('query', value)),
+          onChanged: (value) => _setTextFilter('query', value),
         ),
         _statusFilter(),
         OptionsChipFilter(
@@ -139,20 +151,17 @@ class _IncidentsPageState extends State<IncidentsPage> {
             incidents,
             (incident) => incident.siteName,
           ),
-          onChanged: (value) =>
-              setState(() => _columnFilters.setText('site', value)),
+          onChanged: (value) => _setTextFilter('site', value),
         ),
         DateColumnFilter(
           label: 'Inicio',
           value: _columnFilters.date('startTime'),
-          onChanged: (value) =>
-              setState(() => _columnFilters.setDate('startTime', value)),
+          onChanged: (value) => _setDateFilter('startTime', value),
         ),
         DateColumnFilter(
           label: 'Fin',
           value: _columnFilters.date('endTime'),
-          onChanged: (value) =>
-              setState(() => _columnFilters.setDate('endTime', value)),
+          onChanged: (value) => _setDateFilter('endTime', value),
         ),
         _durationSort(),
       ];
@@ -178,14 +187,12 @@ class _IncidentsPageState extends State<IncidentsPage> {
       DateColumnFilter(
         label: 'Inicio',
         value: _columnFilters.date('startTime'),
-        onChanged: (value) =>
-            setState(() => _columnFilters.setDate('startTime', value)),
+        onChanged: (value) => _setDateFilter('startTime', value),
       ),
       DateColumnFilter(
         label: 'Fin',
         value: _columnFilters.date('endTime'),
-        onChanged: (value) =>
-            setState(() => _columnFilters.setDate('endTime', value)),
+        onChanged: (value) => _setDateFilter('endTime', value),
       ),
       _durationSort(),
     ];
@@ -195,8 +202,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
     label: 'Estado',
     value: _columnFilters.text('status'),
     options: const ['Activo', 'Atendido', 'Resuelto'],
-    onChanged: (value) =>
-        setState(() => _columnFilters.setText('status', value)),
+    onChanged: (value) => _setTextFilter('status', value),
   );
 
   Widget _durationSort() => SortColumnControl(
@@ -217,8 +223,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
       value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) =>
-          setState(() => _columnFilters.setText(keyName, value)),
+      onChanged: (value) => _setTextFilter(keyName, value),
     );
   }
 
@@ -233,32 +238,62 @@ class _IncidentsPageState extends State<IncidentsPage> {
       value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) =>
-          setState(() => _columnFilters.setText(keyName, value)),
+      onChanged: (value) => _setTextFilter(keyName, value),
     );
   }
 
-  bool _matchesFilters(Incident incident) {
-    return _columnFilters.matchesAnyText('query', [
-          incident.deviceName,
-          incident.siteName,
-        ]) &&
-        _columnFilters.matchesText('device', incident.deviceName) &&
-        _columnFilters.matchesChoice('site', incident.siteName) &&
-        _columnFilters.matchesChoice(
-          'status',
-          _incidentStatusLabel(incident.status),
-        ) &&
-        _columnFilters.matchesDate('startTime', incident.startTime) &&
-        _columnFilters.matchesDate('endTime', incident.endTime);
+  Future<PagedResult<Incident>> _loadPage() {
+    return widget.getIncidents.page(
+      page: _page,
+      size: _pageSize,
+      search: _columnFilters.text('query'),
+      status: _statusQueryValue(_columnFilters.text('status')),
+      deviceName: _columnFilters.text('device'),
+      siteName: _columnFilters.text('site'),
+      startDate: _columnFilters.date('startTime'),
+      endDate: _columnFilters.date('endTime'),
+    );
+  }
+
+  void _changePage(int page) {
+    setState(() {
+      _page = page;
+      _future = _loadPage();
+    });
+  }
+
+  void _setTextFilter(String key, String value) {
+    setState(() => _columnFilters.setText(key, value));
+    _queueFilterRefresh();
+  }
+
+  void _setDateFilter(String key, DateTime? value) {
+    setState(() => _columnFilters.setDate(key, value));
+    _applyFiltersNow();
+  }
+
+  void _queueFilterRefresh() {
+    _filterDebounce?.cancel();
+    _filterDebounce = Timer(
+      const Duration(milliseconds: 350),
+      _applyFiltersNow,
+    );
+  }
+
+  void _applyFiltersNow() {
+    if (!mounted) return;
+    setState(() {
+      _page = 0;
+      _future = _loadPage();
+    });
   }
 }
 
-String _incidentStatusLabel(String status) => switch (status) {
-  'active' => 'Activo',
-  'acknowledged' => 'Atendido',
-  'resolved' => 'Resuelto',
-  _ => status,
+String _statusQueryValue(String label) => switch (label) {
+  'Activo' => 'active',
+  'Atendido' => 'acknowledged',
+  'Resuelto' => 'resolved',
+  _ => label,
 };
 
 class _IncidentsTable extends StatelessWidget {

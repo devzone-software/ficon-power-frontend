@@ -8,6 +8,7 @@ import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
+import '../../domain/paged_result.dart';
 import '../../domain/site.dart';
 import '../../ports/output/device_repository.dart';
 import '../../ports/output/monitoring_query_repository.dart';
@@ -215,9 +216,59 @@ class FiconMonitoringRepository
   }
 
   @override
+  Future<PagedResult<Incident>> fetchIncidentsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String status = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final data = await _api.getJson(
+      _pathWithQuery('/api/incidents', {
+        'page': '$page',
+        'size': '$size',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (status.trim().isNotEmpty) 'status': status.trim(),
+        if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
+        if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (startDate != null) 'startDate': _dateQueryValue(startDate),
+        if (endDate != null) 'endDate': _dateQueryValue(endDate),
+      }),
+    );
+    return PagedResult.fromJson(data, Incident.fromJson);
+  }
+
+  @override
   Future<List<Event>> fetchEvents({int limit = 100}) async {
     final data = await _api.getList('/api/events?limit=$limit');
     return data.map(Event.fromJson).toList();
+  }
+
+  @override
+  Future<PagedResult<Event>> fetchEventsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String eventType = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? occurredDate,
+  }) async {
+    final data = await _api.getJson(
+      _pathWithQuery('/api/events', {
+        'page': '$page',
+        'size': '$size',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (eventType.trim().isNotEmpty) 'eventType': eventType.trim(),
+        if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
+        if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (occurredDate != null) 'occurredDate': _dateQueryValue(occurredDate),
+      }),
+    );
+    return PagedResult.fromJson(data, Event.fromJson);
   }
 
   @override
@@ -251,6 +302,16 @@ class FiconMonitoringRepository
       if (province != null && province.isNotEmpty) 'province': province,
     });
     return Site.fromJson(data);
+  }
+
+  String _pathWithQuery(String path, Map<String, String> query) {
+    return Uri(path: path, queryParameters: query).toString();
+  }
+
+  String _dateQueryValue(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
   }
 
   void dispose() => _api.dispose();

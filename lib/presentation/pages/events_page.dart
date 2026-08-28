@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
 import '../../domain/event.dart';
+import '../../domain/paged_result.dart';
 import '../../ports/input/get_events.dart';
 import '../events/mobile/event_cards.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
+import '../widgets/pagination_controls.dart';
 import '../widgets/table_filters.dart';
 
 /// Tabla de eventos Tuya recibidos por el backend.
@@ -29,23 +31,26 @@ class EventsPage extends StatefulWidget {
 
 class _EventsPageState extends State<EventsPage> {
   static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _pageSize = 10;
 
-  late Future<List<Event>> _future;
+  late Future<PagedResult<Event>> _future;
   Timer? _autoRefreshTimer;
+  Timer? _filterDebounce;
   bool _refreshing = false;
+  int _page = 0;
   final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
-    _future = widget.getEvents();
+    _future = _loadPage();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
 
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = widget.getEvents());
+    setState(() => _future = _loadPage());
     try {
       await _future;
     } catch (_) {
@@ -58,6 +63,7 @@ class _EventsPageState extends State<EventsPage> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _filterDebounce?.cancel();
     super.dispose();
   }
 
@@ -68,7 +74,7 @@ class _EventsPageState extends State<EventsPage> {
       title: 'Eventos',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
-      body: FutureBuilder<List<Event>>(
+      body: FutureBuilder<PagedResult<Event>>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -77,15 +83,13 @@ class _EventsPageState extends State<EventsPage> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final events = snapshot.data!;
+          final result = snapshot.data!;
+          final events = result.items;
           final filteredEvents = _columnFilters.sortedNumeric(
             'latency',
-            events.where(_matchesFilters),
+            events,
             (event) => event.deliveryLatencyMillis,
           );
-          if (events.isEmpty) {
-            return const Center(child: Text('No hay eventos registrados.'));
-          }
           return RefreshIndicator(
             onRefresh: _refresh,
             child: LayoutBuilder(
@@ -94,7 +98,12 @@ class _EventsPageState extends State<EventsPage> {
                 child: Column(
                   children: [
                     TableFiltersBar(filters: _filters(events)),
-                    if (constraints.maxWidth < 720)
+                    if (events.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('No hay eventos registrados.'),
+                      )
+                    else if (constraints.maxWidth < 720)
                       MobileEventList(events: filteredEvents)
                     else
                       SingleChildScrollView(
@@ -106,6 +115,10 @@ class _EventsPageState extends State<EventsPage> {
                           child: _EventsTable(events: filteredEvents),
                         ),
                       ),
+                    PaginationControls<Event>(
+                      page: result,
+                      onPageChanged: _changePage,
+                    ),
                   ],
                 ),
               ),
@@ -128,23 +141,20 @@ class _EventsPageState extends State<EventsPage> {
             uniqueColumnOptions(events, (event) => event.siteName),
           ]),
           wideOnMobile: true,
-          onChanged: (value) =>
-              setState(() => _columnFilters.setText('query', value)),
+          onChanged: (value) => _setTextFilter('query', value),
         ),
         _typeFilter(),
         OptionsChipFilter(
           label: 'Sede',
           value: _columnFilters.text('site'),
           options: uniqueColumnOptions(events, (event) => event.siteName),
-          onChanged: (value) =>
-              setState(() => _columnFilters.setText('site', value)),
+          onChanged: (value) => _setTextFilter('site', value),
         ),
         DateColumnFilter(
           label: 'Ocurrió',
           value: _columnFilters.date('occurredAt'),
           wideOnMobile: true,
-          onChanged: (value) =>
-              setState(() => _columnFilters.setDate('occurredAt', value)),
+          onChanged: (value) => _setDateFilter('occurredAt', value),
         ),
         _latencySort(),
       ];
@@ -164,8 +174,7 @@ class _EventsPageState extends State<EventsPage> {
       DateColumnFilter(
         label: 'Ocurrió',
         value: _columnFilters.date('occurredAt'),
-        onChanged: (value) =>
-            setState(() => _columnFilters.setDate('occurredAt', value)),
+        onChanged: (value) => _setDateFilter('occurredAt', value),
       ),
       _latencySort(),
     ];
@@ -176,7 +185,7 @@ class _EventsPageState extends State<EventsPage> {
     value: _columnFilters.text('type'),
     options: const ['deviceOffline', 'deviceOnline'],
     labels: const {'deviceOffline': 'Offline', 'deviceOnline': 'Online'},
-    onChanged: (value) => setState(() => _columnFilters.setText('type', value)),
+    onChanged: (value) => _setTextFilter('type', value),
   );
 
   Widget _latencySort() => SortColumnControl(
@@ -197,8 +206,7 @@ class _EventsPageState extends State<EventsPage> {
       value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) =>
-          setState(() => _columnFilters.setText(keyName, value)),
+      onChanged: (value) => _setTextFilter(keyName, value),
     );
   }
 
@@ -213,20 +221,53 @@ class _EventsPageState extends State<EventsPage> {
       value: _columnFilters.text(keyName),
       options: options,
       width: width,
-      onChanged: (value) =>
-          setState(() => _columnFilters.setText(keyName, value)),
+      onChanged: (value) => _setTextFilter(keyName, value),
     );
   }
 
-  bool _matchesFilters(Event event) {
-    return _columnFilters.matchesAnyText('query', [
-          event.deviceName,
-          event.siteName,
-        ]) &&
-        _columnFilters.matchesChoice('type', event.eventType) &&
-        _columnFilters.matchesText('device', event.deviceName) &&
-        _columnFilters.matchesChoice('site', event.siteName) &&
-        _columnFilters.matchesDate('occurredAt', event.occurredAt);
+  Future<PagedResult<Event>> _loadPage() {
+    return widget.getEvents.page(
+      page: _page,
+      size: _pageSize,
+      search: _columnFilters.text('query'),
+      eventType: _columnFilters.text('type'),
+      deviceName: _columnFilters.text('device'),
+      siteName: _columnFilters.text('site'),
+      occurredDate: _columnFilters.date('occurredAt'),
+    );
+  }
+
+  void _changePage(int page) {
+    setState(() {
+      _page = page;
+      _future = _loadPage();
+    });
+  }
+
+  void _setTextFilter(String key, String value) {
+    setState(() => _columnFilters.setText(key, value));
+    _queueFilterRefresh();
+  }
+
+  void _setDateFilter(String key, DateTime? value) {
+    setState(() => _columnFilters.setDate(key, value));
+    _applyFiltersNow();
+  }
+
+  void _queueFilterRefresh() {
+    _filterDebounce?.cancel();
+    _filterDebounce = Timer(
+      const Duration(milliseconds: 350),
+      _applyFiltersNow,
+    );
+  }
+
+  void _applyFiltersNow() {
+    if (!mounted) return;
+    setState(() {
+      _page = 0;
+      _future = _loadPage();
+    });
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:ficon_power_frontend/domain/device.dart';
 import 'package:ficon_power_frontend/domain/event.dart';
 import 'package:ficon_power_frontend/domain/incident.dart';
+import 'package:ficon_power_frontend/domain/paged_result.dart';
 import 'package:ficon_power_frontend/domain/site.dart';
 import 'package:ficon_power_frontend/ports/output/monitoring_query_repository.dart';
 import 'package:ficon_power_frontend/usecase/get_monitoring_overview_service.dart';
@@ -41,7 +42,51 @@ class FakeMonitoringQueryRepository implements MonitoringQueryRepository {
       ];
 
   @override
+  Future<PagedResult<Incident>> fetchIncidentsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String status = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final items = await fetchIncidents(limit: size);
+    return PagedResult(
+      items: items,
+      page: page,
+      size: size,
+      totalItems: items.length,
+      totalPages: 1,
+      hasPrevious: false,
+      hasNext: false,
+    );
+  }
+
+  @override
   Future<List<Event>> fetchEvents({int limit = 100}) async => const [];
+
+  @override
+  Future<PagedResult<Event>> fetchEventsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String eventType = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? occurredDate,
+  }) async {
+    return PagedResult(
+      items: await fetchEvents(limit: size),
+      page: page,
+      size: size,
+      totalItems: 0,
+      totalPages: 0,
+      hasPrevious: false,
+      hasNext: false,
+    );
+  }
 }
 
 void main() {
