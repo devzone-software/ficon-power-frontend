@@ -154,6 +154,7 @@ class _MobileEventNotificationWatcherState
         sound: const RawResourceAndroidNotificationSound('power_alarm'),
         enableVibration: true,
         vibrationPattern: _vibrationPattern,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
       ),
     );
 
