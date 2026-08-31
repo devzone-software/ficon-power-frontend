@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
+import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
+import '../../ports/input/get_incidents.dart';
 import '../../ports/input/get_monitoring_overview.dart';
 import '../../ports/input/get_notification_templates.dart';
 import '../dashboard/dashboard_body.dart';
@@ -16,12 +18,14 @@ class DashboardPage extends StatefulWidget {
   const DashboardPage({
     super.key,
     required this.getOverview,
+    required this.getIncidents,
     required this.getNotificationTemplates,
     required this.currentUser,
     required this.onLogout,
   });
 
   final GetMonitoringOverview getOverview;
+  final GetIncidents getIncidents;
   final GetNotificationTemplates getNotificationTemplates;
   final AuthUser currentUser;
   final VoidCallback onLogout;
@@ -84,11 +88,33 @@ class _DashboardPageState extends State<DashboardPage> {
             child: DashboardBody(
               data: snapshot.data!,
               getNotificationTemplates: widget.getNotificationTemplates,
+              canAcknowledgeIncidents: widget.currentUser.canAccessAdmin,
+              onAcknowledgeIncident: _acknowledgeIncident,
             ),
           );
         },
       ),
     );
+  }
+
+  Future<void> _acknowledgeIncident(Incident incident) async {
+    try {
+      await widget.getIncidents.acknowledge(incident.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Incidente atendido: ${incident.deviceName ?? 'dispositivo'}',
+          ),
+        ),
+      );
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo atender el incidente: $error')),
+      );
+    }
   }
 }
 

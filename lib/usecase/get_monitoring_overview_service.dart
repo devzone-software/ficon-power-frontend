@@ -18,7 +18,7 @@ class GetMonitoringOverviewService implements GetMonitoringOverview {
     final results = await Future.wait([
       _repository.fetchSites(),
       _repository.fetchDevices(),
-      _repository.fetchIncidents(limit: 100),
+      _repository.fetchIncidents(limit: 500),
     ]);
     return MonitoringOverview(
       sites: results[0] as List<Site>,

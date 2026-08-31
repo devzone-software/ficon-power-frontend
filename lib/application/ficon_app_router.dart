@@ -89,6 +89,7 @@ class FiconAppRouter {
 
   DashboardPage _dashboardPage() => DashboardPage(
     getOverview: dependencies.getOverview,
+    getIncidents: dependencies.getIncidents,
     getNotificationTemplates: dependencies.getNotificationTemplates,
     currentUser: session.user!,
     onLogout: logout,

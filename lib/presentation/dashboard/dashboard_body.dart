@@ -22,10 +22,14 @@ class DashboardBody extends StatelessWidget {
     super.key,
     required this.data,
     required this.getNotificationTemplates,
+    required this.canAcknowledgeIncidents,
+    required this.onAcknowledgeIncident,
   });
 
   final MonitoringOverview data;
   final GetNotificationTemplates getNotificationTemplates;
+  final bool canAcknowledgeIncidents;
+  final ValueChanged<Incident> onAcknowledgeIncident;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +38,9 @@ class DashboardBody extends StatelessWidget {
         .where((device) => !device.isOnline && device.active)
         .toList();
     final recentIncidents = data.incidents.take(6).toList();
+    final unresolvedIncidents = data.incidents
+        .where((incident) => incident.isOpen)
+        .toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -52,6 +59,12 @@ class DashboardBody extends StatelessWidget {
                 ),
                 SizedBox(height: mobile ? 14 : 24),
                 _KpiGrid(data: data),
+                SizedBox(height: mobile ? 14 : 24),
+                ActiveIncidentsActionCard(
+                  incidents: unresolvedIncidents,
+                  canAcknowledge: canAcknowledgeIncidents,
+                  onAcknowledge: onAcknowledgeIncident,
+                ),
                 SizedBox(height: mobile ? 14 : 24),
                 FleetHealthCard(
                   online: data.onlineCount,
@@ -140,6 +153,186 @@ class _KpiGrid extends StatelessWidget {
       },
     );
   }
+}
+
+class ActiveIncidentsActionCard extends StatelessWidget {
+  const ActiveIncidentsActionCard({
+    super.key,
+    required this.incidents,
+    required this.canAcknowledge,
+    required this.onAcknowledge,
+  });
+
+  final List<Incident> incidents;
+  final bool canAcknowledge;
+  final ValueChanged<Incident> onAcknowledge;
+
+  @override
+  Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 720;
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(mobile ? 16 : 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: incidents.isEmpty
+                        ? FiconColors.cyanSoft.withValues(alpha: 0.14)
+                        : StatusColors.offline.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    incidents.isEmpty
+                        ? Icons.task_alt_outlined
+                        : Icons.notification_important_outlined,
+                    color: incidents.isEmpty
+                        ? StatusColors.online
+                        : StatusColors.offline,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        incidents.isEmpty
+                            ? 'Sin incidentes pendientes'
+                            : 'Incidentes no resueltos',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        incidents.isEmpty
+                            ? 'No hay cortes pendientes de resolución.'
+                            : '${incidents.length} corte${incidents.length == 1 ? '' : 's'} pendiente${incidents.length == 1 ? '' : 's'} de resolución',
+                        style: const TextStyle(color: FiconColors.slate),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (incidents.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              for (var index = 0; index < incidents.length; index++) ...[
+                if (index > 0)
+                  const Divider(height: 18, color: FiconColors.cardBorderSoft),
+                _ActiveIncidentTile(
+                  incident: incidents[index],
+                  canAcknowledge: canAcknowledge,
+                  onAcknowledge: onAcknowledge,
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveIncidentTile extends StatelessWidget {
+  const _ActiveIncidentTile({
+    required this.incident,
+    required this.canAcknowledge,
+    required this.onAcknowledge,
+  });
+
+  final Incident incident;
+  final bool canAcknowledge;
+  final ValueChanged<Incident> onAcknowledge;
+
+  @override
+  Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 720;
+    final details = Wrap(
+      spacing: 12,
+      runSpacing: 6,
+      children: [
+        _IncidentMeta(
+          icon: Icons.business_outlined,
+          value: incident.siteName ?? 'Sin sede',
+        ),
+        _IncidentMeta(
+          icon: Icons.schedule,
+          value: formatDateTime(incident.startTime),
+        ),
+        _IncidentMeta(
+          icon: Icons.timer_outlined,
+          value: formatDurationSeconds(incident.durationSeconds),
+        ),
+      ],
+    );
+    final action = canAcknowledge
+        ? FilledButton.tonalIcon(
+            onPressed: () => onAcknowledge(incident),
+            icon: const Icon(Icons.task_alt, size: 18),
+            label: const Text('Atender'),
+          )
+        : IncidentStatusChip(status: incident.status);
+
+    if (mobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            incident.deviceName ?? 'Dispositivo desconocido',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          details,
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: action),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                incident.deviceName ?? 'Dispositivo desconocido',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              details,
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        action,
+      ],
+    );
+  }
+}
+
+class _IncidentMeta extends StatelessWidget {
+  const _IncidentMeta({required this.icon, required this.value});
+
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 16, color: FiconColors.deepAlt),
+      const SizedBox(width: 5),
+      Text(value, style: const TextStyle(color: FiconColors.slate)),
+    ],
+  );
 }
 
 class _StatusLists extends StatelessWidget {

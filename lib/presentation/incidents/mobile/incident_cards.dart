@@ -68,7 +68,7 @@ class MobileIncidentList extends StatelessWidget {
                   label: 'Duración',
                   value: formatDurationSeconds(incident.durationSeconds),
                 ),
-                if (incident.status == 'active' && onAcknowledge != null) ...[
+                if (incident.isOpen && onAcknowledge != null) ...[
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
