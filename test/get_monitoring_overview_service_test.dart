@@ -65,6 +65,9 @@ class FakeMonitoringQueryRepository implements MonitoringQueryRepository {
   }
 
   @override
+  Future<void> acknowledgeIncident(String id) async {}
+
+  @override
   Future<List<Event>> fetchEvents({int limit = 100}) async => const [];
 
   @override

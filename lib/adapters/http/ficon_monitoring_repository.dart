@@ -242,6 +242,11 @@ class FiconMonitoringRepository
   }
 
   @override
+  Future<void> acknowledgeIncident(String id) async {
+    await _api.patchJson('/api/incidents/$id/acknowledge');
+  }
+
+  @override
   Future<List<Event>> fetchEvents({int limit = 100}) async {
     final data = await _api.getList('/api/events?limit=$limit');
     return data.map(Event.fromJson).toList();

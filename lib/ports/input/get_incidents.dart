@@ -16,4 +16,6 @@ abstract interface class GetIncidents {
     DateTime? startDate,
     DateTime? endDate,
   });
+
+  Future<void> acknowledge(String id);
 }

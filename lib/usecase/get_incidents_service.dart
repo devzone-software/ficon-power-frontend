@@ -34,4 +34,7 @@ class GetIncidentsService implements GetIncidents {
         startDate: startDate,
         endDate: endDate,
       );
+
+  @override
+  Future<void> acknowledge(String id) => _repository.acknowledgeIncident(id);
 }

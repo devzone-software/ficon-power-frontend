@@ -24,6 +24,8 @@ abstract interface class MonitoringQueryRepository {
     DateTime? endDate,
   });
 
+  Future<void> acknowledgeIncident(String id);
+
   Future<List<Event>> fetchEvents({int limit = 100});
 
   Future<PagedResult<Event>> fetchEventsPage({
