@@ -24,9 +24,11 @@ class MobilePowerAlertChannel {
           AndroidFlutterLocalNotificationsPlugin
         >();
     await android?.requestNotificationsPermission();
-    await android?.deleteNotificationChannel('ficon_power_power_alerts_alarm');
     await android?.deleteNotificationChannel(
-      'ficon_power_power_alerts_alarm_v2',
+      channelId: 'ficon_power_power_alerts_alarm',
+    );
+    await android?.deleteNotificationChannel(
+      channelId: 'ficon_power_power_alerts_alarm_v2',
     );
     await android?.createNotificationChannel(
       AndroidNotificationChannel(
