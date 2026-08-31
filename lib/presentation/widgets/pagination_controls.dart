@@ -30,7 +30,7 @@ class PaginationControls<T> extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(compact ? 10 : 24, 8, compact ? 10 : 24, 18),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: compact ? FiconColors.deep : Colors.white,
+          color: Colors.white,
           border: Border.all(
             color: compact
                 ? FiconColors.cyan.withValues(alpha: 0.28)
@@ -75,7 +75,7 @@ class PaginationControls<T> extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: compact ? Colors.white : FiconColors.ink,
+                    color: FiconColors.ink,
                     fontWeight: FontWeight.w800,
                     fontSize: compact ? 11.5 : null,
                   ),
@@ -185,8 +185,8 @@ class _PageButton extends StatelessWidget {
         ? selected
             ? FiconColors.cyan
             : active
-            ? FiconColors.deepAlt
-            : FiconColors.deepAlt.withValues(alpha: 0.55)
+            ? FiconColors.cyan.withValues(alpha: 0.12)
+            : FiconColors.cardBorderSoft.withValues(alpha: 0.50)
         : selected
         ? FiconColors.cyan
         : active
@@ -196,8 +196,8 @@ class _PageButton extends StatelessWidget {
         ? selected
             ? FiconColors.ink
             : active
-            ? Colors.white
-            : Colors.white.withValues(alpha: 0.34)
+            ? FiconColors.deepAlt
+            : FiconColors.slate.withValues(alpha: 0.45)
         : selected
         ? FiconColors.ink
         : active
