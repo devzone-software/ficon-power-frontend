@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
+import 'exception_handler.dart';
 
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode, this.details});
@@ -13,8 +14,7 @@ class ApiException implements Exception {
   final String? details;
 
   @override
-  String toString() =>
-      'ApiException(${statusCode ?? 'sin respuesta'}): $message';
+  String toString() => message;
 }
 
 class FiconApiClient {
@@ -207,24 +207,10 @@ class FiconApiClient {
   void _requireStatus(http.Response response, String path, Set<int> accepted) {
     if (accepted.contains(response.statusCode)) return;
     throw ApiException(
-      _errorMessage(response, path),
+      ExceptionHandler.fromResponse(response, path),
       statusCode: response.statusCode,
       details: utf8.decode(response.bodyBytes),
     );
-  }
-
-  String _errorMessage(http.Response response, String path) {
-    final body = utf8.decode(response.bodyBytes);
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final error = decoded['error'] ?? decoded['message'];
-        if (error is String && error.isNotEmpty) return error;
-      }
-    } catch (_) {
-      // Una respuesta no JSON utiliza el mensaje genérico del endpoint.
-    }
-    return 'El backend respondió con un error en $path';
   }
 
   void dispose() => _client.close();

@@ -64,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
             401 => 'Usuario o contraseña incorrectos.',
             403 => e.message,
             429 => 'Demasiados intentos fallidos. Espera unos minutos.',
-            _ => 'No se pudo iniciar sesión: $e',
+            _ => 'No se pudo iniciar sesión: ${e.message}',
           },
         );
       }

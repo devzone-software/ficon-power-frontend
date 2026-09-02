@@ -75,6 +75,32 @@ void main() {
     );
   });
 
+  test('traduce validaciones técnicas del backend', () async {
+    final client = FiconApiClient(
+      baseUrl: 'https://ficon.test',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'detail':
+                'Validation failed for field password: size must be between 8 and 120',
+          }),
+          400,
+        ),
+      ),
+    );
+
+    await expectLater(
+      client.getJson('/api/users'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          'La contraseña debe tener entre 8 y 120 caracteres.',
+        ),
+      ),
+    );
+  });
+
   test(
     'renueva la sesión y reintenta la petición con el token nuevo',
     () async {
