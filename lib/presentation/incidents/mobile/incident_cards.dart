@@ -8,11 +8,9 @@ class MobileIncidentList extends StatelessWidget {
   const MobileIncidentList({
     super.key,
     required this.incidents,
-    this.onAcknowledge,
   });
 
   final List<Incident> incidents;
-  final ValueChanged<Incident>? onAcknowledge;
 
   @override
   Widget build(BuildContext context) {
@@ -68,17 +66,6 @@ class MobileIncidentList extends StatelessWidget {
                   label: 'Duración',
                   value: formatDurationSeconds(incident.durationSeconds),
                 ),
-                if (incident.isOpen && onAcknowledge != null) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonalIcon(
-                      onPressed: () => onAcknowledge?.call(incident),
-                      icon: const Icon(Icons.task_alt),
-                      label: const Text('Atender'),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

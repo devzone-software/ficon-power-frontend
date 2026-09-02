@@ -273,9 +273,8 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPowerOutage = notification.eventType == 'power_outage';
-    final canAttend = isPowerOutage && notification.unread && onTap != null;
     return ListTile(
-      onTap: canAttend ? null : onTap,
+      onTap: onTap,
       leading: Icon(
         isPowerOutage ? Icons.power_off_outlined : Icons.power_outlined,
         color: notification.unread ? FiconColors.cyan : FiconColors.deepAlt,
@@ -287,13 +286,7 @@ class _NotificationTile extends StatelessWidget {
         ),
       ),
       subtitle: Text(notification.body),
-      trailing: canAttend
-          ? FilledButton.tonalIcon(
-              onPressed: onTap,
-              icon: const Icon(Icons.task_alt_outlined, size: 18),
-              label: const Text('Atender'),
-            )
-          : notification.unread
+      trailing: notification.unread
           ? const Icon(Icons.circle, size: 9, color: FiconColors.cyan)
           : null,
     );

@@ -104,12 +104,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
                         child: Text('No hay incidentes registrados.'),
                       )
                     else if (constraints.maxWidth < 720)
-                      MobileIncidentList(
-                        incidents: filteredIncidents,
-                        onAcknowledge: widget.currentUser.canAccessAdmin
-                            ? _acknowledgeIncident
-                            : null,
-                      )
+                      MobileIncidentList(incidents: filteredIncidents)
                     else
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -293,25 +288,6 @@ class _IncidentsPageState extends State<IncidentsPage> {
     });
   }
 
-  Future<void> _acknowledgeIncident(Incident incident) async {
-    try {
-      await widget.getIncidents.acknowledge(incident.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Incidente atendido: ${incident.deviceName ?? 'dispositivo'}',
-          ),
-        ),
-      );
-      await _refresh();
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo atender el incidente: $error')),
-      );
-    }
-  }
 }
 
 String _statusQueryValue(String label) => switch (label) {

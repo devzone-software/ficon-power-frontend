@@ -60,12 +60,14 @@ class DashboardBody extends StatelessWidget {
                 SizedBox(height: mobile ? 14 : 24),
                 _KpiGrid(data: data),
                 SizedBox(height: mobile ? 14 : 24),
-                ActiveIncidentsActionCard(
-                  incidents: unresolvedIncidents,
-                  canAcknowledge: canAcknowledgeIncidents,
-                  onAcknowledge: onAcknowledgeIncident,
-                ),
-                SizedBox(height: mobile ? 14 : 24),
+                if (unresolvedIncidents.isNotEmpty) ...[
+                  ActiveIncidentsActionCard(
+                    incidents: unresolvedIncidents,
+                    canAcknowledge: canAcknowledgeIncidents,
+                    onAcknowledge: onAcknowledgeIncident,
+                  ),
+                  SizedBox(height: mobile ? 14 : 24),
+                ],
                 FleetHealthCard(
                   online: data.onlineCount,
                   total: data.devices.length,

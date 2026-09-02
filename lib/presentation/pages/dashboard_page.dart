@@ -98,6 +98,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _acknowledgeIncident(Incident incident) async {
+    final confirmed = await _confirmAcknowledge(incident);
+    if (!confirmed || !mounted) return;
     try {
       await widget.getIncidents.acknowledge(incident.id);
       if (!mounted) return;
@@ -109,12 +111,39 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       );
       await _refresh();
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRoutes.incidents);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo atender el incidente: $error')),
       );
     }
+  }
+
+  Future<bool> _confirmAcknowledge(Incident incident) async {
+    final deviceName = incident.deviceName ?? 'este dispositivo';
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Confirmar atención'),
+            content: Text(
+              '¿Deseas marcar como atendido el incidente de $deviceName?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.task_alt, size: 18),
+                label: const Text('Atender'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 
