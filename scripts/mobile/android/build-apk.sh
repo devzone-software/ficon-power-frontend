@@ -15,6 +15,8 @@ APK_TARGET="${PROJECT_DIR}/dist/ficon-power.apk"
 MOBILE_DIST_DIR="${PROJECT_DIR}/dist/mobile"
 MOBILE_APK_TARGET="${MOBILE_DIST_DIR}/ficon-power.apk"
 KEY_PROPERTIES="${PROJECT_DIR}/android/key.properties"
+ALARM_SOUND_SOURCE="${PROJECT_DIR}/resources/mobile/audio/power_alarm.wav"
+ALARM_SOUND_TARGET="${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.wav"
 VERSION_LINE="$(grep '^version:' "${PROJECT_DIR}/pubspec.yaml" | awk '{print $2}' | tr -d '\r')"
 APP_VERSION_NAME="${VERSION_LINE%%+*}"
 APP_VERSION_CODE="${VERSION_LINE##*+}"
@@ -60,7 +62,13 @@ if [[ ! -f "${KEY_PROPERTIES}" ]]; then
   exit 1
 fi
 
+if [[ ! -f "${ALARM_SOUND_SOURCE}" ]]; then
+  echo "No existe el audio de alarma en ${ALARM_SOUND_SOURCE}." >&2
+  exit 1
+fi
+
 mkdir -p \
+  "$(dirname "${ALARM_SOUND_TARGET}")" \
   "${CACHE_DIR}/pub" \
   "${CACHE_DIR}/gradle" \
   "${CACHE_DIR}/android-platforms" \
@@ -69,6 +77,8 @@ mkdir -p \
   "${CACHE_DIR}/android-cmake" \
   "${PROJECT_DIR}/dist" \
   "${MOBILE_DIST_DIR}"
+
+cp "${ALARM_SOUND_SOURCE}" "${ALARM_SOUND_TARGET}"
 
 # Normaliza artefactos que pudieron quedar creados por Docker como root.
 docker run --rm \
