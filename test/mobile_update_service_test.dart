@@ -63,4 +63,26 @@ void main() {
     expect(await current.findAvailableUpdate(), isNull);
     expect(await unavailable.findAvailableUpdate(), isNull);
   });
+
+  test('expone la versión publicada aunque no sea una actualización', () async {
+    final service = MobileUpdateService(
+      manifestUri: Uri.parse('https://example/version.json'),
+      installedVersionCode: 10,
+      client: MockClient(
+        (_) async => http.Response(
+          '{"versionCode":10,"versionName":"0.1.5",'
+          '"architecture":"arm64-v8a",'
+          '"apkUrl":"https://example/app.apk","required":false}',
+          200,
+        ),
+      ),
+    );
+
+    final manifest = await service.fetchManifest();
+
+    expect(manifest?.versionName, '0.1.5');
+    expect(manifest?.versionCode, 10);
+    expect(manifest?.architecture, 'arm64-v8a');
+    expect(await service.findAvailableUpdate(), isNull);
+  });
 }

@@ -10,6 +10,7 @@ class MobileUpdateManifest {
     required this.apkUri,
     required this.notes,
     required this.required,
+    this.architecture = '',
   });
 
   final int versionCode;
@@ -17,6 +18,7 @@ class MobileUpdateManifest {
   final Uri apkUri;
   final String notes;
   final bool required;
+  final String architecture;
 
   factory MobileUpdateManifest.fromJson(Map<String, dynamic> json) {
     return MobileUpdateManifest(
@@ -25,6 +27,7 @@ class MobileUpdateManifest {
       apkUri: Uri.parse(json['apkUrl'] as String? ?? ''),
       notes: json['notes'] as String? ?? '',
       required: json['required'] as bool? ?? false,
+      architecture: json['architecture'] as String? ?? '',
     );
   }
 }
@@ -43,6 +46,12 @@ class MobileUpdateService {
   final bool _ownsClient;
 
   Future<MobileUpdateManifest?> findAvailableUpdate() async {
+    final manifest = await fetchManifest();
+    if (manifest == null) return null;
+    return manifest.versionCode > installedVersionCode ? manifest : null;
+  }
+
+  Future<MobileUpdateManifest?> fetchManifest() async {
     final response = await _client
         .get(manifestUri, headers: {'Accept': 'application/json'})
         .timeout(const Duration(seconds: 10));
@@ -52,7 +61,10 @@ class MobileUpdateService {
       (jsonDecode(utf8.decode(response.bodyBytes)) as Map<dynamic, dynamic>)
           .cast<String, dynamic>(),
     );
-    return manifest.versionCode > installedVersionCode ? manifest : null;
+    if (manifest.versionCode <= 0 || manifest.versionName.trim().isEmpty) {
+      return null;
+    }
+    return manifest;
   }
 
   void close() {
