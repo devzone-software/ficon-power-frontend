@@ -6,8 +6,11 @@ class MobilePowerAlertChannel {
   MobilePowerAlertChannel({FlutterLocalNotificationsPlugin? notifications})
     : _notifications = notifications ?? FlutterLocalNotificationsPlugin();
 
-  static const id = 'ficon_power_power_alerts_alarm_v4';
-  static const name = 'Cortes de energia';
+  // Canal de respaldo utilizado por Firebase cuando el mensaje no puede
+  // resolverse contra otro channel_id. Se configura explícitamente para que
+  // las alarmas no terminen en un canal Misc silencioso.
+  static const id = 'fcm_fallback_notification_channel';
+  static const name = 'Misc';
   static const description =
       'Alertas sonoras para cortes de energia pendientes de revision.';
   static final _vibrationPattern = Int64List.fromList([0, 1000, 300, 1000]);
@@ -32,6 +35,9 @@ class MobilePowerAlertChannel {
     );
     await android?.deleteNotificationChannel(
       channelId: 'ficon_power_power_alerts_alarm_v3',
+    );
+    await android?.deleteNotificationChannel(
+      channelId: 'ficon_power_power_alerts_alarm_v4',
     );
     await android?.createNotificationChannel(
       AndroidNotificationChannel(
