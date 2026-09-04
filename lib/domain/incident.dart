@@ -21,6 +21,7 @@ class Incident {
   final int? durationSeconds;
 
   bool get isOpen => status == 'active' || status == 'acknowledged';
+  bool get isAwaitingAttention => status == 'active';
 
   factory Incident.fromJson(Map<String, dynamic> json) {
     return Incident(

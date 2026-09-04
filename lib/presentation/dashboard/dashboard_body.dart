@@ -23,12 +23,14 @@ class DashboardBody extends StatelessWidget {
     required this.data,
     required this.getNotificationTemplates,
     required this.canAcknowledgeIncidents,
+    required this.acknowledgingIncidentIds,
     required this.onAcknowledgeIncident,
   });
 
   final MonitoringOverview data;
   final GetNotificationTemplates getNotificationTemplates;
   final bool canAcknowledgeIncidents;
+  final Set<String> acknowledgingIncidentIds;
   final ValueChanged<Incident> onAcknowledgeIncident;
 
   @override
@@ -39,7 +41,7 @@ class DashboardBody extends StatelessWidget {
         .toList();
     final recentIncidents = data.incidents.take(6).toList();
     final unresolvedIncidents = data.incidents
-        .where((incident) => incident.isOpen)
+        .where((incident) => incident.isAwaitingAttention)
         .toList();
 
     return ListView(
@@ -64,6 +66,7 @@ class DashboardBody extends StatelessWidget {
                   ActiveIncidentsActionCard(
                     incidents: unresolvedIncidents,
                     canAcknowledge: canAcknowledgeIncidents,
+                    acknowledgingIncidentIds: acknowledgingIncidentIds,
                     onAcknowledge: onAcknowledgeIncident,
                   ),
                   SizedBox(height: mobile ? 14 : 24),
@@ -162,11 +165,13 @@ class ActiveIncidentsActionCard extends StatelessWidget {
     super.key,
     required this.incidents,
     required this.canAcknowledge,
+    required this.acknowledgingIncidentIds,
     required this.onAcknowledge,
   });
 
   final List<Incident> incidents;
   final bool canAcknowledge;
+  final Set<String> acknowledgingIncidentIds;
   final ValueChanged<Incident> onAcknowledge;
 
   @override
@@ -231,6 +236,9 @@ class ActiveIncidentsActionCard extends StatelessWidget {
                 _ActiveIncidentTile(
                   incident: incidents[index],
                   canAcknowledge: canAcknowledge,
+                  acknowledging: acknowledgingIncidentIds.contains(
+                    incidents[index].id,
+                  ),
                   onAcknowledge: onAcknowledge,
                 ),
               ],
@@ -246,11 +254,13 @@ class _ActiveIncidentTile extends StatelessWidget {
   const _ActiveIncidentTile({
     required this.incident,
     required this.canAcknowledge,
+    required this.acknowledging,
     required this.onAcknowledge,
   });
 
   final Incident incident;
   final bool canAcknowledge;
+  final bool acknowledging;
   final ValueChanged<Incident> onAcknowledge;
 
   @override
@@ -276,9 +286,14 @@ class _ActiveIncidentTile extends StatelessWidget {
     );
     final action = canAcknowledge
         ? FilledButton.tonalIcon(
-            onPressed: () => onAcknowledge(incident),
-            icon: const Icon(Icons.task_alt, size: 18),
-            label: const Text('Atender'),
+            onPressed: acknowledging ? null : () => onAcknowledge(incident),
+            icon: acknowledging
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.task_alt, size: 18),
+            label: Text(acknowledging ? 'Atendiendo…' : 'Atender'),
           )
         : IncidentStatusChip(status: incident.status);
 

@@ -40,6 +40,7 @@ class _DashboardPageState extends State<DashboardPage> {
   late Future<MonitoringOverview> _future;
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
+  final Set<String> _acknowledgingIncidentIds = {};
 
   @override
   void initState() {
@@ -89,6 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
               data: snapshot.data!,
               getNotificationTemplates: widget.getNotificationTemplates,
               canAcknowledgeIncidents: widget.currentUser.canAccessAdmin,
+              acknowledgingIncidentIds: _acknowledgingIncidentIds,
               onAcknowledgeIncident: _acknowledgeIncident,
             ),
           );
@@ -98,8 +100,13 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _acknowledgeIncident(Incident incident) async {
+    if (!incident.isAwaitingAttention ||
+        _acknowledgingIncidentIds.contains(incident.id)) {
+      return;
+    }
     final confirmed = await _confirmAcknowledge(incident);
     if (!confirmed || !mounted) return;
+    setState(() => _acknowledgingIncidentIds.add(incident.id));
     try {
       await widget.getIncidents.acknowledge(incident.id);
       if (!mounted) return;
@@ -118,6 +125,11 @@ class _DashboardPageState extends State<DashboardPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No se pudo atender el incidente: $error')),
       );
+      await _refresh();
+    } finally {
+      if (mounted) {
+        setState(() => _acknowledgingIncidentIds.remove(incident.id));
+      }
     }
   }
 
