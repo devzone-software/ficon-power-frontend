@@ -55,6 +55,7 @@ class FiconMonitoringRepository
 
   final FiconApiClient _api;
   final AuthSession? session;
+  String? _registeredMobilePushToken;
 
   Future<LoginResult> login({
     required String username,
@@ -83,9 +84,13 @@ class FiconMonitoringRepository
       await _api.postJson('/api/auth/logout', {
         if (session?.refreshToken != null)
           'refreshToken': session!.refreshToken,
+        if (_registeredMobilePushToken != null)
+          'deviceToken': _registeredMobilePushToken,
       });
     } catch (_) {
       // El cierre local de sesión no debe bloquearse por red.
+    } finally {
+      _registeredMobilePushToken = null;
     }
   }
 
@@ -101,10 +106,13 @@ class FiconMonitoringRepository
       if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
       if (appVersion != null && appVersion.isNotEmpty) 'appVersion': appVersion,
     });
+    _registeredMobilePushToken = token;
   }
 
   Future<void> revokeMobilePushToken(String token) async {
+    if (_registeredMobilePushToken != token) return;
     await _api.deleteJson('/api/mobile/device-tokens', {'token': token});
+    _registeredMobilePushToken = null;
   }
 
   Future<List<MobileNotification>> fetchMobileNotifications({

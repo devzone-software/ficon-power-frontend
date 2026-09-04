@@ -78,11 +78,21 @@ class _MobilePushRegistrationState extends State<MobilePushRegistration> {
   Future<void> _revokeCurrentDevice() async {
     final token = _registeredToken;
     _registeredToken = null;
-    if (token == null || token.isEmpty) return;
+    final refreshSubscription = _refreshSubscription;
+    _refreshSubscription = null;
+    await refreshSubscription?.cancel();
+    if (token == null || token.isEmpty || !MobileFirebaseConfig.isConfigured) {
+      return;
+    }
     try {
       await widget.repository.revokeMobilePushToken(token);
     } catch (_) {
-      // Si no hay red al cerrar sesión, el token expirará o podrá revocarse luego.
+      // La eliminación local invalida el token aunque no haya red con la API.
+    }
+    try {
+      await FirebaseMessaging.instance.deleteToken();
+    } catch (_) {
+      // El cierre de sesión no se bloquea si Firebase no está disponible.
     }
   }
 

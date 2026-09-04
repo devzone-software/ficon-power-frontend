@@ -81,6 +81,7 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
         title: widget.title,
         debugShowCheckedModeBanner: false,
         theme: buildFiconTheme(),
+        themeMode: ThemeMode.light,
         builder: (context, child) {
           final content = child ?? const SizedBox.shrink();
           return FiconRepositoryScope(
