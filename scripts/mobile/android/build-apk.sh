@@ -15,8 +15,8 @@ APK_TARGET="${PROJECT_DIR}/dist/ficon-power.apk"
 MOBILE_DIST_DIR="${PROJECT_DIR}/dist/mobile"
 MOBILE_APK_TARGET="${MOBILE_DIST_DIR}/ficon-power.apk"
 KEY_PROPERTIES="${PROJECT_DIR}/android/key.properties"
-ALARM_SOUND_SOURCE="${PROJECT_DIR}/resources/mobile/audio/power_alarm.wav"
-ALARM_SOUND_TARGET="${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.wav"
+ALARM_SOUND_SOURCE="${PROJECT_DIR}/resources/mobile/audio/power_alarm.ogg"
+ALARM_SOUND_TARGET="${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.ogg"
 VERSION_LINE="$(grep '^version:' "${PROJECT_DIR}/pubspec.yaml" | awk '{print $2}' | tr -d '\r')"
 APP_VERSION_NAME="${VERSION_LINE%%+*}"
 APP_VERSION_CODE="${VERSION_LINE##*+}"
@@ -78,6 +78,9 @@ mkdir -p \
   "${PROJECT_DIR}/dist" \
   "${MOBILE_DIST_DIR}"
 
+rm -f \
+  "${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.wav" \
+  "${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.ogg"
 cp "${ALARM_SOUND_SOURCE}" "${ALARM_SOUND_TARGET}"
 
 # Normaliza artefactos que pudieron quedar creados por Docker como root.
@@ -106,6 +109,23 @@ docker run --rm \
   -w /app \
   "${FLUTTER_DOCKER_IMAGE}" \
   bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release ${FLUTTER_PLATFORM_ARGS} --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' --dart-define=FIREBASE_API_KEY='${FIREBASE_API_KEY}' --dart-define=FIREBASE_APP_ID='${FIREBASE_APP_ID}' --dart-define=FIREBASE_MESSAGING_SENDER_ID='${FIREBASE_MESSAGING_SENDER_ID}' --dart-define=FIREBASE_PROJECT_ID='${FIREBASE_PROJECT_ID}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
+
+apk_contains_alarm_sound() {
+  local apk_entry
+
+  while IFS= read -r apk_entry; do
+    if unzip -p "${APK_SOURCE}" "${apk_entry}" | cmp -s - "${ALARM_SOUND_SOURCE}"; then
+      return 0
+    fi
+  done < <(unzip -Z1 "${APK_SOURCE}" | grep -E '\.ogg$' || true)
+
+  return 1
+}
+
+if ! apk_contains_alarm_sound; then
+  echo "La APK no contiene el audio OGG de power_alarm; se cancela la publicación." >&2
+  exit 1
+fi
 
 cp "${APK_SOURCE}" "${APK_TARGET}"
 cp "${APK_SOURCE}" "${MOBILE_APK_TARGET}"
