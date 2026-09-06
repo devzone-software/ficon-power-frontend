@@ -5,6 +5,7 @@ import '../../../application/mobile_notification_controller.dart';
 import '../../../application/mobile_data_export.dart';
 import '../../../domain/auth_user.dart';
 import '../../../domain/mobile_notification.dart';
+import '../../../mobile/notifications/mobile_push_registration.dart';
 import '../overlays/mobile_account_panel.dart';
 import '../overlays/mobile_export_sheet.dart';
 import '../../theme/ficon_theme.dart';
@@ -177,14 +178,17 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
   Future<void> _openNotifications() async {
     await _notifications.refresh();
     if (!mounted) return;
+    final pushStatus = MobilePushStatusScope.maybeOf(context);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => AnimatedBuilder(
         animation: _notifications,
-        builder: (context, _) =>
-            _NotificationHistorySheet(controller: _notifications),
+        builder: (context, _) => _NotificationHistorySheet(
+          controller: _notifications,
+          pushStatus: pushStatus,
+        ),
       ),
     );
   }
@@ -208,9 +212,13 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
 }
 
 class _NotificationHistorySheet extends StatelessWidget {
-  const _NotificationHistorySheet({required this.controller});
+  const _NotificationHistorySheet({
+    required this.controller,
+    required this.pushStatus,
+  });
 
   final MobileNotificationController controller;
+  final MobilePushStatus? pushStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +241,13 @@ class _NotificationHistorySheet extends StatelessWidget {
               ),
             ),
             const Divider(height: 1),
+            if (pushStatus != null) ...[
+              AnimatedBuilder(
+                animation: pushStatus!,
+                builder: (context, _) => _PushStatusCard(status: pushStatus!),
+              ),
+              const Divider(height: 1),
+            ],
             Expanded(child: _history()),
           ],
         ),
@@ -262,6 +277,84 @@ class _NotificationHistorySheet extends StatelessWidget {
       },
     );
   }
+}
+
+class _PushStatusCard extends StatelessWidget {
+  const _PushStatusCard({required this.status});
+
+  final MobilePushStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final registered = status.phase == MobilePushPhase.registered;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    registered
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_off_outlined,
+                    color: registered ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Push FCM: ${status.label}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text('Permiso: ${status.permission}'),
+              if (status.tokenHint != null) Text('Token: ${status.tokenHint}'),
+              if (status.nextRetryAt != null)
+                Text('Próximo reintento: ${_clock(status.nextRetryAt!)}'),
+              if (status.lastError != null)
+                Text(
+                  'Último error: ${status.lastError}',
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              if (status.testMessage != null) Text(status.testMessage!),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: status.canRetry ? status.retryNow : null,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: status.canTest ? status.sendTest : null,
+                    icon: status.testing
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.notifications_active_outlined),
+                    label: const Text('Probar notificación'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _clock(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}:'
+      '${value.second.toString().padLeft(2, '0')}';
 }
 
 class _NotificationTile extends StatelessWidget {

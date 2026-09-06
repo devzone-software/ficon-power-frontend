@@ -34,6 +34,28 @@ class LoginResult {
   final AuthUser user;
 }
 
+class MobilePushTestResult {
+  const MobilePushTestResult({
+    required this.configured,
+    required this.tokenRegistered,
+    required this.accepted,
+    required this.message,
+  });
+
+  final bool configured;
+  final bool tokenRegistered;
+  final bool accepted;
+  final String message;
+
+  factory MobilePushTestResult.fromJson(Map<String, dynamic> json) =>
+      MobilePushTestResult(
+        configured: json['configured'] as bool? ?? false,
+        tokenRegistered: json['tokenRegistered'] as bool? ?? false,
+        accepted: json['accepted'] as bool? ?? false,
+        message: json['message'] as String? ?? 'Respuesta FCM no disponible.',
+      );
+}
+
 /// Adaptador HTTP: implementa los puertos de salida
 /// [MonitoringQueryRepository], [NotificationTemplateRepository],
 /// [DeviceRepository] y [SiteRepository] contra la API REST del backend.
@@ -113,6 +135,13 @@ class FiconMonitoringRepository
     if (_registeredMobilePushToken != token) return;
     await _api.deleteJson('/api/mobile/device-tokens', {'token': token});
     _registeredMobilePushToken = null;
+  }
+
+  Future<MobilePushTestResult> sendMobilePushTest(String token) async {
+    final data = await _api.postJson('/api/mobile/device-tokens/test', {
+      'token': token,
+    });
+    return MobilePushTestResult.fromJson(data);
   }
 
   Future<List<MobileNotification>> fetchMobileNotifications({

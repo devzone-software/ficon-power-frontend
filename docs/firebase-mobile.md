@@ -207,6 +207,25 @@ POST /api/mobile/device-tokens
 Al cerrar sesión, el backend revoca el registro del dispositivo. Al volver a
 iniciar sesión, la APK registra el token vigente nuevamente.
 
+Si el registro falla por falta de red o por un error temporal, la APK reintenta
+después de 2, 5, 15 y 30 segundos, y luego de 1 y 5 minutos. El último intervalo
+se conserva mientras continúe el fallo. Al volver la aplicación a primer plano
+también se fuerza un intento inmediato.
+
+En la APK, abre **Notificaciones** para consultar el bloque **Push FCM**. Allí se
+muestran el permiso Android, el estado del registro, los últimos ocho caracteres
+del token, el próximo reintento y el último error. Los botones **Reintentar** y
+**Probar notificación** permiten recuperar el registro o solicitar una entrega
+FCM real al teléfono actual. La prueba usa:
+
+```http
+POST /api/mobile/device-tokens/test
+```
+
+El backend valida que el token esté activo y pertenezca al usuario autenticado.
+Con `FCM_DRY_RUN=true` informa que la entrega es solo una validación y no la
+presenta como una notificación aceptada para entrega.
+
 ## Verificar una notificación
 
 Se genera un evento real o controlado de corte/retorno y se revisa:
