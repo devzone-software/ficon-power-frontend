@@ -224,9 +224,13 @@ order by created_at desc
 limit 50;
 ```
 
-La prueba final debe ejecutarse con la APK en segundo plano y completamente
-cerrada. Android debe mostrar el push en ambos casos, siempre que Google Play
-Services esté disponible y el permiso continúe habilitado.
+La prueba final debe ejecutarse con la APK visible, en segundo plano y
+completamente cerrada. Cuando está visible, la APK escucha
+`FirebaseMessaging.onMessage` y vuelve a publicar el mensaje como notificación
+local en `fcm_fallback_notification_channel`, con el sonido `power_alarm`. En
+segundo plano o cerrada, Android muestra directamente la notificación entregada
+por FCM. Los tres escenarios requieren Google Play Services y el permiso de
+notificaciones habilitado.
 
 ## Diagnóstico
 
