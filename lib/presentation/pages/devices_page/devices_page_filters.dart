@@ -6,24 +6,17 @@ extension _DevicesPageFilters on _DevicesPageState {
       return [
         TextColumnFilter(
           label: 'Buscar medidor',
-          hint: 'Nombre, ID, sede o distrito',
+          hint: 'Nombre, ID o distrito',
           value: _columnFilters.text('query'),
           options: mergeFilterOptions([
             uniqueColumnOptions(devices, (device) => device.name),
             uniqueColumnOptions(devices, (device) => device.externalId),
-            uniqueColumnOptions(devices, (device) => device.siteName),
             uniqueColumnOptions(devices, (device) => device.district),
           ]),
           wideOnMobile: true,
           onChanged: (value) => _setTextFilter('query', value),
         ),
         _statusFilter(),
-        OptionsChipFilter(
-          label: 'Sede',
-          value: _columnFilters.text('site'),
-          options: uniqueColumnOptions(devices, (device) => device.siteName),
-          onChanged: (value) => _setTextFilter('site', value),
-        ),
         OptionsChipFilter(
           label: 'Distrito',
           value: _columnFilters.text('district'),
@@ -56,11 +49,6 @@ extension _DevicesPageFilters on _DevicesPageState {
         keyName: 'externalId',
         label: 'ID externo',
         options: uniqueColumnOptions(devices, (device) => device.externalId),
-      ),
-      _selectFilter(
-        keyName: 'site',
-        label: 'Sede',
-        options: uniqueColumnOptions(devices, (device) => device.siteName),
       ),
       _selectFilter(
         keyName: 'district',
@@ -123,7 +111,6 @@ extension _DevicesPageFilters on _DevicesPageState {
     return _columnFilters.matchesAnyText('query', [
           device.name,
           device.externalId,
-          device.siteName,
           device.district,
         ]) &&
         _columnFilters.matchesText(
@@ -131,7 +118,6 @@ extension _DevicesPageFilters on _DevicesPageState {
           device.name.isNotEmpty ? device.name : device.externalId,
         ) &&
         _columnFilters.matchesText('externalId', device.externalId) &&
-        _columnFilters.matchesChoice('site', device.siteName) &&
         _columnFilters.matchesChoice('district', device.district) &&
         _columnFilters.matchesChoice(
           'status',

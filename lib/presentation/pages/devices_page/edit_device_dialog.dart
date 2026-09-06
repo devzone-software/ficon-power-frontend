@@ -135,7 +135,7 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                 DropdownButtonFormField<String>(
                   initialValue: _isNewSite ? _newSiteValue : selected,
                   decoration: const InputDecoration(
-                    labelText: 'Sede',
+                    labelText: 'Distrito',
                     border: OutlineInputBorder(),
                   ),
                   items: [
@@ -143,8 +143,8 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                       DropdownMenuItem(
                         value: site.id,
                         child: Text(
-                          site.locationLabel.isNotEmpty
-                              ? '${site.name} (${site.locationLabel})'
+                          site.district?.trim().isNotEmpty == true
+                              ? site.district!
                               : site.name,
                         ),
                       ),
@@ -163,7 +163,8 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                     controller: _siteNameController,
                     enabled: !_saving,
                     decoration: const InputDecoration(
-                      labelText: 'Nombre de la nueva sede',
+                      labelText: 'Nombre en Tuya Spatial',
+                      helperText: 'Ejemplo: Timax - Puno',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -172,7 +173,7 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                     controller: _districtController,
                     enabled: !_saving,
                     decoration: const InputDecoration(
-                      labelText: 'Distrito (opcional)',
+                      labelText: 'Distrito (se infiere si queda vacío)',
                       border: OutlineInputBorder(),
                     ),
                   ),

@@ -21,7 +21,6 @@ class DevicesTable extends StatelessWidget {
       columns: const [
         DataColumn(label: Text('Nombre')),
         DataColumn(label: Text('ID externo')),
-        DataColumn(label: Text('Sede')),
         DataColumn(label: Text('Distrito')),
         DataColumn(label: Text('Estado')),
         DataColumn(label: Text('Último cambio')),
@@ -40,7 +39,6 @@ class DevicesTable extends StatelessWidget {
           Text(device.name.isNotEmpty ? device.name : device.externalId ?? ''),
         ),
         DataCell(Text(device.externalId ?? '')),
-        DataCell(Text(device.siteName ?? '')),
         DataCell(Text(device.district ?? '')),
         DataCell(DeviceStatusChip(online: device.isOnline)),
         DataCell(Text(formatDateTime(device.lastStatusChange))),

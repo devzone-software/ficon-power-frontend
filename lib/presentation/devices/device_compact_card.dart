@@ -83,10 +83,6 @@ class DeviceCompactCard extends StatelessWidget {
                 DeviceStatusChip(online: device.isOnline),
                 DeviceMiniChip(
                   icon: Icons.location_on_outlined,
-                  label: _present(device.siteName, 'Sin sede'),
-                ),
-                DeviceMiniChip(
-                  icon: Icons.map_outlined,
                   label: _present(device.district, 'Sin distrito'),
                 ),
                 if (device.category?.trim().isNotEmpty == true)
