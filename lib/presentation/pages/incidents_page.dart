@@ -7,6 +7,7 @@ import '../../domain/incident.dart';
 import '../../domain/paged_result.dart';
 import '../../ports/input/get_incidents.dart';
 import '../incidents/mobile/incident_cards.dart';
+import '../widgets/notification_focus_banner.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/pagination_controls.dart';
@@ -19,11 +20,13 @@ class IncidentsPage extends StatefulWidget {
     required this.getIncidents,
     required this.currentUser,
     required this.onLogout,
+    this.focusIncidentId,
   });
 
   final GetIncidents getIncidents;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final String? focusIncidentId;
 
   @override
   State<IncidentsPage> createState() => _IncidentsPageState();
@@ -38,11 +41,13 @@ class _IncidentsPageState extends State<IncidentsPage> {
   Timer? _filterDebounce;
   bool _refreshing = false;
   int _page = 0;
+  late String? _focusIncidentId;
   final ColumnFilterState _columnFilters = ColumnFilterState();
 
   @override
   void initState() {
     super.initState();
+    _focusIncidentId = widget.focusIncidentId;
     _future = _loadPage();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
@@ -97,6 +102,11 @@ class _IncidentsPageState extends State<IncidentsPage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
+                    if (_focusIncidentId != null)
+                      NotificationFocusBanner(
+                        label: 'Mostrando el incidente de la notificación',
+                        onClear: _clearNotificationFocus,
+                      ),
                     TableFiltersBar(filters: _filters(incidents)),
                     if (incidents.isEmpty)
                       const Padding(
@@ -250,9 +260,18 @@ class _IncidentsPageState extends State<IncidentsPage> {
       status: _statusQueryValue(_columnFilters.text('status')),
       deviceName: _columnFilters.text('device'),
       siteName: _columnFilters.text('site'),
+      incidentId: _focusIncidentId ?? '',
       startDate: _columnFilters.date('startTime'),
       endDate: _columnFilters.date('endTime'),
     );
+  }
+
+  void _clearNotificationFocus() {
+    setState(() {
+      _focusIncidentId = null;
+      _page = 0;
+      _future = _loadPage();
+    });
   }
 
   void _changePage(int page) {
@@ -287,7 +306,6 @@ class _IncidentsPageState extends State<IncidentsPage> {
       _future = _loadPage();
     });
   }
-
 }
 
 String _statusQueryValue(String label) => switch (label) {

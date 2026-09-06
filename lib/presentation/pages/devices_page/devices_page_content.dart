@@ -3,6 +3,7 @@ part of '../devices_page.dart';
 class _DevicesPageContent extends StatelessWidget {
   const _DevicesPageContent({
     required this.devices,
+    this.focusBanner,
     required this.filters,
     required this.canEdit,
     required this.onEdit,
@@ -10,6 +11,7 @@ class _DevicesPageContent extends StatelessWidget {
   });
 
   final List<Device> devices;
+  final Widget? focusBanner;
   final List<Widget> filters;
   final bool canEdit;
   final void Function(Device device) onEdit;
@@ -24,6 +26,7 @@ class _DevicesPageContent extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
+              ?focusBanner,
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: Row(

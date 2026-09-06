@@ -226,6 +226,22 @@ El backend valida que el token esté activo y pertenezca al usuario autenticado.
 Con `FCM_DRY_RUN=true` informa que la entrega es solo una validación y no la
 presenta como una notificación aceptada para entrega.
 
+### Apertura de alertas
+
+La APK escucha `FirebaseMessaging.onMessageOpenedApp` cuando se toca una
+notificación con la aplicación en segundo plano y consulta
+`FirebaseMessaging.instance.getInitialMessage()` cuando el toque inicia una
+aplicación cerrada. Los mensajes con `incidentId` abren **Incidentes** filtrando
+el registro exacto; los mensajes con `deviceId` abren **Dispositivos** mostrando
+el medidor correspondiente. Si no existe una sesión, el destino queda pendiente
+y se abre después de iniciar sesión.
+
+Las alertas FCM recibidas en primer plano se publican como notificaciones
+locales. Su `payload` usa `incident:<uuid>` y el toque sigue el mismo flujo de
+navegación, incluso si esa notificación local vuelve a iniciar la aplicación.
+La pantalla enfocada muestra un aviso con la acción **Ver todos** para retirar
+el filtro proveniente de la notificación.
+
 ## Verificar una notificación
 
 Se genera un evento real o controlado de corte/retorno y se revisa:

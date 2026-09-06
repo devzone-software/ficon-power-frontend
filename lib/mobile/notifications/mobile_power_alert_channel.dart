@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -16,7 +17,19 @@ class MobilePowerAlertChannel {
   static final _vibrationPattern = Int64List.fromList([0, 1000, 300, 1000]);
 
   final FlutterLocalNotificationsPlugin _notifications;
+  final StreamController<String> _notificationPayloads =
+      StreamController<String>.broadcast();
   Future<void>? _initialization;
+
+  Stream<String> get notificationPayloads => _notificationPayloads.stream;
+
+  Future<String?> initialNotificationPayload() async {
+    await ensureCreated();
+    final launch = await _notifications.getNotificationAppLaunchDetails();
+    if (launch?.didNotificationLaunchApp != true) return null;
+    final payload = launch?.notificationResponse?.payload?.trim();
+    return payload == null || payload.isEmpty ? null : payload;
+  }
 
   Future<void> ensureCreated() => _initialization ??= _createChannel();
 
@@ -24,7 +37,15 @@ class MobilePowerAlertChannel {
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
-    await _notifications.initialize(settings: settings);
+    await _notifications.initialize(
+      settings: settings,
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload?.trim();
+        if (payload != null && payload.isNotEmpty) {
+          _notificationPayloads.add(payload);
+        }
+      },
+    );
     final android = _notifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin

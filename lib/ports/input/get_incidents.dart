@@ -13,6 +13,7 @@ abstract interface class GetIncidents {
     String status = '',
     String deviceName = '',
     String siteName = '',
+    String incidentId = '',
     DateTime? startDate,
     DateTime? endDate,
   });

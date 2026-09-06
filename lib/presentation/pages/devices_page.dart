@@ -12,6 +12,7 @@ import '../../ports/input/update_device_details.dart';
 import '../devices/devices_compact_list.dart';
 import '../devices/devices_table.dart';
 import '../devices/onboarding/tuya_spatial_guide.dart';
+import '../widgets/notification_focus_banner.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
@@ -31,6 +32,7 @@ class DevicesPage extends StatefulWidget {
     required this.createSite,
     required this.currentUser,
     required this.onLogout,
+    this.focusDeviceId,
   });
 
   final GetDevices getDevices;
@@ -39,6 +41,7 @@ class DevicesPage extends StatefulWidget {
   final CreateSite createSite;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final String? focusDeviceId;
 
   @override
   State<DevicesPage> createState() => _DevicesPageState();
@@ -51,10 +54,12 @@ class _DevicesPageState extends State<DevicesPage> {
   Timer? _autoRefreshTimer;
   bool _refreshing = false;
   final ColumnFilterState _columnFilters = ColumnFilterState();
+  late String? _focusDeviceId;
 
   @override
   void initState() {
     super.initState();
+    _focusDeviceId = widget.focusDeviceId;
     _future = widget.getDevices();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
   }
@@ -132,12 +137,22 @@ class _DevicesPageState extends State<DevicesPage> {
           }
           final devices = snapshot.data!;
           final filteredDevices = _sortedDevices(
-            devices.where(_matchesFilters),
+            devices.where(
+              (device) =>
+                  (_focusDeviceId == null || device.id == _focusDeviceId) &&
+                  _matchesFilters(device),
+            ),
           );
           return RefreshIndicator(
             onRefresh: _refresh,
             child: _DevicesPageContent(
               devices: filteredDevices,
+              focusBanner: _focusDeviceId == null
+                  ? null
+                  : NotificationFocusBanner(
+                      label: 'Mostrando el dispositivo de la notificación',
+                      onClear: _clearNotificationFocus,
+                    ),
               filters: _filters(devices),
               canEdit: widget.currentUser.canEditDevices,
               onEdit: _edit,
@@ -147,5 +162,9 @@ class _DevicesPageState extends State<DevicesPage> {
         },
       ),
     );
+  }
+
+  void _clearNotificationFocus() {
+    setState(() => _focusDeviceId = null);
   }
 }

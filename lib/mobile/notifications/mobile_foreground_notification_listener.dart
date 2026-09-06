@@ -49,7 +49,7 @@ class MobileForegroundNotificationContent {
       notificationId: identity.hashCode & 0x7fffffff,
       title: title,
       body: body,
-      payload: incidentId?.isEmpty == false ? incidentId : null,
+      payload: incidentId?.isEmpty == false ? 'incident:$incidentId' : null,
     );
   }
 

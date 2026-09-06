@@ -10,6 +10,7 @@ import 'main.dart';
 import 'mobile/config/mobile_firebase_config.dart';
 import 'mobile/notifications/mobile_event_notification_watcher.dart';
 import 'mobile/notifications/mobile_foreground_notification_listener.dart';
+import 'mobile/notifications/mobile_notification_navigation.dart';
 import 'mobile/notifications/mobile_power_alert_channel.dart';
 import 'mobile/notifications/mobile_push_registration.dart';
 import 'mobile/session/mobile_session_storage.dart';
@@ -60,12 +61,19 @@ Future<void> main() async {
           channel: powerAlertChannel,
           child: app,
         );
+  final notificationNavigationApp = MobileNotificationNavigation(
+    navigatorKey: navigatorKey,
+    session: session,
+    localPayloads: powerAlertChannel?.notificationPayloads,
+    initialLocalPayload: powerAlertChannel?.initialNotificationPayload,
+    child: notificationsEnabledApp,
+  );
   runApp(
     MobileUpdateChecker(
       session: session,
       navigatorKey: navigatorKey,
       child: MobileFirebaseConfig.isConfigured
-          ? notificationsEnabledApp
+          ? notificationNavigationApp
           : MobileEventNotificationWatcher(
               repository: repository,
               session: session,

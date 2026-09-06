@@ -20,6 +20,7 @@ abstract interface class MonitoringQueryRepository {
     String status = '',
     String deviceName = '',
     String siteName = '',
+    String incidentId = '',
     DateTime? startDate,
     DateTime? endDate,
   });

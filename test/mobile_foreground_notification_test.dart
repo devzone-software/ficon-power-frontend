@@ -25,7 +25,7 @@ void main() {
 
     expect(content.title, 'Corte detectado');
     expect(content.body, 'Medidor Puno sin energía');
-    expect(content.payload, 'incident-1');
+    expect(content.payload, 'incident:incident-1');
     expect(content.notificationId, 'message-1'.hashCode & 0x7fffffff);
   });
 
@@ -42,7 +42,7 @@ void main() {
 
     expect(content.title, 'Suministro eléctrico restablecido');
     expect(content.body, 'Medidor Juliaca');
-    expect(content.payload, 'incident-2');
+    expect(content.payload, 'incident:incident-2');
   });
 
   testWidgets('muestra localmente los mensajes recibidos en primer plano', (

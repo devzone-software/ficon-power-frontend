@@ -260,6 +260,7 @@ class FiconMonitoringRepository
     String status = '',
     String deviceName = '',
     String siteName = '',
+    String incidentId = '',
     DateTime? startDate,
     DateTime? endDate,
   }) async {
@@ -271,6 +272,7 @@ class FiconMonitoringRepository
         if (status.trim().isNotEmpty) 'status': status.trim(),
         if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
         if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (incidentId.trim().isNotEmpty) 'incidentId': incidentId.trim(),
         if (startDate != null) 'startDate': _dateQueryValue(startDate),
         if (endDate != null) 'endDate': _dateQueryValue(endDate),
       }),

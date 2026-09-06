@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../adapters/http/ficon_monitoring_repository.dart';
 import '../config/auth_session.dart';
+import '../mobile/notifications/mobile_notification_navigation.dart';
 import '../presentation/pages/admin_page.dart';
 import '../presentation/pages/dashboard_page.dart';
 import '../presentation/pages/devices_page.dart';
@@ -30,7 +31,7 @@ class FiconAppRouter {
   Map<String, WidgetBuilder> get routes => {
     AppRoutes.login: (_) => _loginPage(),
     AppRoutes.dashboard: (_) => _protected(_dashboardPage),
-    AppRoutes.devices: (_) => _protected(
+    AppRoutes.devices: (context) => _protected(
       () => DevicesPage(
         getDevices: dependencies.getDevices,
         getSites: dependencies.getSites,
@@ -38,13 +39,15 @@ class FiconAppRouter {
         createSite: dependencies.createSite,
         currentUser: session.user!,
         onLogout: logout,
+        focusDeviceId: _destination(context)?.deviceId,
       ),
     ),
-    AppRoutes.incidents: (_) => _protected(
+    AppRoutes.incidents: (context) => _protected(
       () => IncidentsPage(
         getIncidents: dependencies.getIncidents,
         currentUser: session.user!,
         onLogout: logout,
+        focusIncidentId: _destination(context)?.incidentId,
       ),
     ),
     AppRoutes.events: (_) => _protected(
@@ -62,6 +65,11 @@ class FiconAppRouter {
       ),
     ),
   };
+
+  MobileNotificationDestination? _destination(BuildContext context) {
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    return arguments is MobileNotificationDestination ? arguments : null;
+  }
 
   Route<dynamic> unknownRoute(RouteSettings settings) => MaterialPageRoute(
     settings: settings,

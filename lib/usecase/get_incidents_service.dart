@@ -21,6 +21,7 @@ class GetIncidentsService implements GetIncidents {
     String status = '',
     String deviceName = '',
     String siteName = '',
+    String incidentId = '',
     DateTime? startDate,
     DateTime? endDate,
   }) =>
@@ -31,6 +32,7 @@ class GetIncidentsService implements GetIncidents {
         status: status,
         deviceName: deviceName,
         siteName: siteName,
+        incidentId: incidentId,
         startDate: startDate,
         endDate: endDate,
       );
