@@ -101,6 +101,67 @@ void main() {
     );
   });
 
+  test('lee el contrato uniforme de error y conserva su referencia', () async {
+    final client = FiconApiClient(
+      baseUrl: 'https://ficon.test',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'code': 'validation_error',
+            'message': 'Revisa los datos indicados.',
+            'fieldErrors': [
+              {
+                'field': 'displayName',
+                'message': 'El nombre visible es obligatorio.',
+              },
+            ],
+            'traceId': 'request-123',
+          }),
+          400,
+        ),
+      ),
+    );
+
+    await expectLater(
+      client.getJson('/api/users'),
+      throwsA(
+        isA<ApiException>()
+            .having(
+              (error) => error.message,
+              'message',
+              'El nombre visible es obligatorio.',
+            )
+            .having((error) => error.code, 'code', 'validation_error')
+            .having((error) => error.traceId, 'traceId', 'request-123'),
+      ),
+    );
+  });
+
+  test('los errores de conexión no exponen URL ni excepción técnica', () async {
+    final client = FiconApiClient(
+      baseUrl: 'https://internal.example:8443',
+      client: MockClient((_) async => throw http.ClientException('socket')),
+    );
+
+    await expectLater(
+      client.getJson('/api/devices'),
+      throwsA(
+        isA<ApiException>()
+            .having(
+              (error) => error.message,
+              'message',
+              'No se pudo conectar con el servidor. '
+                  'Revisa tu conexión a Internet.',
+            )
+            .having(
+              (error) => error.message,
+              'does not expose URL',
+              isNot(contains('internal.example')),
+            ),
+      ),
+    );
+  });
+
   test(
     'renueva la sesión y reintenta la petición con el token nuevo',
     () async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -6,12 +7,24 @@ import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
 import 'exception_handler.dart';
 
-class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode, this.details});
+class ApiException implements Exception, UserReadableException {
+  ApiException(
+    this.message, {
+    this.statusCode,
+    this.details,
+    this.code,
+    this.traceId,
+  });
 
   final String message;
   final int? statusCode;
   final String? details;
+  final String? code;
+  @override
+  final String? traceId;
+
+  @override
+  String get userMessage => message;
 
   @override
   String toString() => message;
@@ -137,8 +150,16 @@ class FiconApiClient {
   Future<http.Response> _request(Future<http.Response> Function() send) async {
     try {
       return await send().timeout(_timeout);
+    } on TimeoutException catch (error) {
+      throw ApiException(
+        'El servidor tardó demasiado en responder. Inténtalo nuevamente.',
+        details: error.toString(),
+      );
     } catch (error) {
-      throw ApiException('No se pudo conectar con $_baseUrl: $error');
+      throw ApiException(
+        'No se pudo conectar con el servidor. Revisa tu conexión a Internet.',
+        details: error.toString(),
+      );
     }
   }
 
@@ -210,6 +231,8 @@ class FiconApiClient {
       ExceptionHandler.fromResponse(response, path),
       statusCode: response.statusCode,
       details: utf8.decode(response.bodyBytes),
+      code: ExceptionHandler.codeFromResponse(response),
+      traceId: ExceptionHandler.traceIdFromResponse(response),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
+import '../../application/user_error_message.dart';
 import '../../config/auth_session.dart';
 import '../login/widgets/login_form_card.dart';
 import '../login/widgets/login_support_dialog.dart';
@@ -62,15 +63,20 @@ class _LoginPageState extends State<LoginPage> {
         setState(
           () => _error = switch (e.statusCode) {
             401 => 'Usuario o contraseña incorrectos.',
-            403 => e.message,
+            403 => UserErrorMessage.from(e),
             429 => 'Demasiados intentos fallidos. Espera unos minutos.',
-            _ => 'No se pudo iniciar sesión: ${e.message}',
+            _ => UserErrorMessage.forAction('No se pudo iniciar sesión', e),
           },
         );
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = 'No se pudo iniciar sesión: $e');
+        setState(
+          () => _error = UserErrorMessage.forAction(
+            'No se pudo iniciar sesión',
+            e,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);

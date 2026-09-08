@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
+import '../../application/user_error_message.dart';
 import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
 import '../config/mobile_firebase_config.dart';
@@ -285,10 +286,7 @@ class _MobilePushRegistrationState extends State<MobilePushRegistration>
       ? '••••$token'
       : '••••${token.substring(token.length - 8)}';
 
-  String _friendlyError(Object error) => error
-      .toString()
-      .replaceFirst('Bad state: ', '')
-      .replaceFirst('StateError: ', '');
+  String _friendlyError(Object error) => UserErrorMessage.from(error);
 
   @override
   Widget build(BuildContext context) =>

@@ -2,6 +2,11 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+abstract interface class UserReadableException {
+  String get userMessage;
+  String? get traceId;
+}
+
 class ExceptionHandler {
   const ExceptionHandler._();
 
@@ -27,9 +32,40 @@ class ExceptionHandler {
   }
 
   static String fromException(Object error) {
-    final message = error.toString();
-    return _friendly(message, '', null);
+    if (error is UserReadableException) {
+      return _withTrace(error.userMessage, error.traceId);
+    }
+    final message = error.toString().trim();
+    final normalized = message.toLowerCase();
+    if (normalized.contains('timeoutexception') ||
+        normalized.contains('timed out')) {
+      return 'El servidor tardó demasiado en responder. Inténtalo nuevamente.';
+    }
+    if (normalized.contains('socketexception') ||
+        normalized.contains('clientexception') ||
+        normalized.contains('xmlhttprequest error') ||
+        normalized.contains('failed host lookup') ||
+        normalized.contains('connection refused') ||
+        normalized.contains('network is unreachable')) {
+      return 'No se pudo conectar con el servidor. Revisa tu conexión a Internet.';
+    }
+    if (normalized.contains('formatexception')) {
+      return 'El servidor devolvió una respuesta que la aplicación no pudo interpretar.';
+    }
+    if (message.startsWith('Bad state: ')) {
+      return message.substring('Bad state: '.length).trim();
+    }
+    if (message.startsWith('StateError: ')) {
+      return message.substring('StateError: '.length).trim();
+    }
+    return 'Ocurrió un error inesperado. Inténtalo nuevamente.';
   }
+
+  static String? codeFromResponse(http.Response response) =>
+      _responseText(response, 'code');
+
+  static String? traceIdFromResponse(http.Response response) =>
+      _responseText(response, 'traceId') ?? response.headers['x-trace-id'];
 
   static Object? _decodeJson(String body) {
     try {
@@ -40,6 +76,17 @@ class ExceptionHandler {
   }
 
   static String? _validationMessage(Map<String, dynamic> decoded) {
+    final fieldErrors = decoded['fieldErrors'];
+    if (fieldErrors is List && fieldErrors.isNotEmpty) {
+      final messages = fieldErrors
+          .whereType<Map<String, dynamic>>()
+          .map((entry) => _firstText(entry, const ['message', 'reason']))
+          .whereType<String>()
+          .where((message) => message.isNotEmpty)
+          .toList();
+      if (messages.isNotEmpty) return messages.join('\n');
+    }
+
     final errors = decoded['errors'];
     if (errors is List && errors.isNotEmpty) {
       final messages = errors
@@ -111,6 +158,19 @@ class ExceptionHandler {
       if (value is String && value.trim().isNotEmpty) return value.trim();
     }
     return null;
+  }
+
+  static String? _responseText(http.Response response, String key) {
+    final decoded = _decodeJson(utf8.decode(response.bodyBytes));
+    if (decoded is! Map<String, dynamic>) return null;
+    final value = decoded[key]?.toString().trim();
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  static String _withTrace(String message, String? traceId) {
+    final reference = traceId?.trim();
+    if (reference == null || reference.isEmpty) return message;
+    return '$message\nReferencia: $reference';
   }
 
   static String _friendly(String message, String path, int? statusCode) {

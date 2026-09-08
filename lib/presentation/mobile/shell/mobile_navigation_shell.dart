@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../adapters/http/ficon_monitoring_repository.dart';
 import '../../../application/mobile_notification_controller.dart';
 import '../../../application/mobile_data_export.dart';
+import '../../../application/user_error_message.dart';
 import '../../../domain/auth_user.dart';
 import '../../../domain/mobile_notification.dart';
 import '../../../mobile/notifications/mobile_push_registration.dart';
@@ -10,6 +11,7 @@ import '../overlays/mobile_account_panel.dart';
 import '../overlays/mobile_export_sheet.dart';
 import '../../theme/ficon_theme.dart';
 import '../../navigation/app_routes.dart';
+import '../../widgets/common.dart';
 
 class MobileNavigationShell extends StatefulWidget {
   const MobileNavigationShell({
@@ -205,7 +207,14 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron exportar los datos: $error')),
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction(
+              'No se pudieron exportar los datos',
+              error,
+            ),
+          ),
+        ),
       );
     }
   }
@@ -259,8 +268,8 @@ class _NotificationHistorySheet extends StatelessWidget {
     if (controller.loading && controller.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (controller.error != null && controller.items.isEmpty) {
-      return Center(child: Text('No se pudo cargar el historial.'));
+    if (controller.error != null) {
+      return ErrorView(error: controller.error, onRetry: controller.refresh);
     }
     if (controller.items.isEmpty) {
       return const Center(child: Text('No hay notificaciones registradas.'));

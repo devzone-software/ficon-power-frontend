@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
 import '../../application/admin_activity_controller.dart';
+import '../../application/user_error_message.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../admin/admin_table_filters.dart';
@@ -116,9 +117,13 @@ class _AdminPageState extends State<AdminPage> {
       await _activityController.refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('No se pudo desbloquear: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction('No se pudo desbloquear', e),
+          ),
+        ),
+      );
     }
   }
 
@@ -154,7 +159,11 @@ class _AdminPageState extends State<AdminPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo revocar la sesión: $error')),
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction('No se pudo revocar la sesión', error),
+          ),
+        ),
       );
     }
   }

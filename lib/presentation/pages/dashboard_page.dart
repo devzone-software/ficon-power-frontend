@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../application/user_error_message.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
@@ -123,7 +124,14 @@ class _DashboardPageState extends State<DashboardPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo atender el incidente: $error')),
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction(
+              'No se pudo atender el incidente',
+              error,
+            ),
+          ),
+        ),
       );
       await _refresh();
     } finally {

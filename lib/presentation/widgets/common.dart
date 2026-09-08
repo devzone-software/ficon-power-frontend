@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../application/user_error_message.dart';
 import '../theme/ficon_theme.dart';
 
 /// Formato de fecha/hora compartido por las vistas.
@@ -127,7 +128,7 @@ class ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '$error',
+              UserErrorMessage.from(error),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),

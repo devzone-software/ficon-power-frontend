@@ -85,7 +85,7 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        _showError('No se pudo guardar: $e');
+        _showError(UserErrorMessage.forAction('No se pudo guardar', e));
       }
     }
   }
@@ -106,7 +106,10 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
           future: _sitesFuture,
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return const Text('No se pudieron cargar las sedes.');
+              return ErrorView(
+                error: snapshot.error,
+                onRetry: () => setState(() => _sitesFuture = widget.getSites()),
+              );
             }
             if (!snapshot.hasData) {
               return const Padding(

@@ -45,7 +45,10 @@ void main() {
 
     expect(attempts, 1);
     expect(status?.phase, MobilePushPhase.retrying);
-    expect(status?.lastError, contains('sin red'));
+    expect(
+      status?.lastError,
+      'Ocurrió un error inesperado. Inténtalo nuevamente.',
+    );
 
     await tester.pump(const Duration(milliseconds: 11));
     await tester.pump();
