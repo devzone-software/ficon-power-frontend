@@ -10,6 +10,8 @@ import 'blocked_users_tab.dart';
 import 'login_attempts_tab.dart';
 import 'sessions_tab.dart';
 import 'users_tab.dart';
+import 'whatsapp_recipients_tab.dart';
+import '../../adapters/http/ficon_monitoring_repository.dart';
 
 class AdminTabs extends StatelessWidget {
   const AdminTabs({
@@ -21,6 +23,7 @@ class AdminTabs extends StatelessWidget {
     required this.onUnblockUser,
     required this.onRevokeSession,
     required this.onRefresh,
+    required this.repository,
   });
 
   final AdminActivityData data;
@@ -30,6 +33,7 @@ class AdminTabs extends StatelessWidget {
   final ValueChanged<BlockedLoginUser> onUnblockUser;
   final ValueChanged<AdminSession> onRevokeSession;
   final Future<void> Function() onRefresh;
+  final FiconMonitoringRepository repository;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +44,7 @@ class AdminTabs extends StatelessWidget {
       compact: compact,
     );
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Column(
         children: [
           const Material(
@@ -56,6 +60,7 @@ class AdminTabs extends StatelessWidget {
                 Tab(text: 'Audit logs'),
                 Tab(text: 'Logins'),
                 Tab(text: 'Sesiones'),
+                Tab(text: 'WhatsApp'),
               ],
             ),
           ),
@@ -97,6 +102,7 @@ class AdminTabs extends StatelessWidget {
                   onRevoke: onRevokeSession,
                   filters: definitions.sessions,
                 ),
+                WhatsAppRecipientsTab(repository: repository),
               ],
             ),
           ),

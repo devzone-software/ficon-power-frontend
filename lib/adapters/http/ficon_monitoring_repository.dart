@@ -10,6 +10,7 @@ import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
 import '../../domain/paged_result.dart';
 import '../../domain/site.dart';
+import '../../domain/whatsapp_recipient.dart';
 import '../../ports/output/device_repository.dart';
 import '../../ports/output/monitoring_query_repository.dart';
 import '../../ports/output/notification_template_repository.dart';
@@ -217,6 +218,45 @@ class FiconMonitoringRepository
 
   Future<void> revokeAdminSession(String id) async {
     await _api.postJson('/api/admin/sessions/$id/revoke', const {});
+  }
+
+  Future<List<WhatsAppRecipient>> fetchWhatsAppRecipients() async {
+    final data = await _api.getList('/api/whatsapp-recipients');
+    return data.map(WhatsAppRecipient.fromJson).toList();
+  }
+
+  Future<WhatsAppRecipient> saveWhatsAppRecipient({
+    String? id,
+    required String label,
+    required String phone,
+    String? siteId,
+    required bool notifyOutage,
+    required bool notifyRestored,
+    required bool active,
+  }) async {
+    final payload = {
+      'label': label.trim(),
+      'phone': phone.trim(),
+      'siteId': siteId,
+      'notifyOutage': notifyOutage,
+      'notifyRestored': notifyRestored,
+      'active': active,
+    };
+    final data = id == null
+        ? await _api.postJson('/api/whatsapp-recipients', payload)
+        : await _api.putJson('/api/whatsapp-recipients/$id', payload);
+    return WhatsAppRecipient.fromJson(data);
+  }
+
+  Future<void> deleteWhatsAppRecipient(String id) =>
+      _api.deleteJson('/api/whatsapp-recipients/$id', const {});
+
+  Future<WhatsAppTestResult> testWhatsAppRecipient(String id) async {
+    final data = await _api.postJson(
+      '/api/whatsapp-recipients/$id/test',
+      const {},
+    );
+    return WhatsAppTestResult.fromJson(data);
   }
 
   Future<List<BlockedLoginUser>> fetchBlockedUsers({int limit = 100}) async {
