@@ -4,7 +4,9 @@ class Device {
     required this.id,
     required this.name,
     this.externalId,
+    this.provider,
     this.category,
+    this.productId,
     this.model,
     required this.active,
     required this.status,
@@ -12,6 +14,8 @@ class Device {
     this.siteId,
     this.siteName,
     this.district,
+    this.province,
+    this.department,
     this.currentIncidentStartedAt,
     required this.eventCount,
     required this.incidentCount,
@@ -21,7 +25,9 @@ class Device {
   final String id;
   final String name;
   final String? externalId;
+  final String? provider;
   final String? category;
+  final String? productId;
   final String? model;
   final bool active;
 
@@ -31,6 +37,8 @@ class Device {
   final String? siteId;
   final String? siteName;
   final String? district;
+  final String? province;
+  final String? department;
   final DateTime? currentIncidentStartedAt;
   final int eventCount;
   final int incidentCount;
@@ -43,7 +51,9 @@ class Device {
       id: json['id'] as String,
       name: json['name'] as String? ?? '',
       externalId: json['externalId'] as String?,
+      provider: json['provider'] as String?,
       category: json['category'] as String?,
+      productId: json['productId'] as String?,
       model: json['model'] as String?,
       active: json['active'] as bool? ?? false,
       status: json['status'] as String? ?? 'offline',
@@ -51,6 +61,8 @@ class Device {
       siteId: json['siteId'] as String?,
       siteName: json['siteName'] as String?,
       district: json['district'] as String?,
+      province: json['province'] as String?,
+      department: json['department'] as String?,
       currentIncidentStartedAt: _parseDate(json['currentIncidentStartedAt']),
       eventCount: (json['eventCount'] as num?)?.toInt() ?? 0,
       incidentCount: (json['incidentCount'] as num?)?.toInt() ?? 0,

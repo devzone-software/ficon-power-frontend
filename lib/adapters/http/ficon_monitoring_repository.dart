@@ -4,6 +4,7 @@ import '../../config/auth_session.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
+import '../../domain/device_detail.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/mobile_notification.dart';
@@ -284,6 +285,12 @@ class FiconMonitoringRepository
   Future<List<Device>> fetchDevices() async {
     final data = await _api.getList('/api/devices');
     return data.map(Device.fromJson).toList();
+  }
+
+  @override
+  Future<DeviceDetail> fetchDeviceDetail(String deviceId) async {
+    final data = await _api.getJson('/api/devices/$deviceId/detail');
+    return DeviceDetail.fromJson(data);
   }
 
   @override

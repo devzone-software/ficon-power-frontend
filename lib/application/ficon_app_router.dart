@@ -34,6 +34,7 @@ class FiconAppRouter {
     AppRoutes.devices: (context) => _protected(
       () => DevicesPage(
         getDevices: dependencies.getDevices,
+        getDeviceDetail: dependencies.getDeviceDetail,
         getSites: dependencies.getSites,
         updateDeviceDetails: dependencies.updateDeviceDetails,
         createSite: dependencies.createSite,

@@ -1,4 +1,5 @@
 import '../../domain/device.dart';
+import '../../domain/device_detail.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/paged_result.dart';
@@ -10,6 +11,8 @@ abstract interface class MonitoringQueryRepository {
   Future<List<Site>> fetchSites();
 
   Future<List<Device>> fetchDevices();
+
+  Future<DeviceDetail> fetchDeviceDetail(String deviceId);
 
   Future<List<Incident>> fetchIncidents({int limit = 100});
 

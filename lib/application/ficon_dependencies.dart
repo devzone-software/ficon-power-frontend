@@ -1,6 +1,7 @@
 import '../adapters/http/ficon_monitoring_repository.dart';
 import '../usecase/create_site_service.dart';
 import '../usecase/get_devices_service.dart';
+import '../usecase/get_device_detail_service.dart';
 import '../usecase/get_events_service.dart';
 import '../usecase/get_incidents_service.dart';
 import '../usecase/get_monitoring_overview_service.dart';
@@ -11,6 +12,7 @@ import '../usecase/update_device_details_service.dart';
 class FiconDependencies {
   FiconDependencies(FiconMonitoringRepository repository)
     : getOverview = GetMonitoringOverviewService(repository),
+      getDeviceDetail = GetDeviceDetailService(repository),
       getDevices = GetDevicesService(repository),
       getIncidents = GetIncidentsService(repository),
       getEvents = GetEventsService(repository),
@@ -20,6 +22,7 @@ class FiconDependencies {
       createSite = CreateSiteService(repository);
 
   final GetMonitoringOverviewService getOverview;
+  final GetDeviceDetailService getDeviceDetail;
   final GetDevicesService getDevices;
   final GetIncidentsService getIncidents;
   final GetEventsService getEvents;

@@ -7,6 +7,7 @@ class _DevicesPageContent extends StatelessWidget {
     required this.filters,
     required this.canEdit,
     required this.onEdit,
+    required this.onOpen,
     required this.onOpenGuide,
   });
 
@@ -15,6 +16,7 @@ class _DevicesPageContent extends StatelessWidget {
   final List<Widget> filters;
   final bool canEdit;
   final void Function(Device device) onEdit;
+  final void Function(Device device) onOpen;
   final VoidCallback onOpenGuide;
 
   @override
@@ -56,6 +58,7 @@ class _DevicesPageContent extends StatelessWidget {
                 DevicesCompactList(
                   devices: devices,
                   onEdit: onEdit,
+                  onOpen: onOpen,
                   canEdit: canEdit,
                 )
               else
@@ -66,6 +69,7 @@ class _DevicesPageContent extends StatelessWidget {
                     child: DevicesTable(
                       devices: devices,
                       onEdit: onEdit,
+                      onOpen: onOpen,
                       canEdit: canEdit,
                     ),
                   ),

@@ -8,11 +8,13 @@ import '../../domain/device.dart';
 import '../../domain/site.dart';
 import '../../ports/input/create_site.dart';
 import '../../ports/input/get_devices.dart';
+import '../../ports/input/get_device_detail.dart';
 import '../../ports/input/get_sites.dart';
 import '../../ports/input/update_device_details.dart';
 import '../devices/devices_compact_list.dart';
 import '../devices/devices_table.dart';
 import '../devices/onboarding/tuya_spatial_guide.dart';
+import 'device_detail_page.dart';
 import '../widgets/notification_focus_banner.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
@@ -28,6 +30,7 @@ class DevicesPage extends StatefulWidget {
   const DevicesPage({
     super.key,
     required this.getDevices,
+    required this.getDeviceDetail,
     required this.getSites,
     required this.updateDeviceDetails,
     required this.createSite,
@@ -37,6 +40,7 @@ class DevicesPage extends StatefulWidget {
   });
 
   final GetDevices getDevices;
+  final GetDeviceDetail getDeviceDetail;
   final GetSites getSites;
   final UpdateDeviceDetails updateDeviceDetails;
   final CreateSite createSite;
@@ -120,6 +124,20 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
+  void _openDetail(Device device) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DeviceDetailPage(
+          deviceId: device.id,
+          initialDeviceName: device.name,
+          getDeviceDetail: widget.getDeviceDetail,
+          currentUser: widget.currentUser,
+          onLogout: widget.onLogout,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
@@ -157,6 +175,7 @@ class _DevicesPageState extends State<DevicesPage> {
               filters: _filters(devices),
               canEdit: widget.currentUser.canEditDevices,
               onEdit: _edit,
+              onOpen: _openDetail,
               onOpenGuide: _openTuyaSpatialGuide,
             ),
           );
