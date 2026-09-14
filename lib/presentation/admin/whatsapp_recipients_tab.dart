@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
 import '../../application/user_error_message.dart';
 import '../../domain/site.dart';
 import '../../domain/realtime_change.dart';
 import '../../domain/whatsapp_recipient.dart';
+import '../../domain/peru_phone_number.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 
@@ -183,7 +185,7 @@ class _WhatsAppRecipientsTabState extends State<WhatsAppRecipientsTab> {
                     ),
                     title: Text(recipient.label),
                     subtitle: Text(
-                      '+${recipient.phone} · '
+                      '${formatPeruMobilePhone(recipient.phone)} · '
                       '${recipient.siteName ?? 'Todas las sedes'}\n'
                       '${recipient.notifyOutage ? 'Cortes' : ''}'
                       '${recipient.notifyOutage && recipient.notifyRestored ? ' y ' : ''}'
@@ -254,7 +256,11 @@ class _RecipientDialogState extends State<_RecipientDialog> {
     super.initState();
     final recipient = widget.recipient;
     _label = TextEditingController(text: recipient?.label);
-    _phone = TextEditingController(text: recipient?.phone);
+    _phone = TextEditingController(
+      text: recipient == null
+          ? ''
+          : formatPeruMobilePhone(recipient.phone, includeCountryCode: false),
+    );
     _siteId = recipient?.siteId;
     _outage = recipient?.notifyOutage ?? true;
     _restored = recipient?.notifyRestored ?? true;
@@ -282,7 +288,7 @@ class _RecipientDialogState extends State<_RecipientDialog> {
       await widget.repository.saveWhatsAppRecipient(
         id: widget.recipient?.id,
         label: _label.text,
-        phone: _phone.text,
+        phone: normalizePeruMobilePhone(_phone.text)!,
         siteId: _siteId,
         notifyOutage: _outage,
         notifyRestored: _restored,
@@ -323,17 +329,16 @@ class _RecipientDialogState extends State<_RecipientDialog> {
                 TextFormField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: const [_PeruMobilePhoneFormatter()],
                   decoration: const InputDecoration(
-                    labelText: 'Número internacional',
-                    hintText: '51987654321',
-                    prefixText: '+',
+                    labelText: 'Celular WhatsApp',
+                    hintText: '987 654 321',
+                    prefixText: '+51 ',
                   ),
                   validator: (value) =>
-                      RegExp(
-                        r'^[1-9][0-9]{7,14}$',
-                      ).hasMatch(value?.trim().replaceFirst('+', '') ?? '')
+                      normalizePeruMobilePhone(value ?? '') != null
                       ? null
-                      : 'Usa entre 8 y 15 dígitos con código de país.',
+                      : 'Ingresa un celular peruano de 9 dígitos.',
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
@@ -394,6 +399,24 @@ class _RecipientDialogState extends State<_RecipientDialog> {
           child: Text(_saving ? 'Guardando…' : 'Guardar'),
         ),
       ],
+    );
+  }
+}
+
+class _PeruMobilePhoneFormatter extends TextInputFormatter {
+  const _PeruMobilePhoneFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = peruLocalPhoneDigits(newValue.text);
+    if (digits.length > 9) digits = digits.substring(0, 9);
+    final formatted = formatPeruMobilePhone(digits, includeCountryCode: false);
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

@@ -137,3 +137,16 @@ bool sameDate(DateTime first, DateTime second) =>
     first.year == second.year &&
     first.month == second.month &&
     first.day == second.day;
+
+List<DateTime> calendarGridDays(DateTime month) {
+  final first = DateTime(month.year, month.month);
+  final last = DateTime(month.year, month.month + 1, 0);
+  final gridStart = first.subtract(
+    Duration(days: first.weekday - DateTime.monday),
+  );
+  final gridEnd = last.add(Duration(days: DateTime.sunday - last.weekday));
+  return List.generate(
+    gridEnd.difference(gridStart).inDays + 1,
+    (index) => gridStart.add(Duration(days: index)),
+  );
+}

@@ -10,6 +10,7 @@ import '../../ports/input/get_device_detail.dart';
 import '../../ports/input/get_operations_calendar.dart';
 import '../../ports/input/manage_tuya_plans.dart';
 import '../dashboard/dashboard_formatters.dart';
+import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import 'device_detail_page.dart';
@@ -384,35 +385,61 @@ class _CalendarHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                IconButton(
-                  tooltip: 'Mes anterior',
-                  onPressed: onPrevious,
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Text(
-                  formatCalendarMonth(month),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Mes siguiente',
-                  onPressed: onNext,
-                  icon: const Icon(Icons.chevron_right),
-                ),
-                OutlinedButton(onPressed: onToday, child: const Text('Hoy')),
-                if (canManage)
-                  FilledButton.icon(
-                    onPressed: onAddPlan,
-                    icon: const Icon(Icons.add_alert_outlined),
-                    label: const Text('Agregar renovación'),
-                  ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 600;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: compact ? constraints.maxWidth : 360,
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Mes anterior',
+                            onPressed: onPrevious,
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                          Expanded(
+                            child: Text(
+                              formatCalendarMonth(month),
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  (compact
+                                          ? Theme.of(
+                                              context,
+                                            ).textTheme.titleMedium
+                                          : Theme.of(
+                                              context,
+                                            ).textTheme.titleLarge)
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Mes siguiente',
+                            onPressed: onNext,
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton(
+                      onPressed: onToday,
+                      child: const Text('Hoy'),
+                    ),
+                    if (canManage)
+                      FilledButton.icon(
+                        onPressed: onAddPlan,
+                        icon: const Icon(Icons.add_alert_outlined),
+                        label: const Text('Agregar renovación'),
+                      ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -431,8 +458,14 @@ class _CalendarHeader extends StatelessWidget {
                   avatar: const Icon(Icons.autorenew, size: 18),
                   label: Text('${activePlans.length} planes Tuya'),
                 ),
-                _SummaryChip(color: Colors.red, label: '$overdue vencidos'),
-                _SummaryChip(color: Colors.orange, label: '$dueSoon próximos'),
+                _SummaryChip(
+                  color: FiconColors.danger,
+                  label: '$overdue vencidos',
+                ),
+                _SummaryChip(
+                  color: FiconColors.warning,
+                  label: '$dueSoon próximos',
+                ),
               ],
             ),
           ],
@@ -474,14 +507,7 @@ class _MonthCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final first = DateTime(month.year, month.month, 1);
-    final gridStart = first.subtract(
-      Duration(days: first.weekday - DateTime.monday),
-    );
-    final days = List.generate(
-      42,
-      (index) => gridStart.add(Duration(days: index)),
-    );
+    final days = calendarGridDays(month);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -574,7 +600,7 @@ class _CalendarDay extends StatelessWidget {
       child: Material(
         color: selected
             ? Theme.of(context).colorScheme.primaryContainer
-            : Colors.transparent,
+            : FiconColors.surface.withValues(alpha: 0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: BorderSide(
@@ -609,12 +635,18 @@ class _CalendarDay extends StatelessWidget {
                   runSpacing: 3,
                   children: [
                     if (incidentCount > 0)
-                      _CalendarBadge(color: Colors.red, count: incidentCount),
+                      _CalendarBadge(
+                        color: FiconColors.danger,
+                        count: incidentCount,
+                      ),
                     if (renewalCount > 0)
-                      _CalendarBadge(color: Colors.orange, count: renewalCount),
+                      _CalendarBadge(
+                        color: FiconColors.warning,
+                        count: renewalCount,
+                      ),
                     if (completedCount > 0)
                       _CalendarBadge(
-                        color: Colors.green,
+                        color: FiconColors.success,
                         count: completedCount,
                       ),
                   ],
@@ -645,8 +677,8 @@ class _CalendarBadge extends StatelessWidget {
     alignment: Alignment.center,
     child: Text(
       '$count',
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onPrimary,
         fontWeight: FontWeight.w800,
         fontSize: 9,
       ),
@@ -903,10 +935,10 @@ class _TuyaPlanTile extends StatelessWidget {
     final days = plan.daysUntilRenewal();
     final status = plan.status();
     final color = switch (status) {
-      'OVERDUE' => Colors.red,
-      'DUE_SOON' => Colors.orange,
-      'INACTIVE' => Colors.grey,
-      _ => Colors.green,
+      'OVERDUE' => FiconColors.danger,
+      'DUE_SOON' => FiconColors.warning,
+      'INACTIVE' => FiconColors.cardBorder,
+      _ => FiconColors.success,
     };
     final countdown = switch (days) {
       < 0 => 'Vencido hace ${-days} día${days == -1 ? '' : 's'}',
@@ -1299,13 +1331,13 @@ class _RenewalFormValue {
 
 Color calendarEntryColor(OperationsCalendarEntry entry) {
   if (entry.isIncident) {
-    return entry.status == 'resolved' ? Colors.blueGrey : Colors.red;
+    return entry.status == 'resolved' ? FiconColors.slate : FiconColors.danger;
   }
-  if (entry.isCompletedRenewal) return Colors.green;
+  if (entry.isCompletedRenewal) return FiconColors.success;
   return switch (entry.status) {
-    'OVERDUE' => Colors.red,
-    'DUE_SOON' => Colors.orange,
-    _ => Colors.amber.shade700,
+    'OVERDUE' => FiconColors.danger,
+    'DUE_SOON' => FiconColors.warning,
+    _ => FiconColors.logoBlue,
   };
 }
 

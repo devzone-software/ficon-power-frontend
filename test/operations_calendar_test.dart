@@ -63,4 +63,12 @@ void main() {
     expect(entry.isCompletedRenewal, isTrue);
     expect(entry.tuyaPlanId, 7);
   });
+
+  test('el calendario usa solo las semanas necesarias para el mes', () {
+    final september = calendarGridDays(DateTime(2026, 9));
+
+    expect(september, hasLength(35));
+    expect(september.first, DateTime(2026, 8, 31));
+    expect(september.last, DateTime(2026, 10, 4));
+  });
 }
