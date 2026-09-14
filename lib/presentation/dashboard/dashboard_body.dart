@@ -10,7 +10,6 @@ import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 import 'dashboard_analytics_section.dart';
 import 'dashboard_kpi_card.dart';
-import 'dashboard_overview_header.dart';
 import 'fleet_health_card.dart';
 import 'mobile_app_download_card.dart';
 import 'notification_templates_card.dart';
@@ -54,12 +53,6 @@ class DashboardBody extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 1200),
             child: Column(
               children: [
-                DashboardOverviewHeader(
-                  online: data.onlineCount,
-                  total: data.devices.length,
-                  openIncidents: data.openIncidents,
-                ),
-                SizedBox(height: mobile ? 14 : 24),
                 _KpiGrid(data: data),
                 SizedBox(height: mobile ? 14 : 24),
                 if (unresolvedIncidents.isNotEmpty) ...[

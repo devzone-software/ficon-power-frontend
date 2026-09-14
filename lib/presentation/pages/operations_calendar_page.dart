@@ -43,9 +43,6 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
   late Future<OperationsCalendarData> _future;
   StreamSubscription<RealtimeChange>? _realtimeSubscription;
   Timer? _realtimeDebounce;
-  bool _showIncidents = true;
-  bool _showRenewals = true;
-
   bool get _canManage => widget.currentUser.canAccessAdmin;
 
   @override
@@ -118,13 +115,7 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
     });
   }
 
-  List<OperationsCalendarEntry> _visibleEntries(OperationsCalendarData data) =>
-      data.entries.where((entry) {
-        if (entry.isIncident) return _showIncidents;
-        return _showRenewals;
-      }).toList();
-
-  Future<void> _openPlanDialog([TuyaPlan? plan]) async {
+  Future<void> _openPlanDialog(TuyaPlan plan) async {
     final request = await showDialog<_TuyaPlanFormValue>(
       context: context,
       builder: (_) => _TuyaPlanDialog(plan: plan),
@@ -132,7 +123,7 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
     if (request == null) return;
     try {
       await widget.managePlans.save(
-        id: plan?.id,
+        id: plan.id,
         projectName: request.projectName,
         planName: request.planName,
         lastRenewedOn: request.lastRenewedOn,
@@ -143,9 +134,7 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
         active: request.active,
       );
       if (!mounted) return;
-      _showMessage(
-        plan == null ? 'Plan Tuya agregado.' : 'Plan Tuya actualizado.',
-      );
+      _showMessage('Plan Tuya actualizado.');
       await _refresh();
     } catch (error) {
       if (mounted) _showActionError('No se pudo guardar el plan', error);
@@ -259,7 +248,7 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
               return const Center(child: CircularProgressIndicator());
             }
             final data = snapshot.data!;
-            final entries = _visibleEntries(data);
+            final entries = data.entries;
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -267,17 +256,9 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
                 _CalendarHeader(
                   month: _focusedMonth,
                   data: data,
-                  showIncidents: _showIncidents,
-                  showRenewals: _showRenewals,
-                  canManage: _canManage,
                   onPrevious: () => _changeMonth(-1),
                   onNext: () => _changeMonth(1),
                   onToday: _goToday,
-                  onAddPlan: () => _openPlanDialog(),
-                  onToggleIncidents: (value) =>
-                      setState(() => _showIncidents = value),
-                  onToggleRenewals: (value) =>
-                      setState(() => _showRenewals = value),
                 ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
@@ -319,7 +300,6 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
                 _TuyaPlansCard(
                   plans: data.plans,
                   canManage: _canManage,
-                  onAdd: () => _openPlanDialog(),
                   onEdit: _openPlanDialog,
                   onRenew: _renewPlan,
                   onDelete: _deletePlan,
@@ -337,28 +317,16 @@ class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({
     required this.month,
     required this.data,
-    required this.showIncidents,
-    required this.showRenewals,
-    required this.canManage,
     required this.onPrevious,
     required this.onNext,
     required this.onToday,
-    required this.onAddPlan,
-    required this.onToggleIncidents,
-    required this.onToggleRenewals,
   });
 
   final DateTime month;
   final OperationsCalendarData data;
-  final bool showIncidents;
-  final bool showRenewals;
-  final bool canManage;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final VoidCallback onToday;
-  final VoidCallback onAddPlan;
-  final ValueChanged<bool> onToggleIncidents;
-  final ValueChanged<bool> onToggleRenewals;
 
   @override
   Widget build(BuildContext context) {
@@ -431,12 +399,6 @@ class _CalendarHeader extends StatelessWidget {
                       onPressed: onToday,
                       child: const Text('Hoy'),
                     ),
-                    if (canManage)
-                      FilledButton.icon(
-                        onPressed: onAddPlan,
-                        icon: const Icon(Icons.add_alert_outlined),
-                        label: const Text('Agregar renovación'),
-                      ),
                   ],
                 );
               },
@@ -446,15 +408,11 @@ class _CalendarHeader extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                FilterChip(
-                  selected: showIncidents,
-                  onSelected: onToggleIncidents,
+                Chip(
                   avatar: const Icon(Icons.bolt, size: 18),
                   label: Text('$incidents incidentes'),
                 ),
-                FilterChip(
-                  selected: showRenewals,
-                  onSelected: onToggleRenewals,
+                Chip(
                   avatar: const Icon(Icons.autorenew, size: 18),
                   label: Text('${activePlans.length} planes Tuya'),
                 ),
@@ -848,7 +806,6 @@ class _TuyaPlansCard extends StatelessWidget {
   const _TuyaPlansCard({
     required this.plans,
     required this.canManage,
-    required this.onAdd,
     required this.onEdit,
     required this.onRenew,
     required this.onDelete,
@@ -856,7 +813,6 @@ class _TuyaPlansCard extends StatelessWidget {
 
   final List<TuyaPlan> plans;
   final bool canManage;
-  final VoidCallback onAdd;
   final ValueChanged<TuyaPlan> onEdit;
   final ValueChanged<TuyaPlan> onRenew;
   final ValueChanged<TuyaPlan> onDelete;
@@ -882,12 +838,6 @@ class _TuyaPlansCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (canManage)
-                  IconButton(
-                    tooltip: 'Agregar plan',
-                    onPressed: onAdd,
-                    icon: const Icon(Icons.add),
-                  ),
               ],
             ),
             const SizedBox(height: 8),
@@ -982,9 +932,9 @@ class _TuyaPlanTile extends StatelessWidget {
 }
 
 class _TuyaPlanDialog extends StatefulWidget {
-  const _TuyaPlanDialog({this.plan});
+  const _TuyaPlanDialog({required this.plan});
 
-  final TuyaPlan? plan;
+  final TuyaPlan plan;
 
   @override
   State<_TuyaPlanDialog> createState() => _TuyaPlanDialogState();
@@ -994,7 +944,6 @@ class _TuyaPlanDialogState extends State<_TuyaPlanDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _project;
   late final TextEditingController _plan;
-  late final TextEditingController _interval;
   late final TextEditingController _reminder;
   late final TextEditingController _notes;
   late DateTime _nextRenewal;
@@ -1005,61 +954,26 @@ class _TuyaPlanDialogState extends State<_TuyaPlanDialog> {
   void initState() {
     super.initState();
     final source = widget.plan;
-    _project = TextEditingController(text: source?.projectName ?? '');
-    _plan = TextEditingController(
-      text: source?.planName ?? 'Plan gratuito Tuya IoT',
-    );
-    _interval = TextEditingController(
-      text: '${source?.renewalIntervalMonths ?? 6}',
-    );
-    _reminder = TextEditingController(text: '${source?.reminderDays ?? 30}');
-    _notes = TextEditingController(text: source?.notes ?? '');
-    _nextRenewal =
-        source?.nextRenewalOn ?? DateTime.now().add(const Duration(days: 30));
-    _lastRenewed = source?.lastRenewedOn;
-    _active = source?.active ?? true;
+    _project = TextEditingController(text: source.projectName);
+    _plan = TextEditingController(text: source.planName);
+    _reminder = TextEditingController(text: '${source.reminderDays}');
+    _notes = TextEditingController(text: source.notes ?? '');
+    _nextRenewal = source.nextRenewalOn;
+    _lastRenewed = source.lastRenewedOn;
+    _active = source.active;
   }
 
   @override
   void dispose() {
     _project.dispose();
     _plan.dispose();
-    _interval.dispose();
     _reminder.dispose();
     _notes.dispose();
     super.dispose();
   }
 
-  Future<void> _pickNextRenewal() async {
-    final value = await showDatePicker(
-      context: context,
-      initialDate: _nextRenewal,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (value != null) setState(() => _nextRenewal = value);
-  }
-
-  Future<void> _pickLastRenewed() async {
-    final today = dateOnly(DateTime.now());
-    final upperBound = _nextRenewal.isAfter(today) ? _nextRenewal : today;
-    final initial = _lastRenewed == null
-        ? today
-        : _lastRenewed!.isAfter(upperBound)
-        ? upperBound
-        : _lastRenewed!;
-    final value = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2020),
-      lastDate: upperBound,
-    );
-    if (value != null) setState(() => _lastRenewed = value);
-  }
-
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final interval = int.parse(_interval.text);
     final reminder = int.parse(_reminder.text);
     if (_lastRenewed != null && _nextRenewal.isBefore(_lastRenewed!)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1078,7 +992,7 @@ class _TuyaPlanDialogState extends State<_TuyaPlanDialog> {
         planName: _plan.text.trim(),
         lastRenewedOn: _lastRenewed,
         nextRenewalOn: _nextRenewal,
-        intervalMonths: interval,
+        intervalMonths: 6,
         reminderDays: reminder,
         notes: _notes.text.trim(),
         active: _active,
@@ -1100,9 +1014,7 @@ class _TuyaPlanDialogState extends State<_TuyaPlanDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(
-        widget.plan == null ? 'Agregar renovación Tuya' : 'Editar plan Tuya',
-      ),
+      title: const Text('Editar plan Tuya'),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -1134,23 +1046,25 @@ class _TuyaPlanDialogState extends State<_TuyaPlanDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickNextRenewal,
-                        icon: const Icon(Icons.event),
-                        label: Text(
-                          'Próxima: ${formatCalendarDate(_nextRenewal)}',
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Próxima renovación (Tuya)',
+                          border: OutlineInputBorder(),
                         ),
+                        child: Text(formatCalendarDate(_nextRenewal)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickLastRenewed,
-                        icon: const Icon(Icons.history),
-                        label: Text(
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Última renovación (Tuya)',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(
                           _lastRenewed == null
-                              ? 'Última: sin registrar'
-                              : 'Última: ${formatCalendarDate(_lastRenewed!)}',
+                              ? 'Sin registrar'
+                              : formatCalendarDate(_lastRenewed!),
                         ),
                       ),
                     ),
@@ -1160,14 +1074,12 @@ class _TuyaPlanDialogState extends State<_TuyaPlanDialog> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextFormField(
-                        controller: _interval,
-                        keyboardType: TextInputType.number,
-                        validator: (value) => _numberInRange(value, 1, 60),
-                        decoration: const InputDecoration(
-                          labelText: 'Ciclo (meses)',
+                      child: const InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Ciclo fijo de Tuya',
                           border: OutlineInputBorder(),
                         ),
+                        child: Text('6 meses'),
                       ),
                     ),
                     const SizedBox(width: 10),
