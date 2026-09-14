@@ -21,7 +21,7 @@ void main() {
     expect(device.longitude, -70.021881);
   });
 
-  test('no inventa ubicación para dispositivos sin coordenadas', () {
+  test('usa el centro de Puno si faltan coordenadas de la sede', () {
     final device = Device.fromJson({
       'id': 'device-2',
       'name': 'Sin ubicación',
@@ -32,5 +32,47 @@ void main() {
 
     expect(device.isInPuno, isTrue);
     expect(device.hasLocation, isFalse);
+    expect(device.punoMapLocation?.latitude, -15.8433);
+    expect(device.punoMapLocation?.longitude, -70.0236);
+  });
+
+  test('ubica Putina y Lampa dentro de la región Puno', () {
+    final putina = Device.fromJson({
+      'id': 'device-putina',
+      'name': 'Medidor Putina',
+      'active': true,
+      'status': 'online',
+      'siteName': 'Timax - Putina',
+      'district': 'Putina',
+    });
+    final lampa = Device.fromJson({
+      'id': 'device-lampa',
+      'name': 'Medidor Lampa',
+      'active': true,
+      'status': 'online',
+      'district': 'Lampa',
+    });
+
+    expect(putina.isInPuno, isTrue);
+    expect(putina.punoMapLocation?.latitude, -14.9141);
+    expect(lampa.isInPuno, isTrue);
+    expect(lampa.punoMapLocation?.longitude, -70.36662);
+  });
+
+  test('excluye coordenadas que pertenecen a otra región', () {
+    final device = Device.fromJson({
+      'id': 'device-cusco',
+      'name': 'Medidor Cusco',
+      'active': true,
+      'status': 'online',
+      'siteName': 'Cusco',
+      'district': 'Cusco',
+      'department': 'Cusco',
+      'latitude': -13.53195,
+      'longitude': -71.96746,
+    });
+
+    expect(device.hasLocation, isTrue);
+    expect(device.isInPuno, isFalse);
   });
 }

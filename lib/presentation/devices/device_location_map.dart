@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../domain/device.dart';
+import '../theme/ficon_theme.dart';
 
 enum DevicesViewMode { list, map }
 
@@ -25,7 +26,11 @@ class DeviceLocationMap extends StatefulWidget {
 }
 
 class _DeviceLocationMapState extends State<DeviceLocationMap> {
-  static const _punoCenter = LatLng(-15.8402, -70.0219);
+  static const _punoCenter = LatLng(-15.25, -69.9);
+  static final _punoBounds = LatLngBounds(
+    const LatLng(-17.5, -71.5),
+    const LatLng(-13.5, -68.5),
+  );
   Device? _selectedDevice;
 
   @override
@@ -33,9 +38,11 @@ class _DeviceLocationMapState extends State<DeviceLocationMap> {
     final punoDevices = widget.devices
         .where((device) => device.isInPuno)
         .toList();
-    final locatedDevices = punoDevices
-        .where((device) => device.hasLocation)
-        .toList();
+    final locatedDevices = punoDevices.where((device) {
+      final location = device.punoMapLocation;
+      return location != null &&
+          _punoBounds.contains(LatLng(location.latitude, location.longitude));
+    }).toList();
     final missingLocation = punoDevices.length - locatedDevices.length;
     final outsidePuno = widget.devices.length - punoDevices.length;
 
@@ -62,18 +69,22 @@ class _DeviceLocationMapState extends State<DeviceLocationMap> {
                       initialCenter: locatedDevices.length == 1
                           ? _pointFor(locatedDevices.first)
                           : _punoCenter,
-                      initialZoom: 13,
+                      initialZoom: 12,
                       initialCameraFit: locatedDevices.length > 1
                           ? CameraFit.coordinates(
                               coordinates: locatedDevices
                                   .map(_pointFor)
                                   .toList(growable: false),
                               padding: const EdgeInsets.all(56),
+                              minZoom: 8,
                               maxZoom: 15,
                             )
                           : null,
-                      minZoom: 10,
+                      minZoom: 8,
                       maxZoom: 18,
+                      cameraConstraint: CameraConstraint.containCenter(
+                        bounds: _punoBounds,
+                      ),
                       onTap: (_, _) => setState(() => _selectedDevice = null),
                     ),
                     children: [
@@ -86,6 +97,7 @@ class _DeviceLocationMapState extends State<DeviceLocationMap> {
                       MarkerClusterLayerWidget(
                         options: MarkerClusterLayerOptions(
                           maxClusterRadius: 55,
+                          spiderfyCluster: true,
                           size: const Size(46, 46),
                           padding: const EdgeInsets.all(48),
                           maxZoom: 18,
@@ -140,8 +152,10 @@ class _DeviceLocationMapState extends State<DeviceLocationMap> {
     );
   }
 
-  LatLng _pointFor(Device device) =>
-      LatLng(device.latitude!, device.longitude!);
+  LatLng _pointFor(Device device) {
+    final location = device.punoMapLocation!;
+    return LatLng(location.latitude, location.longitude);
+  }
 }
 
 class _MapSummary extends StatelessWidget {
@@ -158,8 +172,8 @@ class _MapSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hidden = <String>[
-      if (missingLocation > 0) '$missingLocation sin coordenadas',
-      if (outsidePuno > 0) '$outsidePuno fuera de Puno',
+      if (missingLocation > 0) '$missingLocation sin ubicación válida',
+      if (outsidePuno > 0) '$outsidePuno fuera de la región Puno',
     ];
     return Card(
       margin: EdgeInsets.zero,
@@ -174,7 +188,7 @@ class _MapSummary extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Mapa de Puno · $visibleDevices dispositivo${visibleDevices == 1 ? '' : 's'}',
+                    'Mapa de la región Puno · $visibleDevices dispositivo${visibleDevices == 1 ? '' : 's'}',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -216,7 +230,7 @@ class _EmptyPunoMap extends StatelessWidget {
             Icon(Icons.location_off_outlined, size: 42),
             SizedBox(height: 12),
             Text(
-              'No hay dispositivos de Puno con coordenadas registradas.',
+              'No hay dispositivos de la región Puno con una ubicación reconocida.',
               textAlign: TextAlign.center,
             ),
           ],
@@ -249,12 +263,15 @@ class _DeviceMarker extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: selected ? 4 : 3),
-            boxShadow: const [
+            border: Border.all(
+              color: FiconColors.surface,
+              width: selected ? 4 : 3,
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: FiconColors.ink.withValues(alpha: 0.26),
                 blurRadius: 7,
-                offset: Offset(0, 3),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -262,7 +279,7 @@ class _DeviceMarker extends StatelessWidget {
             device.hasActiveIncident
                 ? Icons.warning_amber_rounded
                 : Icons.electrical_services_rounded,
-            color: Colors.white,
+            color: FiconColors.surface,
             size: selected ? 25 : 22,
           ),
         ),
@@ -282,14 +299,19 @@ class _ClusterMarker extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+        border: Border.all(color: FiconColors.surface, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: FiconColors.ink.withValues(alpha: 0.26),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: Center(
         child: Text(
           '$count',
           style: const TextStyle(
-            color: Colors.white,
+            color: FiconColors.surface,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -321,7 +343,7 @@ class _SelectedDeviceCard extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: _statusColor(device),
-              foregroundColor: Colors.white,
+              foregroundColor: FiconColors.surface,
               child: const Icon(Icons.electrical_services_rounded),
             ),
             const SizedBox(width: 12),
@@ -370,10 +392,10 @@ class _MapLegend extends StatelessWidget {
           spacing: 10,
           runSpacing: 6,
           children: [
-            _LegendItem(color: Colors.green, label: 'En línea'),
-            _LegendItem(color: Colors.orange, label: 'Sin conexión'),
-            _LegendItem(color: Colors.red, label: 'Incidente'),
-            _LegendItem(color: Colors.grey, label: 'Inactivo'),
+            _LegendItem(color: FiconColors.success, label: 'En línea'),
+            _LegendItem(color: FiconColors.warning, label: 'Sin conexión'),
+            _LegendItem(color: FiconColors.danger, label: 'Incidente'),
+            _LegendItem(color: FiconColors.slate, label: 'Inactivo'),
           ],
         ),
       ),
@@ -405,9 +427,9 @@ class _LegendItem extends StatelessWidget {
 }
 
 Color _statusColor(Device device) {
-  if (!device.active) return Colors.grey;
-  if (device.hasActiveIncident) return Colors.red;
-  return device.isOnline ? Colors.green : Colors.orange;
+  if (!device.active) return FiconColors.slate;
+  if (device.hasActiveIncident) return FiconColors.danger;
+  return device.isOnline ? FiconColors.success : FiconColors.warning;
 }
 
 String _statusLabel(Device device) {

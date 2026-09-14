@@ -52,11 +52,38 @@ class Device {
   bool get hasActiveIncident => currentIncidentStartedAt != null;
   bool get hasLocation => latitude != null && longitude != null;
 
+  ({double latitude, double longitude})? get punoMapLocation {
+    if (hasLocation) {
+      return (latitude: latitude!, longitude: longitude!);
+    }
+
+    return _recognizedPunoCityLocation;
+  }
+
+  ({double latitude, double longitude})? get _recognizedPunoCityLocation {
+    final location = [
+      siteName,
+      district,
+      province,
+    ].whereType<String>().map(_normalizeLocation).join(' ');
+    if (_containsLocation(location, 'putina')) {
+      return (latitude: -14.9141, longitude: -69.86848);
+    }
+    if (_containsLocation(location, 'lampa')) {
+      return (latitude: -15.36443, longitude: -70.36662);
+    }
+    if (_containsLocation(location, 'puno')) {
+      return (latitude: -15.8433, longitude: -70.0236);
+    }
+    return null;
+  }
+
   bool get isInPuno {
-    final locations = [district, province, department];
-    return locations.whereType<String>().any(
-      (value) => value.trim().toLowerCase() == 'puno',
-    );
+    if (_normalizeLocation(department) == 'puno' ||
+        _normalizeLocation(province) == 'puno') {
+      return true;
+    }
+    return _recognizedPunoCityLocation != null;
   }
 
   factory Device.fromJson(Map<String, dynamic> json) {
@@ -92,4 +119,11 @@ class Device {
     }
     return null;
   }
+
+  static String _normalizeLocation(String? value) =>
+      value?.trim().toLowerCase() ?? '';
+
+  static bool _containsLocation(String value, String location) => RegExp(
+    '(^|[^a-záéíóúñ])${RegExp.escape(location)}([^a-záéíóúñ]|\$)',
+  ).hasMatch(value);
 }
