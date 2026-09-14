@@ -9,6 +9,7 @@ import '../presentation/pages/devices_page.dart';
 import '../presentation/pages/events_page.dart';
 import '../presentation/pages/incidents_page.dart';
 import '../presentation/pages/login_page.dart';
+import '../presentation/pages/operations_calendar_page.dart';
 import '../presentation/widgets/admin_scaffold.dart';
 import 'ficon_dependencies.dart';
 
@@ -50,6 +51,16 @@ class FiconAppRouter {
         currentUser: session.user!,
         onLogout: logout,
         focusIncidentId: _destination(context)?.incidentId,
+        realtimeChanges: dependencies.realtime.changes,
+      ),
+    ),
+    AppRoutes.calendar: (_) => _protected(
+      () => OperationsCalendarPage(
+        getCalendar: dependencies.getOperationsCalendar,
+        managePlans: dependencies.manageTuyaPlans,
+        getDeviceDetail: dependencies.getDeviceDetail,
+        currentUser: session.user!,
+        onLogout: logout,
         realtimeChanges: dependencies.realtime.changes,
       ),
     ),

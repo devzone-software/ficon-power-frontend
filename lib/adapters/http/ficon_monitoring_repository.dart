@@ -11,6 +11,7 @@ import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
+import '../../domain/operations_calendar.dart';
 import '../../domain/paged_result.dart';
 import '../../domain/realtime_change.dart';
 import '../../domain/site.dart';
@@ -18,6 +19,7 @@ import '../../domain/whatsapp_recipient.dart';
 import '../../ports/output/device_repository.dart';
 import '../../ports/output/monitoring_query_repository.dart';
 import '../../ports/output/notification_template_repository.dart';
+import '../../ports/output/operations_calendar_repository.dart';
 import '../../ports/output/site_repository.dart';
 import 'ficon_api_client.dart';
 
@@ -68,6 +70,7 @@ class FiconMonitoringRepository
     implements
         MonitoringQueryRepository,
         NotificationTemplateRepository,
+        OperationsCalendarRepository,
         DeviceRepository,
         SiteRepository {
   FiconMonitoringRepository({
@@ -272,6 +275,72 @@ class FiconMonitoringRepository
     );
     return WhatsAppTestResult.fromJson(data);
   }
+
+  @override
+  Future<List<OperationsCalendarEntry>> fetchCalendarEntries({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final data = await _api.getList(
+      _pathWithQuery('/api/calendar', {
+        'from': _dateQueryValue(from),
+        'to': _dateQueryValue(to),
+      }),
+    );
+    return data.map(OperationsCalendarEntry.fromJson).toList();
+  }
+
+  @override
+  Future<List<TuyaPlan>> fetchTuyaPlans() async {
+    final data = await _api.getList('/api/calendar/tuya-plans');
+    return data.map(TuyaPlan.fromJson).toList();
+  }
+
+  @override
+  Future<TuyaPlan> saveTuyaPlan({
+    int? id,
+    required String projectName,
+    required String planName,
+    DateTime? lastRenewedOn,
+    required DateTime nextRenewalOn,
+    required int renewalIntervalMonths,
+    required int reminderDays,
+    String? notes,
+    required bool active,
+  }) async {
+    final payload = {
+      'projectName': projectName.trim(),
+      'planName': planName.trim(),
+      if (lastRenewedOn != null)
+        'lastRenewedOn': _dateQueryValue(lastRenewedOn),
+      'nextRenewalOn': _dateQueryValue(nextRenewalOn),
+      'renewalIntervalMonths': renewalIntervalMonths,
+      'reminderDays': reminderDays,
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      'active': active,
+    };
+    final data = id == null
+        ? await _api.postJson('/api/calendar/tuya-plans', payload)
+        : await _api.putJson('/api/calendar/tuya-plans/$id', payload);
+    return TuyaPlan.fromJson(data);
+  }
+
+  @override
+  Future<TuyaPlan> renewTuyaPlan(
+    int id, {
+    DateTime? renewedOn,
+    String? notes,
+  }) async {
+    final data = await _api.postJson('/api/calendar/tuya-plans/$id/renew', {
+      if (renewedOn != null) 'renewedOn': _dateQueryValue(renewedOn),
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    });
+    return TuyaPlan.fromJson(data);
+  }
+
+  @override
+  Future<void> deleteTuyaPlan(int id) =>
+      _api.deleteJson('/api/calendar/tuya-plans/$id', const {});
 
   Future<List<BlockedLoginUser>> fetchBlockedUsers({int limit = 100}) async {
     final data = await _api.getList('/api/admin/blocked-users?limit=$limit');

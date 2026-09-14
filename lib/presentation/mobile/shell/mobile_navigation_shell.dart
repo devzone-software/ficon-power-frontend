@@ -170,6 +170,7 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
     AppRoutes.dashboard => Icons.dashboard_outlined,
     AppRoutes.devices => Icons.router_outlined,
     AppRoutes.incidents => Icons.warning_amber_outlined,
+    AppRoutes.calendar => Icons.calendar_month_outlined,
     AppRoutes.events => Icons.event_note_outlined,
     AppRoutes.admin => Icons.admin_panel_settings_outlined,
     _ => Icons.circle_outlined,
