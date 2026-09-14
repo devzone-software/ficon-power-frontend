@@ -21,7 +21,7 @@ void main() {
     expect(device.longitude, -70.021881);
   });
 
-  test('usa el centro de Puno si faltan coordenadas de la sede', () {
+  test('usa Alto Puno si faltan coordenadas de la sede', () {
     final device = Device.fromJson({
       'id': 'device-2',
       'name': 'Sin ubicación',
@@ -32,8 +32,8 @@ void main() {
 
     expect(device.isInPuno, isTrue);
     expect(device.hasLocation, isFalse);
-    expect(device.punoMapLocation?.latitude, -15.8433);
-    expect(device.punoMapLocation?.longitude, -70.0236);
+    expect(device.punoMapLocation?.latitude, -15.81154);
+    expect(device.punoMapLocation?.longitude, -70.0323);
   });
 
   test('ubica Putina y Lampa dentro de la región Puno', () {

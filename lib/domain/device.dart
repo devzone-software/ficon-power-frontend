@@ -73,7 +73,7 @@ class Device {
       return (latitude: -15.36443, longitude: -70.36662);
     }
     if (_containsLocation(location, 'puno')) {
-      return (latitude: -15.8433, longitude: -70.0236);
+      return (latitude: -15.81154, longitude: -70.0323);
     }
     return null;
   }

@@ -13,10 +13,10 @@ departamento. La comparación ignora mayúsculas y espacios. Los filtros activos
 de la pantalla también se aplican al mapa.
 
 Cuando una sede reconocida todavía no tiene coordenadas, se utiliza
-temporalmente el centro urbano de Puno, Putina o Lampa. Un dispositivo se omite
-si no pertenece a la región o no es posible reconocer su ciudad. La cabecera
-informa cuántos registros quedaron fuera; la vista de lista continúa
-mostrándolos.
+temporalmente Alto Puno para la sede Puno y el centro urbano para Putina o
+Lampa. Un dispositivo se omite si no pertenece a la región o no es posible
+reconocer su ciudad. La cabecera informa cuántos registros quedaron fuera; la
+vista de lista continúa mostrándolos.
 
 La cámara inicia mostrando todos los marcadores disponibles, permite alejarse
 lo suficiente para ver las tres ciudades y mantiene su centro dentro de los
