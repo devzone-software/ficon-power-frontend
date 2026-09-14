@@ -9,6 +9,8 @@ class _DevicesPageContent extends StatelessWidget {
     required this.onEdit,
     required this.onOpen,
     required this.onOpenGuide,
+    required this.viewMode,
+    required this.onViewModeChanged,
   });
 
   final List<Device> devices;
@@ -18,6 +20,8 @@ class _DevicesPageContent extends StatelessWidget {
   final void Function(Device device) onEdit;
   final void Function(Device device) onOpen;
   final VoidCallback onOpenGuide;
+  final DevicesViewMode viewMode;
+  final ValueChanged<DevicesViewMode> onViewModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +49,38 @@ class _DevicesPageContent extends StatelessWidget {
                       icon: const Icon(Icons.menu_book_outlined),
                       label: Text(compact ? 'Guía' : 'Cómo agregar un medidor'),
                     ),
+                    const SizedBox(width: 8),
+                    SegmentedButton<DevicesViewMode>(
+                      segments: compact
+                          ? const [
+                              ButtonSegment(
+                                value: DevicesViewMode.list,
+                                icon: Icon(Icons.view_list_outlined),
+                                tooltip: 'Lista',
+                              ),
+                              ButtonSegment(
+                                value: DevicesViewMode.map,
+                                icon: Icon(Icons.map_outlined),
+                                tooltip: 'Mapa de Puno',
+                              ),
+                            ]
+                          : const [
+                              ButtonSegment(
+                                value: DevicesViewMode.list,
+                                icon: Icon(Icons.view_list_outlined),
+                                label: Text('Lista'),
+                              ),
+                              ButtonSegment(
+                                value: DevicesViewMode.map,
+                                icon: Icon(Icons.map_outlined),
+                                label: Text('Mapa'),
+                              ),
+                            ],
+                      selected: {viewMode},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (selection) =>
+                          onViewModeChanged(selection.first),
+                    ),
                   ],
                 ),
               ),
@@ -53,6 +89,14 @@ class _DevicesPageContent extends StatelessWidget {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 48),
                   child: Text('No hay dispositivos con esos filtros.'),
+                )
+              else if (viewMode == DevicesViewMode.map)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  child: DeviceLocationMap(
+                    devices: devices,
+                    onOpenDevice: onOpen,
+                  ),
                 )
               else if (compact)
                 DevicesCompactList(

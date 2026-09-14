@@ -13,6 +13,7 @@ import '../../ports/input/get_device_detail.dart';
 import '../../ports/input/get_sites.dart';
 import '../../ports/input/update_device_details.dart';
 import '../devices/devices_compact_list.dart';
+import '../devices/device_location_map.dart';
 import '../devices/devices_table.dart';
 import '../devices/onboarding/tuya_spatial_guide.dart';
 import 'device_detail_page.dart';
@@ -65,6 +66,7 @@ class _DevicesPageState extends State<DevicesPage> {
   bool _refreshing = false;
   final ColumnFilterState _columnFilters = ColumnFilterState();
   late String? _focusDeviceId;
+  DevicesViewMode _viewMode = DevicesViewMode.list;
 
   @override
   void initState() {
@@ -204,6 +206,8 @@ class _DevicesPageState extends State<DevicesPage> {
               onEdit: _edit,
               onOpen: _openDetail,
               onOpenGuide: _openTuyaSpatialGuide,
+              viewMode: _viewMode,
+              onViewModeChanged: (mode) => setState(() => _viewMode = mode),
             ),
           );
         },

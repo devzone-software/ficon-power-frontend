@@ -16,6 +16,8 @@ class Device {
     this.district,
     this.province,
     this.department,
+    this.latitude,
+    this.longitude,
     this.currentIncidentStartedAt,
     required this.eventCount,
     required this.incidentCount,
@@ -39,12 +41,23 @@ class Device {
   final String? district;
   final String? province;
   final String? department;
+  final double? latitude;
+  final double? longitude;
   final DateTime? currentIncidentStartedAt;
   final int eventCount;
   final int incidentCount;
   final int totalDowntimeSeconds;
 
   bool get isOnline => status == 'online';
+  bool get hasActiveIncident => currentIncidentStartedAt != null;
+  bool get hasLocation => latitude != null && longitude != null;
+
+  bool get isInPuno {
+    final locations = [district, province, department];
+    return locations.whereType<String>().any(
+      (value) => value.trim().toLowerCase() == 'puno',
+    );
+  }
 
   factory Device.fromJson(Map<String, dynamic> json) {
     return Device(
@@ -63,6 +76,8 @@ class Device {
       district: json['district'] as String?,
       province: json['province'] as String?,
       department: json['department'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       currentIncidentStartedAt: _parseDate(json['currentIncidentStartedAt']),
       eventCount: (json['eventCount'] as num?)?.toInt() ?? 0,
       incidentCount: (json['incidentCount'] as num?)?.toInt() ?? 0,
