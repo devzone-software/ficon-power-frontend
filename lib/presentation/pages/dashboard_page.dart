@@ -6,6 +6,7 @@ import '../../application/user_error_message.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
+import '../../domain/realtime_change.dart';
 import '../../ports/input/get_incidents.dart';
 import '../../ports/input/get_monitoring_overview.dart';
 import '../../ports/input/get_notification_templates.dart';
@@ -23,6 +24,7 @@ class DashboardPage extends StatefulWidget {
     required this.getNotificationTemplates,
     required this.currentUser,
     required this.onLogout,
+    this.realtimeChanges,
   });
 
   final GetMonitoringOverview getOverview;
@@ -30,16 +32,19 @@ class DashboardPage extends StatefulWidget {
   final GetNotificationTemplates getNotificationTemplates;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _autoRefreshInterval = Duration(minutes: 3);
 
   late Future<MonitoringOverview> _future;
   Timer? _autoRefreshTimer;
+  Timer? _realtimeDebounce;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
   bool _refreshing = false;
   final Set<String> _acknowledgingIncidentIds = {};
 
@@ -48,6 +53,25 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _future = widget.getOverview();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) => const {
+            'device',
+            'incident',
+            'event',
+            'site',
+            'notification_template',
+          }.contains(change.entityType),
+        )
+        .listen(_scheduleRealtimeRefresh);
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_refresh()),
+    );
   }
 
   Future<void> _refresh() async {
@@ -66,6 +90,8 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     super.dispose();
   }
 
@@ -76,6 +102,7 @@ class _DashboardPageState extends State<DashboardPage> {
       title: 'Resumen',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: FutureBuilder<MonitoringOverview>(
         future: _future,
         builder: (context, snapshot) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../adapters/http/ficon_monitoring_repository.dart';
@@ -6,6 +8,7 @@ import '../../../application/mobile_data_export.dart';
 import '../../../application/user_error_message.dart';
 import '../../../domain/auth_user.dart';
 import '../../../domain/mobile_notification.dart';
+import '../../../domain/realtime_change.dart';
 import '../../../mobile/notifications/mobile_push_registration.dart';
 import '../overlays/mobile_account_panel.dart';
 import '../overlays/mobile_export_sheet.dart';
@@ -23,6 +26,7 @@ class MobileNavigationShell extends StatefulWidget {
     required this.repository,
     required this.onLogout,
     required this.onNavigate,
+    this.realtimeChanges,
   });
 
   final String currentRoute;
@@ -32,6 +36,7 @@ class MobileNavigationShell extends StatefulWidget {
   final FiconMonitoringRepository repository;
   final VoidCallback onLogout;
   final ValueChanged<String> onNavigate;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<MobileNavigationShell> createState() => _MobileNavigationShellState();
@@ -40,6 +45,8 @@ class MobileNavigationShell extends StatefulWidget {
 class _MobileNavigationShellState extends State<MobileNavigationShell>
     with WidgetsBindingObserver {
   late final MobileNotificationController _notifications;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
+  Timer? _realtimeDebounce;
 
   @override
   void initState() {
@@ -50,6 +57,15 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
       widget.repository.markMobileNotificationRead,
       widget.repository.markAllMobileNotificationsRead,
     )..refresh();
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where((change) => change.entityType == 'notification')
+        .listen((_) {
+          _realtimeDebounce?.cancel();
+          _realtimeDebounce = Timer(
+            const Duration(milliseconds: 250),
+            () => unawaited(_notifications.refresh()),
+          );
+        });
   }
 
   @override
@@ -60,6 +76,8 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     _notifications.dispose();
     super.dispose();
   }

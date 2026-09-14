@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../domain/paged_result.dart';
+import '../../domain/realtime_change.dart';
 import '../../ports/input/get_incidents.dart';
 import '../incidents/mobile/incident_cards.dart';
 import '../widgets/notification_focus_banner.dart';
@@ -21,24 +22,28 @@ class IncidentsPage extends StatefulWidget {
     required this.currentUser,
     required this.onLogout,
     this.focusIncidentId,
+    this.realtimeChanges,
   });
 
   final GetIncidents getIncidents;
   final AuthUser currentUser;
   final VoidCallback onLogout;
   final String? focusIncidentId;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<IncidentsPage> createState() => _IncidentsPageState();
 }
 
 class _IncidentsPageState extends State<IncidentsPage> {
-  static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _autoRefreshInterval = Duration(minutes: 3);
   static const _pageSize = 10;
 
   late Future<PagedResult<Incident>> _future;
   Timer? _autoRefreshTimer;
   Timer? _filterDebounce;
+  Timer? _realtimeDebounce;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
   bool _refreshing = false;
   int _page = 0;
   late String? _focusIncidentId;
@@ -50,6 +55,19 @@ class _IncidentsPageState extends State<IncidentsPage> {
     _focusIncidentId = widget.focusIncidentId;
     _future = _loadPage();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) => const {'incident', 'device'}.contains(change.entityType),
+        )
+        .listen(_scheduleRealtimeRefresh);
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_refresh()),
+    );
   }
 
   Future<void> _refresh() async {
@@ -69,6 +87,8 @@ class _IncidentsPageState extends State<IncidentsPage> {
   void dispose() {
     _autoRefreshTimer?.cancel();
     _filterDebounce?.cancel();
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     super.dispose();
   }
 
@@ -79,6 +99,7 @@ class _IncidentsPageState extends State<IncidentsPage> {
       title: 'Incidentes',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: FutureBuilder<PagedResult<Incident>>(
         future: _future,
         builder: (context, snapshot) {

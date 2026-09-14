@@ -30,6 +30,14 @@ class ApiException implements Exception, UserReadableException {
   String toString() => message;
 }
 
+class ServerSentEvent {
+  const ServerSentEvent({this.id, this.event, required this.data});
+
+  final String? id;
+  final String? event;
+  final String data;
+}
+
 class FiconApiClient {
   FiconApiClient({http.Client? client, String? baseUrl, this.session})
     : _client = client ?? http.Client(),
@@ -70,6 +78,23 @@ class FiconApiClient {
       throw ApiException('Respuesta inesperada en $path');
     }
     return decoded;
+  }
+
+  Stream<ServerSentEvent> getEventStream(String path) async* {
+    var response = await _openEventStream(path);
+    if (response.statusCode == 401 && session?.canRefresh == true) {
+      await response.stream.drain<void>();
+      if (await _refreshSession()) {
+        response = await _openEventStream(path);
+      }
+    }
+    if (response.statusCode != 200) {
+      final bytes = await response.stream.toBytes();
+      _requireStatus(http.Response.bytes(bytes, response.statusCode), path, {
+        200,
+      });
+    }
+    yield* _decodeEventStream(response.stream);
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -160,6 +185,64 @@ class FiconApiClient {
         'No se pudo conectar con el servidor. Revisa tu conexión a Internet.',
         details: error.toString(),
       );
+    }
+  }
+
+  Future<http.StreamedResponse> _openEventStream(String path) async {
+    try {
+      final request = http.Request('GET', Uri.parse('$_baseUrl$path'));
+      request.headers.addAll({..._headers, 'Accept': 'text/event-stream'});
+      return await _client.send(request).timeout(_timeout);
+    } on TimeoutException catch (error) {
+      throw ApiException(
+        'El servidor tardó demasiado en abrir la conexión en tiempo real.',
+        details: error.toString(),
+      );
+    } catch (error) {
+      throw ApiException(
+        'No se pudo abrir la conexión en tiempo real.',
+        details: error.toString(),
+      );
+    }
+  }
+
+  Stream<ServerSentEvent> _decodeEventStream(
+    Stream<List<int>> byteStream,
+  ) async* {
+    String? id;
+    String? event;
+    final data = <String>[];
+
+    await for (final line
+        in byteStream.transform(utf8.decoder).transform(const LineSplitter())) {
+      if (line.isEmpty) {
+        if (data.isNotEmpty) {
+          yield ServerSentEvent(id: id, event: event, data: data.join('\n'));
+        }
+        id = null;
+        event = null;
+        data.clear();
+        continue;
+      }
+      if (line.startsWith(':')) continue;
+      final separator = line.indexOf(':');
+      final field = separator < 0 ? line : line.substring(0, separator);
+      var value = separator < 0 ? '' : line.substring(separator + 1);
+      if (value.startsWith(' ')) value = value.substring(1);
+      switch (field) {
+        case 'id':
+          id = value;
+          break;
+        case 'event':
+          event = value;
+          break;
+        case 'data':
+          data.add(value);
+          break;
+      }
+    }
+    if (data.isNotEmpty) {
+      yield ServerSentEvent(id: id, event: event, data: data.join('\n'));
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
@@ -5,6 +7,7 @@ import '../../application/admin_activity_controller.dart';
 import '../../application/user_error_message.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
+import '../../domain/realtime_change.dart';
 import '../admin/admin_table_filters.dart';
 import '../admin/admin_tabs.dart';
 import '../admin/whatsapp_recipients_tab.dart';
@@ -19,11 +22,13 @@ class AdminPage extends StatefulWidget {
     required this.repository,
     required this.currentUser,
     required this.onLogout,
+    this.realtimeChanges,
   });
 
   final FiconMonitoringRepository repository;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -32,6 +37,8 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> {
   late final AdminActivityController _activityController;
   late final AdminTableFilters _filters;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
+  Timer? _realtimeDebounce;
 
   @override
   void initState() {
@@ -40,11 +47,32 @@ class _AdminPageState extends State<AdminPage> {
     if (widget.currentUser.canManageUsers) {
       _activityController.start();
     }
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) => const {
+            'user',
+            'audit_log',
+            'login_attempt',
+            'auth_session',
+          }.contains(change.entityType),
+        )
+        .listen(_scheduleRealtimeRefresh);
     _filters = AdminTableFilters(onChanged: () => setState(() {}));
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    if (!widget.currentUser.canManageUsers) return;
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_activityController.refresh()),
+    );
   }
 
   @override
   void dispose() {
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     _activityController.dispose();
     super.dispose();
   }
@@ -176,6 +204,7 @@ class _AdminPageState extends State<AdminPage> {
       title: 'Administración',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: AnimatedBuilder(
         animation: _activityController,
         builder: (context, _) => _buildBody(),
@@ -185,7 +214,10 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _buildBody() {
     if (!widget.currentUser.canManageUsers) {
-      return _AdminRoleOverview(repository: widget.repository);
+      return _AdminRoleOverview(
+        repository: widget.repository,
+        realtimeChanges: widget.realtimeChanges,
+      );
     }
     if (_activityController.loading && _activityController.data == null) {
       return const Center(child: CircularProgressIndicator());
@@ -206,14 +238,16 @@ class _AdminPageState extends State<AdminPage> {
       onRevokeSession: _revokeSession,
       onRefresh: _activityController.refresh,
       repository: widget.repository,
+      realtimeChanges: widget.realtimeChanges,
     );
   }
 }
 
 class _AdminRoleOverview extends StatelessWidget {
-  const _AdminRoleOverview({required this.repository});
+  const _AdminRoleOverview({required this.repository, this.realtimeChanges});
 
   final FiconMonitoringRepository repository;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +266,12 @@ class _AdminRoleOverview extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(child: WhatsAppRecipientsTab(repository: repository)),
+        Expanded(
+          child: WhatsAppRecipientsTab(
+            repository: repository,
+            realtimeChanges: realtimeChanges,
+          ),
+        ),
       ],
     );
   }

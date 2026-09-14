@@ -9,7 +9,7 @@ typedef AdminActivityLoader = Future<AdminActivityData> Function();
 class AdminActivityController extends ChangeNotifier {
   AdminActivityController({
     required this.load,
-    this.refreshInterval = const Duration(seconds: 5),
+    this.refreshInterval = const Duration(minutes: 3),
   });
 
   final AdminActivityLoader load;

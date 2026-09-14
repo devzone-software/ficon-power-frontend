@@ -1,16 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
 import '../../application/user_error_message.dart';
 import '../../domain/site.dart';
+import '../../domain/realtime_change.dart';
 import '../../domain/whatsapp_recipient.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 
 class WhatsAppRecipientsTab extends StatefulWidget {
-  const WhatsAppRecipientsTab({super.key, required this.repository});
+  const WhatsAppRecipientsTab({
+    super.key,
+    required this.repository,
+    this.realtimeChanges,
+  });
 
   final FiconMonitoringRepository repository;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<WhatsAppRecipientsTab> createState() => _WhatsAppRecipientsTabState();
@@ -18,11 +26,32 @@ class WhatsAppRecipientsTab extends StatefulWidget {
 
 class _WhatsAppRecipientsTabState extends State<WhatsAppRecipientsTab> {
   late Future<(List<WhatsAppRecipient>, List<Site>)> _future;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
+  Timer? _realtimeDebounce;
 
   @override
   void initState() {
     super.initState();
     _reload();
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) =>
+              const {'whatsapp_recipient', 'site'}.contains(change.entityType),
+        )
+        .listen((_) {
+          _realtimeDebounce?.cancel();
+          _realtimeDebounce = Timer(
+            const Duration(milliseconds: 450),
+            () => unawaited(_refresh()),
+          );
+        });
+  }
+
+  @override
+  void dispose() {
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
+    super.dispose();
   }
 
   void _reload() => _future = _load();

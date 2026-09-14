@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/event.dart';
 import '../../domain/paged_result.dart';
+import '../../domain/realtime_change.dart';
 import '../../ports/input/get_events.dart';
 import '../events/mobile/event_cards.dart';
 import '../widgets/admin_scaffold.dart';
@@ -19,23 +20,27 @@ class EventsPage extends StatefulWidget {
     required this.getEvents,
     required this.currentUser,
     required this.onLogout,
+    this.realtimeChanges,
   });
 
   final GetEvents getEvents;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<EventsPage> createState() => _EventsPageState();
 }
 
 class _EventsPageState extends State<EventsPage> {
-  static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _autoRefreshInterval = Duration(minutes: 3);
   static const _pageSize = 10;
 
   late Future<PagedResult<Event>> _future;
   Timer? _autoRefreshTimer;
   Timer? _filterDebounce;
+  Timer? _realtimeDebounce;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
   bool _refreshing = false;
   int _page = 0;
   final ColumnFilterState _columnFilters = ColumnFilterState();
@@ -45,6 +50,17 @@ class _EventsPageState extends State<EventsPage> {
     super.initState();
     _future = _loadPage();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where((change) => change.entityType == 'event')
+        .listen(_scheduleRealtimeRefresh);
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_refresh()),
+    );
   }
 
   Future<void> _refresh() async {
@@ -64,6 +80,8 @@ class _EventsPageState extends State<EventsPage> {
   void dispose() {
     _autoRefreshTimer?.cancel();
     _filterDebounce?.cancel();
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     super.dispose();
   }
 
@@ -74,6 +92,7 @@ class _EventsPageState extends State<EventsPage> {
       title: 'Eventos',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: FutureBuilder<PagedResult<Event>>(
         future: _future,
         builder: (context, snapshot) {

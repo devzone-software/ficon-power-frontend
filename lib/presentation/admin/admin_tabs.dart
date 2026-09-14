@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../application/admin_activity_controller.dart';
 import '../../domain/admin_models.dart';
+import '../../domain/realtime_change.dart';
 import '../theme/ficon_theme.dart';
 import 'admin_filter_definitions.dart';
 import 'admin_table_filters.dart';
@@ -24,6 +25,7 @@ class AdminTabs extends StatelessWidget {
     required this.onRevokeSession,
     required this.onRefresh,
     required this.repository,
+    this.realtimeChanges,
   });
 
   final AdminActivityData data;
@@ -34,6 +36,7 @@ class AdminTabs extends StatelessWidget {
   final ValueChanged<AdminSession> onRevokeSession;
   final Future<void> Function() onRefresh;
   final FiconMonitoringRepository repository;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +105,10 @@ class AdminTabs extends StatelessWidget {
                   onRevoke: onRevokeSession,
                   filters: definitions.sessions,
                 ),
-                WhatsAppRecipientsTab(repository: repository),
+                WhatsAppRecipientsTab(
+                  repository: repository,
+                  realtimeChanges: realtimeChanges,
+                ),
               ],
             ),
           ),

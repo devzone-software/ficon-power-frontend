@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../config/auth_session.dart';
@@ -10,6 +12,7 @@ import '../../domain/incident.dart';
 import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
 import '../../domain/paged_result.dart';
+import '../../domain/realtime_change.dart';
 import '../../domain/site.dart';
 import '../../domain/whatsapp_recipient.dart';
 import '../../ports/output/device_repository.dart';
@@ -164,6 +167,16 @@ class FiconMonitoringRepository
 
   Future<void> markAllMobileNotificationsRead() async {
     await _api.patchJson('/api/mobile/notifications/read-all');
+  }
+
+  Stream<RealtimeChange> openRealtimeChanges() async* {
+    await for (final event in _api.getEventStream('/api/realtime/stream')) {
+      if (event.event == 'ready' || event.data.trim().isEmpty) continue;
+      final decoded = jsonDecode(event.data);
+      if (decoded is Map<String, dynamic>) {
+        yield RealtimeChange.fromJson(decoded);
+      }
+    }
   }
 
   Future<List<ManagedUser>> fetchUsers() async {

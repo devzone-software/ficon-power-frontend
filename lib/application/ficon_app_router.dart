@@ -41,6 +41,7 @@ class FiconAppRouter {
         currentUser: session.user!,
         onLogout: logout,
         focusDeviceId: _destination(context)?.deviceId,
+        realtimeChanges: dependencies.realtime.changes,
       ),
     ),
     AppRoutes.incidents: (context) => _protected(
@@ -49,6 +50,7 @@ class FiconAppRouter {
         currentUser: session.user!,
         onLogout: logout,
         focusIncidentId: _destination(context)?.incidentId,
+        realtimeChanges: dependencies.realtime.changes,
       ),
     ),
     AppRoutes.events: (_) => _protected(
@@ -56,6 +58,7 @@ class FiconAppRouter {
         getEvents: dependencies.getEvents,
         currentUser: session.user!,
         onLogout: logout,
+        realtimeChanges: dependencies.realtime.changes,
       ),
     ),
     AppRoutes.admin: (_) => _adminOnly(
@@ -63,6 +66,7 @@ class FiconAppRouter {
         repository: repository,
         currentUser: session.user!,
         onLogout: logout,
+        realtimeChanges: dependencies.realtime.changes,
       ),
     ),
   };
@@ -102,5 +106,6 @@ class FiconAppRouter {
     getNotificationTemplates: dependencies.getNotificationTemplates,
     currentUser: session.user!,
     onLogout: logout,
+    realtimeChanges: dependencies.realtime.changes,
   );
 }

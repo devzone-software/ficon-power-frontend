@@ -6,6 +6,7 @@ import '../../application/user_error_message.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/site.dart';
+import '../../domain/realtime_change.dart';
 import '../../ports/input/create_site.dart';
 import '../../ports/input/get_devices.dart';
 import '../../ports/input/get_device_detail.dart';
@@ -37,6 +38,7 @@ class DevicesPage extends StatefulWidget {
     required this.currentUser,
     required this.onLogout,
     this.focusDeviceId,
+    this.realtimeChanges,
   });
 
   final GetDevices getDevices;
@@ -47,16 +49,19 @@ class DevicesPage extends StatefulWidget {
   final AuthUser currentUser;
   final VoidCallback onLogout;
   final String? focusDeviceId;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<DevicesPage> createState() => _DevicesPageState();
 }
 
 class _DevicesPageState extends State<DevicesPage> {
-  static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _autoRefreshInterval = Duration(minutes: 3);
 
   late Future<List<Device>> _future;
   Timer? _autoRefreshTimer;
+  Timer? _realtimeDebounce;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
   bool _refreshing = false;
   final ColumnFilterState _columnFilters = ColumnFilterState();
   late String? _focusDeviceId;
@@ -67,6 +72,24 @@ class _DevicesPageState extends State<DevicesPage> {
     _focusDeviceId = widget.focusDeviceId;
     _future = widget.getDevices();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) => const {
+            'device',
+            'incident',
+            'event',
+            'site',
+          }.contains(change.entityType),
+        )
+        .listen(_scheduleRealtimeRefresh);
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_refresh()),
+    );
   }
 
   Future<void> _refresh() async {
@@ -97,6 +120,8 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     super.dispose();
   }
 
@@ -133,6 +158,7 @@ class _DevicesPageState extends State<DevicesPage> {
           getDeviceDetail: widget.getDeviceDetail,
           currentUser: widget.currentUser,
           onLogout: widget.onLogout,
+          realtimeChanges: widget.realtimeChanges,
         ),
       ),
     );
@@ -145,6 +171,7 @@ class _DevicesPageState extends State<DevicesPage> {
       title: 'Dispositivos',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: FutureBuilder<List<Device>>(
         future: _future,
         builder: (context, snapshot) {

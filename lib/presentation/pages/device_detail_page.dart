@@ -7,6 +7,7 @@ import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/device_detail.dart';
 import '../../domain/incident.dart';
+import '../../domain/realtime_change.dart';
 import '../../ports/input/get_device_detail.dart';
 import '../dashboard/dashboard_section_header.dart';
 import '../dashboard/frequency_bar_chart.dart';
@@ -24,6 +25,7 @@ class DeviceDetailPage extends StatefulWidget {
     required this.getDeviceDetail,
     required this.currentUser,
     required this.onLogout,
+    this.realtimeChanges,
   });
 
   final String deviceId;
@@ -31,16 +33,19 @@ class DeviceDetailPage extends StatefulWidget {
   final GetDeviceDetail getDeviceDetail;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<DeviceDetailPage> createState() => _DeviceDetailPageState();
 }
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
-  static const _refreshInterval = Duration(seconds: 30);
+  static const _refreshInterval = Duration(minutes: 3);
 
   late Future<DeviceDetail> _future;
   Timer? _timer;
+  Timer? _realtimeDebounce;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
   bool _refreshing = false;
 
   @override
@@ -48,11 +53,32 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     super.initState();
     _future = widget.getDeviceDetail(widget.deviceId);
     _timer = Timer.periodic(_refreshInterval, (_) => _refresh());
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(_affectsThisDevice)
+        .listen(_scheduleRealtimeRefresh);
+  }
+
+  bool _affectsThisDevice(RealtimeChange change) {
+    if (change.entityType == 'device' && change.entityId == widget.deviceId) {
+      return true;
+    }
+    return const {'incident', 'event'}.contains(change.entityType) &&
+        change.payload['deviceId']?.toString() == widget.deviceId;
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_refresh()),
+    );
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     super.dispose();
   }
 
@@ -78,6 +104,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           : widget.initialDeviceName,
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: FutureBuilder<DeviceDetail>(
         future: _future,
         builder: (context, snapshot) {

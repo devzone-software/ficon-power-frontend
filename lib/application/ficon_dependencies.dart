@@ -8,10 +8,15 @@ import '../usecase/get_monitoring_overview_service.dart';
 import '../usecase/get_notification_templates_service.dart';
 import '../usecase/get_sites_service.dart';
 import '../usecase/update_device_details_service.dart';
+import 'realtime_service.dart';
 
 class FiconDependencies {
   FiconDependencies(FiconMonitoringRepository repository)
-    : getOverview = GetMonitoringOverviewService(repository),
+    : realtime = RealtimeService(
+        repository.openRealtimeChanges,
+        repository.session,
+      ),
+      getOverview = GetMonitoringOverviewService(repository),
       getDeviceDetail = GetDeviceDetailService(repository),
       getDevices = GetDevicesService(repository),
       getIncidents = GetIncidentsService(repository),
@@ -22,6 +27,7 @@ class FiconDependencies {
       createSite = CreateSiteService(repository);
 
   final GetMonitoringOverviewService getOverview;
+  final RealtimeService realtime;
   final GetDeviceDetailService getDeviceDetail;
   final GetDevicesService getDevices;
   final GetIncidentsService getIncidents;

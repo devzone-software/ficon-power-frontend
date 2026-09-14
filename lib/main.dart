@@ -69,6 +69,7 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
   @override
   void dispose() {
     widget.session.removeListener(_handleSessionChange);
+    _router.dependencies.realtime.dispose();
     super.dispose();
   }
 

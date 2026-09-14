@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
+import '../../domain/realtime_change.dart';
 import '../../application/ficon_repository_scope.dart';
 import '../mobile/shell/mobile_navigation_shell.dart';
 import '../navigation/app_routes.dart';
@@ -19,6 +20,7 @@ class AdminScaffold extends StatelessWidget {
     required this.body,
     required this.currentUser,
     required this.onLogout,
+    this.realtimeChanges,
   });
 
   final String currentRoute;
@@ -26,6 +28,7 @@ class AdminScaffold extends StatelessWidget {
   final Widget body;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   void _goTo(BuildContext context, String route) {
     if (route == currentRoute) return;
@@ -43,6 +46,7 @@ class AdminScaffold extends StatelessWidget {
         repository: FiconRepositoryScope.of(context),
         onLogout: onLogout,
         onNavigate: (route) => _goTo(context, route),
+        realtimeChanges: realtimeChanges,
       );
     }
     return Scaffold(
