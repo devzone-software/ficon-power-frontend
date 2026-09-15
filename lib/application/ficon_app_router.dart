@@ -114,7 +114,7 @@ class FiconAppRouter {
   DashboardPage _dashboardPage() => DashboardPage(
     getOverview: dependencies.getOverview,
     getIncidents: dependencies.getIncidents,
-    getNotificationTemplates: dependencies.getNotificationTemplates,
+    manageTuyaPlans: dependencies.manageTuyaPlans,
     currentUser: session.user!,
     onLogout: logout,
     realtimeChanges: dependencies.realtime.changes,

@@ -85,7 +85,11 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
   @override
   Widget build(BuildContext context) {
     final primaryItems = navItems
-        .where((item) => !item.adminOnly || widget.currentUser.canAccessAdmin)
+        .where(
+          (item) =>
+              mobileNavRoutes.contains(item.route) &&
+              (!item.adminOnly || widget.currentUser.canAccessAdmin),
+        )
         .toList();
     final selected = primaryItems.indexWhere(
       (item) => item.route == widget.currentRoute,

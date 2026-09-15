@@ -8,6 +8,9 @@ class ManageTuyaPlansService implements ManageTuyaPlans {
   final OperationsCalendarRepository _repository;
 
   @override
+  Future<List<TuyaPlan>> list() => _repository.fetchTuyaPlans();
+
+  @override
   Future<TuyaPlan> save({
     int? id,
     required String projectName,

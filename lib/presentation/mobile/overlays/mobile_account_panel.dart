@@ -197,11 +197,6 @@ class _QuickAccess extends StatelessWidget {
               label: 'Gestión de medidores',
               onTap: () => onNavigate(AppRoutes.devices),
             ),
-          _AccessButton(
-            icon: Icons.warning_amber_outlined,
-            label: 'Registro de incidentes',
-            onTap: () => onNavigate(AppRoutes.incidents),
-          ),
         ],
       ),
     ),

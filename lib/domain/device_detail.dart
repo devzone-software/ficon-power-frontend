@@ -1,4 +1,5 @@
 import 'device.dart';
+import 'event.dart';
 import 'incident.dart';
 
 class DeviceDetail {
@@ -11,6 +12,7 @@ class DeviceDetail {
     required this.weekdayIncidents,
     required this.timeOfDayIncidents,
     required this.recentIncidents,
+    required this.recentEvents,
   });
 
   final Device device;
@@ -21,6 +23,7 @@ class DeviceDetail {
   final List<DeviceFrequencyPoint> weekdayIncidents;
   final List<DeviceFrequencyPoint> timeOfDayIncidents;
   final List<Incident> recentIncidents;
+  final List<Event> recentEvents;
 
   factory DeviceDetail.fromJson(Map<String, dynamic> json) => DeviceDetail(
     device: Device.fromJson(_map(json['device'])),
@@ -33,6 +36,9 @@ class DeviceDetail {
     recentIncidents: _list(
       json['recentIncidents'],
     ).map((item) => Incident.fromJson(_map(item))).toList(growable: false),
+    recentEvents: _list(
+      json['recentEvents'],
+    ).map((item) => Event.fromJson(_map(item))).toList(growable: false),
   );
 
   static List<DeviceFrequencyPoint> _points(dynamic value) => _list(value)

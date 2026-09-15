@@ -39,14 +39,13 @@ class _AdminPageState extends State<AdminPage> {
   late final AdminTableFilters _filters;
   StreamSubscription<RealtimeChange>? _realtimeSubscription;
   Timer? _realtimeDebounce;
+  bool _compact = false;
+  bool _started = false;
 
   @override
   void initState() {
     super.initState();
     _activityController = AdminActivityController(load: _load);
-    if (widget.currentUser.canManageUsers) {
-      _activityController.start();
-    }
     _realtimeSubscription = widget.realtimeChanges
         ?.where(
           (change) => const {
@@ -58,6 +57,21 @@ class _AdminPageState extends State<AdminPage> {
         )
         .listen(_scheduleRealtimeRefresh);
     _filters = AdminTableFilters(onChanged: () => setState(() {}));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final compact = MediaQuery.sizeOf(context).width < 720;
+    final layoutChanged = _started && compact != _compact;
+    _compact = compact;
+    if (!widget.currentUser.canManageUsers) return;
+    if (!_started) {
+      _started = true;
+      _activityController.start();
+    } else if (layoutChanged) {
+      unawaited(_activityController.refresh(showLoading: true));
+    }
   }
 
   void _scheduleRealtimeRefresh(RealtimeChange _) {
@@ -78,6 +92,19 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   Future<AdminActivityData> _load() async {
+    if (_compact) {
+      final results = await Future.wait([
+        widget.repository.fetchUsers(),
+        widget.repository.fetchBlockedUsers(),
+      ]);
+      return AdminActivityData(
+        users: results[0] as List<ManagedUser>,
+        auditLogs: const [],
+        loginAttempts: const [],
+        sessions: const [],
+        blockedUsers: results[1] as List<BlockedLoginUser>,
+      );
+    }
     final results = await Future.wait([
       widget.repository.fetchUsers(),
       widget.repository.fetchAuditLogs(),

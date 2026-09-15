@@ -31,6 +31,13 @@ void main() {
       'recentIncidents': [
         {'id': 'incident-1', 'status': 'active', 'durationSeconds': 60},
       ],
+      'recentEvents': [
+        {
+          'id': 'event-1',
+          'eventType': 'power_outage',
+          'occurredAt': '2026-09-14T10:00:00-05:00',
+        },
+      ],
     });
 
     expect(detail.device.name, 'Medidor Puno');
@@ -38,5 +45,6 @@ void main() {
     expect(detail.metrics.longestDowntimeSeconds, 600);
     expect(detail.dailyIncidents.single.count, 1);
     expect(detail.recentIncidents.single.isOpen, isTrue);
+    expect(detail.recentEvents.single.eventType, 'power_outage');
   });
 }

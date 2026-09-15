@@ -99,12 +99,7 @@ class _DevicesPageContent extends StatelessWidget {
                   ),
                 )
               else if (compact)
-                DevicesCompactList(
-                  devices: devices,
-                  onEdit: onEdit,
-                  onOpen: onOpen,
-                  canEdit: canEdit,
-                )
+                DevicesCompactList(devices: devices, onOpen: onOpen)
               else
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,

@@ -1,6 +1,8 @@
 import '../../domain/operations_calendar.dart';
 
 abstract interface class ManageTuyaPlans {
+  Future<List<TuyaPlan>> list();
+
   Future<TuyaPlan> save({
     int? id,
     required String projectName,

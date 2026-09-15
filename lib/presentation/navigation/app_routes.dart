@@ -31,3 +31,9 @@ const navItems = [
   NavItem(route: AppRoutes.events, label: 'Eventos'),
   NavItem(route: AppRoutes.admin, label: 'Admin', adminOnly: true),
 ];
+
+const mobileNavRoutes = {
+  AppRoutes.dashboard,
+  AppRoutes.devices,
+  AppRoutes.admin,
+};

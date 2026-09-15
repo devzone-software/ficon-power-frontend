@@ -5,14 +5,14 @@ import '../../application/dashboard_statistics.dart';
 import '../../domain/device.dart';
 import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
-import '../../ports/input/get_notification_templates.dart';
+import '../../domain/operations_calendar.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/common.dart';
 import 'dashboard_analytics_section.dart';
 import 'dashboard_kpi_card.dart';
 import 'fleet_health_card.dart';
+import 'frequency_dot_chart.dart';
 import 'mobile_app_download_card.dart';
-import 'notification_templates_card.dart';
 import 'offline_devices_card.dart';
 import 'recent_incidents_card.dart';
 
@@ -20,14 +20,14 @@ class DashboardBody extends StatelessWidget {
   const DashboardBody({
     super.key,
     required this.data,
-    required this.getNotificationTemplates,
+    required this.tuyaPlans,
     required this.canAcknowledgeIncidents,
     required this.acknowledgingIncidentIds,
     required this.onAcknowledgeIncident,
   });
 
   final MonitoringOverview data;
-  final GetNotificationTemplates getNotificationTemplates;
+  final List<TuyaPlan> tuyaPlans;
   final bool canAcknowledgeIncidents;
   final Set<String> acknowledgingIncidentIds;
   final ValueChanged<Incident> onAcknowledgeIncident;
@@ -35,6 +35,15 @@ class DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mobile = MediaQuery.sizeOf(context).width < 720;
+    final stats = DashboardStatistics.from(data);
+    if (mobile) {
+      return _MobileDashboard(
+        stats: stats,
+        plans: tuyaPlans,
+        totalDevices: data.devices.length,
+        onlineDevices: data.onlineCount,
+      );
+    }
     final offlineDevices = data.devices
         .where((device) => !device.isOnline && device.active)
         .toList();
@@ -69,20 +78,14 @@ class DashboardBody extends StatelessWidget {
                   total: data.devices.length,
                 ),
                 SizedBox(height: mobile ? 14 : 24),
-                DashboardAnalyticsSection(
-                  stats: DashboardStatistics.from(data),
-                ),
+                DashboardAnalyticsSection(stats: stats),
                 SizedBox(height: mobile ? 14 : 24),
                 _StatusLists(
                   offlineDevices: offlineDevices,
                   recentIncidents: recentIncidents,
                 ),
-                SizedBox(height: mobile ? 14 : 24),
-                NotificationTemplatesCard(
-                  getNotificationTemplates: getNotificationTemplates,
-                ),
                 if (kIsWeb) ...[
-                  SizedBox(height: mobile ? 14 : 24),
+                  const SizedBox(height: 24),
                   const MobileAppDownloadCard(),
                 ],
               ],
@@ -92,6 +95,255 @@ class DashboardBody extends StatelessWidget {
       ],
     );
   }
+}
+
+class _MobileDashboard extends StatelessWidget {
+  const _MobileDashboard({
+    required this.stats,
+    required this.plans,
+    required this.totalDevices,
+    required this.onlineDevices,
+  });
+
+  final DashboardStatistics stats;
+  final List<TuyaPlan> plans;
+  final int totalDevices;
+  final int onlineDevices;
+
+  @override
+  Widget build(BuildContext context) {
+    final activePlans = plans.where((plan) => plan.active).toList()
+      ..sort(
+        (first, second) => first.nextRenewalOn.compareTo(second.nextRenewalOn),
+      );
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(12),
+      children: [
+        _TuyaRenewalSummary(
+          plan: activePlans.isEmpty ? null : activePlans.first,
+        ),
+        const SizedBox(height: 12),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _MobileMetricCard(
+                  title: 'Apagados registrados',
+                  value: '${stats.totalPowerOutages}',
+                  icon: Icons.power_off_outlined,
+                  color: FiconColors.logoBlue,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MobileMetricCard(
+                  title: 'Esta semana',
+                  value: '${stats.currentWeekPowerOutages}',
+                  icon: Icons.date_range_outlined,
+                  color: FiconColors.cyanSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _MobileFleetSummary(total: totalDevices, online: onlineDevices),
+        const SizedBox(height: 12),
+        FrequencyDotChart(
+          title: 'Cortes del mes',
+          subtitle: 'Número de cortes por cada día del mes actual',
+          points: stats.currentMonthDailyIncidents,
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileFleetSummary extends StatelessWidget {
+  const _MobileFleetSummary({required this.total, required this.online});
+
+  final int total;
+  final int online;
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = total == 0
+        ? 0.0
+        : (online / total).clamp(0.0, 1.0).toDouble();
+    final percentage = (ratio * 100).round();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _FleetValue(value: '$total', label: 'Dispositivos'),
+                ),
+                const _FleetDivider(),
+                Expanded(
+                  child: _FleetValue(value: '$online', label: 'En línea'),
+                ),
+                const _FleetDivider(),
+                Expanded(
+                  child: _FleetValue(
+                    value: '$percentage %',
+                    label: 'Disponibilidad',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 6,
+                backgroundColor: FiconColors.cardBorderSoft,
+                color: FiconColors.logoBlue,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FleetValue extends StatelessWidget {
+  const _FleetValue({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        Text(
+          value,
+          style: textTheme.titleLarge?.copyWith(
+            color: FiconColors.ink,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.labelSmall?.copyWith(color: FiconColors.slate),
+        ),
+      ],
+    );
+  }
+}
+
+class _FleetDivider extends StatelessWidget {
+  const _FleetDivider();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    height: 34,
+    child: VerticalDivider(color: FiconColors.cardBorderSoft, width: 8),
+  );
+}
+
+class _MobileMetricCard extends StatelessWidget {
+  const _MobileMetricCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: textTheme.headlineSmall?.copyWith(
+                color: FiconColors.ink,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodySmall?.copyWith(
+                color: FiconColors.deepAlt,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TuyaRenewalSummary extends StatelessWidget {
+  const _TuyaRenewalSummary({required this.plan});
+
+  final TuyaPlan? plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = plan;
+    if (current == null) {
+      return const Card(
+        child: ListTile(
+          leading: Icon(Icons.event_busy_outlined),
+          title: Text('Renovación de Tuya Developer'),
+          subtitle: Text('No hay una fecha de renovación registrada.'),
+        ),
+      );
+    }
+    final days = current.daysUntilRenewal();
+    final date = current.nextRenewalOn;
+    final daysText = switch (days) {
+      < 0 => 'Venció hace ${-days} día${days == -1 ? '' : 's'}',
+      0 => 'Vence hoy',
+      _ => '$days día${days == 1 ? '' : 's'} restantes',
+    };
+    return Card(
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: FiconColors.cardBorderSoft,
+          foregroundColor: FiconColors.logoBlue,
+          child: Icon(Icons.event_available_outlined),
+        ),
+        title: const Text(
+          'Renovación de Tuya Developer',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: Text('$daysText\nVencimiento: ${_date(date)}'),
+        isThreeLine: true,
+      ),
+    );
+  }
+
+  String _date(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}/'
+      '${value.month.toString().padLeft(2, '0')}/${value.year}';
 }
 
 class _KpiGrid extends StatelessWidget {

@@ -6,13 +6,14 @@ import '../../application/dashboard_statistics.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/device_detail.dart';
-import '../../domain/incident.dart';
 import '../../domain/realtime_change.dart';
 import '../../ports/input/get_device_detail.dart';
 import '../dashboard/dashboard_section_header.dart';
 import '../dashboard/frequency_bar_chart.dart';
 import '../dashboard/insight_metric_card.dart';
 import '../devices/device_detail_widgets.dart';
+import '../events/mobile/event_cards.dart';
+import '../incidents/mobile/incident_cards.dart';
 import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
@@ -121,17 +122,26 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 }
 
-class _DeviceDetailBody extends StatelessWidget {
+enum _DeviceHistoryView { incidents, events }
+
+class _DeviceDetailBody extends StatefulWidget {
   const _DeviceDetailBody({required this.detail, required this.onRefresh});
 
   final DeviceDetail detail;
   final Future<void> Function() onRefresh;
 
   @override
+  State<_DeviceDetailBody> createState() => _DeviceDetailBodyState();
+}
+
+class _DeviceDetailBodyState extends State<_DeviceDetailBody> {
+  _DeviceHistoryView _historyView = _DeviceHistoryView.incidents;
+
+  @override
   Widget build(BuildContext context) {
-    final device = detail.device;
+    final device = widget.detail.device;
     return RefreshIndicator(
-      onRefresh: onRefresh,
+      onRefresh: widget.onRefresh,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final contentWidth = constraints.maxWidth.clamp(0, 1180).toDouble();
@@ -152,11 +162,16 @@ class _DeviceDetailBody extends StatelessWidget {
                     const SizedBox(height: 8),
                     _DeviceHeader(device: device),
                     const SizedBox(height: 16),
-                    _Metrics(detail: detail),
+                    _Metrics(detail: widget.detail),
                     const SizedBox(height: 16),
-                    _Charts(detail: detail),
+                    _Charts(detail: widget.detail),
                     const SizedBox(height: 16),
-                    _RecentDeviceIncidents(incidents: detail.recentIncidents),
+                    _DeviceHistory(
+                      detail: widget.detail,
+                      selection: _historyView,
+                      onSelectionChanged: (value) =>
+                          setState(() => _historyView = value),
+                    ),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -461,10 +476,16 @@ class _Charts extends StatelessWidget {
   }
 }
 
-class _RecentDeviceIncidents extends StatelessWidget {
-  const _RecentDeviceIncidents({required this.incidents});
+class _DeviceHistory extends StatelessWidget {
+  const _DeviceHistory({
+    required this.detail,
+    required this.selection,
+    required this.onSelectionChanged,
+  });
 
-  final List<Incident> incidents;
+  final DeviceDetail detail;
+  final _DeviceHistoryView selection;
+  final ValueChanged<_DeviceHistoryView> onSelectionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -474,39 +495,45 @@ class _RecentDeviceIncidents extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const DashboardSectionHeader(
-              icon: Icons.history,
-              color: FiconColors.cyanSoft,
-              title: 'Incidentes recientes',
-              subtitle:
-                  'Los últimos 10 cortes registrados para este dispositivo',
-            ),
-            const SizedBox(height: 8),
-            if (incidents.isEmpty)
-              const EmptyNote('No hay incidentes registrados.')
-            else
-              for (var index = 0; index < incidents.length; index++) ...[
-                if (index > 0)
-                  const Divider(height: 1, color: FiconColors.cardBorderSoft),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    incidents[index].isOpen
-                        ? Icons.error_outline
-                        : Icons.task_alt,
-                    color: incidents[index].isOpen
-                        ? StatusColors.offline
-                        : StatusColors.online,
+            Row(
+              children: [
+                const Expanded(
+                  child: DashboardSectionHeader(
+                    icon: Icons.history,
+                    color: FiconColors.cyanSoft,
+                    title: 'Historial del dispositivo',
+                    subtitle: 'Últimos incidentes y eventos recibidos',
                   ),
-                  title: Text(
-                    'Inicio: ${formatDateTime(incidents[index].startTime)}',
-                  ),
-                  subtitle: Text(
-                    'Duración: ${formatDurationSeconds(incidents[index].durationSeconds)}',
-                  ),
-                  trailing: IncidentStatusChip(status: incidents[index].status),
                 ),
               ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<_DeviceHistoryView>(
+                segments: const [
+                  ButtonSegment(
+                    value: _DeviceHistoryView.incidents,
+                    icon: Icon(Icons.warning_amber_outlined),
+                    label: Text('Incidentes'),
+                  ),
+                  ButtonSegment(
+                    value: _DeviceHistoryView.events,
+                    icon: Icon(Icons.event_note_outlined),
+                    label: Text('Eventos'),
+                  ),
+                ],
+                selected: {selection},
+                showSelectedIcon: false,
+                onSelectionChanged: (values) =>
+                    onSelectionChanged(values.first),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (selection == _DeviceHistoryView.incidents)
+              MobileIncidentList(incidents: detail.recentIncidents)
+            else
+              MobileEventList(events: detail.recentEvents),
           ],
         ),
       ),

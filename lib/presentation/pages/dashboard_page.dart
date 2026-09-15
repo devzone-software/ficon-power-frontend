@@ -6,10 +6,11 @@ import '../../application/user_error_message.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/incident.dart';
 import '../../domain/monitoring_overview.dart';
+import '../../domain/operations_calendar.dart';
 import '../../domain/realtime_change.dart';
 import '../../ports/input/get_incidents.dart';
 import '../../ports/input/get_monitoring_overview.dart';
-import '../../ports/input/get_notification_templates.dart';
+import '../../ports/input/manage_tuya_plans.dart';
 import '../dashboard/dashboard_body.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
@@ -21,7 +22,7 @@ class DashboardPage extends StatefulWidget {
     super.key,
     required this.getOverview,
     required this.getIncidents,
-    required this.getNotificationTemplates,
+    required this.manageTuyaPlans,
     required this.currentUser,
     required this.onLogout,
     this.realtimeChanges,
@@ -29,7 +30,7 @@ class DashboardPage extends StatefulWidget {
 
   final GetMonitoringOverview getOverview;
   final GetIncidents getIncidents;
-  final GetNotificationTemplates getNotificationTemplates;
+  final ManageTuyaPlans manageTuyaPlans;
   final AuthUser currentUser;
   final VoidCallback onLogout;
   final Stream<RealtimeChange>? realtimeChanges;
@@ -41,7 +42,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   static const _autoRefreshInterval = Duration(minutes: 3);
 
-  late Future<MonitoringOverview> _future;
+  late Future<_DashboardData> _future;
   Timer? _autoRefreshTimer;
   Timer? _realtimeDebounce;
   StreamSubscription<RealtimeChange>? _realtimeSubscription;
@@ -51,7 +52,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    _future = widget.getOverview();
+    _future = _load();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
     _realtimeSubscription = widget.realtimeChanges
         ?.where(
@@ -61,6 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
             'event',
             'site',
             'notification_template',
+            'calendar',
           }.contains(change.entityType),
         )
         .listen(_scheduleRealtimeRefresh);
@@ -77,7 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = widget.getOverview());
+    setState(() => _future = _load());
     try {
       await _future;
     } catch (_) {
@@ -85,6 +87,17 @@ class _DashboardPageState extends State<DashboardPage> {
     } finally {
       _refreshing = false;
     }
+  }
+
+  Future<_DashboardData> _load() async {
+    final results = await Future.wait([
+      widget.getOverview(),
+      widget.manageTuyaPlans.list(),
+    ]);
+    return _DashboardData(
+      overview: results[0] as MonitoringOverview,
+      tuyaPlans: results[1] as List<TuyaPlan>,
+    );
   }
 
   @override
@@ -103,7 +116,7 @@ class _DashboardPageState extends State<DashboardPage> {
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
       realtimeChanges: widget.realtimeChanges,
-      body: FutureBuilder<MonitoringOverview>(
+      body: FutureBuilder<_DashboardData>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -115,8 +128,8 @@ class _DashboardPageState extends State<DashboardPage> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: DashboardBody(
-              data: snapshot.data!,
-              getNotificationTemplates: widget.getNotificationTemplates,
+              data: snapshot.data!.overview,
+              tuyaPlans: snapshot.data!.tuyaPlans,
               canAcknowledgeIncidents: widget.currentUser.canAccessAdmin,
               acknowledgingIncidentIds: _acknowledgingIncidentIds,
               onAcknowledgeIncident: _acknowledgeIncident,
@@ -192,6 +205,13 @@ class _DashboardPageState extends State<DashboardPage> {
         ) ??
         false;
   }
+}
+
+class _DashboardData {
+  const _DashboardData({required this.overview, required this.tuyaPlans});
+
+  final MonitoringOverview overview;
+  final List<TuyaPlan> tuyaPlans;
 }
 
 /// Encabezado de resumen con el mismo lenguaje visual de las tarjetas KPI.
