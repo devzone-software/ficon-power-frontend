@@ -7,13 +7,11 @@ class DevicesCompactList extends StatelessWidget {
   const DevicesCompactList({
     super.key,
     required this.devices,
-    required this.onEdit,
-    required this.canEdit,
+    required this.onOpen,
   });
 
   final List<Device> devices;
-  final ValueChanged<Device> onEdit;
-  final bool canEdit;
+  final ValueChanged<Device> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +20,7 @@ class DevicesCompactList extends StatelessWidget {
       child: Column(
         children: [
           for (final device in devices) ...[
-            DeviceCompactCard(device: device, onEdit: onEdit, canEdit: canEdit),
+            DeviceCompactCard(device: device, onOpen: onOpen),
             const SizedBox(height: 10),
           ],
         ],

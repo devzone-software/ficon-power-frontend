@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../adapters/http/ficon_monitoring_repository.dart';
 import '../../application/admin_activity_controller.dart';
+import '../../application/user_error_message.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
+import '../../domain/realtime_change.dart';
 import '../admin/admin_table_filters.dart';
 import '../admin/admin_tabs.dart';
+import '../admin/whatsapp_recipients_tab.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
@@ -17,11 +22,13 @@ class AdminPage extends StatefulWidget {
     required this.repository,
     required this.currentUser,
     required this.onLogout,
+    this.realtimeChanges,
   });
 
   final FiconMonitoringRepository repository;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -30,24 +37,74 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> {
   late final AdminActivityController _activityController;
   late final AdminTableFilters _filters;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
+  Timer? _realtimeDebounce;
+  bool _compact = false;
+  bool _started = false;
 
   @override
   void initState() {
     super.initState();
     _activityController = AdminActivityController(load: _load);
-    if (widget.currentUser.canManageUsers) {
-      _activityController.start();
-    }
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) => const {
+            'user',
+            'audit_log',
+            'login_attempt',
+            'auth_session',
+          }.contains(change.entityType),
+        )
+        .listen(_scheduleRealtimeRefresh);
     _filters = AdminTableFilters(onChanged: () => setState(() {}));
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final compact = MediaQuery.sizeOf(context).width < 720;
+    final layoutChanged = _started && compact != _compact;
+    _compact = compact;
+    if (!widget.currentUser.canManageUsers) return;
+    if (!_started) {
+      _started = true;
+      _activityController.start();
+    } else if (layoutChanged) {
+      unawaited(_activityController.refresh(showLoading: true));
+    }
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    if (!widget.currentUser.canManageUsers) return;
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_activityController.refresh()),
+    );
+  }
+
+  @override
   void dispose() {
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     _activityController.dispose();
     super.dispose();
   }
 
   Future<AdminActivityData> _load() async {
+    if (_compact) {
+      final results = await Future.wait([
+        widget.repository.fetchUsers(),
+        widget.repository.fetchBlockedUsers(),
+      ]);
+      return AdminActivityData(
+        users: results[0] as List<ManagedUser>,
+        auditLogs: const [],
+        loginAttempts: const [],
+        sessions: const [],
+        blockedUsers: results[1] as List<BlockedLoginUser>,
+      );
+    }
     final results = await Future.wait([
       widget.repository.fetchUsers(),
       widget.repository.fetchAuditLogs(),
@@ -116,9 +173,13 @@ class _AdminPageState extends State<AdminPage> {
       await _activityController.refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('No se pudo desbloquear: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction('No se pudo desbloquear', e),
+          ),
+        ),
+      );
     }
   }
 
@@ -154,7 +215,11 @@ class _AdminPageState extends State<AdminPage> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo revocar la sesión: $error')),
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction('No se pudo revocar la sesión', error),
+          ),
+        ),
       );
     }
   }
@@ -166,6 +231,7 @@ class _AdminPageState extends State<AdminPage> {
       title: 'Administración',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: AnimatedBuilder(
         animation: _activityController,
         builder: (context, _) => _buildBody(),
@@ -175,7 +241,10 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _buildBody() {
     if (!widget.currentUser.canManageUsers) {
-      return const _AdminRoleOverview();
+      return _AdminRoleOverview(
+        repository: widget.repository,
+        realtimeChanges: widget.realtimeChanges,
+      );
     }
     if (_activityController.loading && _activityController.data == null) {
       return const Center(child: CircularProgressIndicator());
@@ -195,39 +264,39 @@ class _AdminPageState extends State<AdminPage> {
       onUnblockUser: _unblockUser,
       onRevokeSession: _revokeSession,
       onRefresh: _activityController.refresh,
+      repository: widget.repository,
+      realtimeChanges: widget.realtimeChanges,
     );
   }
 }
 
 class _AdminRoleOverview extends StatelessWidget {
-  const _AdminRoleOverview();
+  const _AdminRoleOverview({required this.repository, this.realtimeChanges});
+
+  final FiconMonitoringRepository repository;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
+    return Column(
       children: [
-        Text(
-          'Herramientas administrativas',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Card(
+            child: ListTile(
+              leading: const Icon(Icons.router_outlined),
+              title: const Text('Gestión de medidores'),
+              subtitle: const Text('Editar nombre, sede y datos autorizados.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.pushReplacementNamed(context, AppRoutes.devices),
+            ),
+          ),
         ),
-        const SizedBox(height: 6),
-        const Text(
-          'El rol ADMIN puede editar la información operativa de los '
-          'medidores. Usuarios, auditoría, bloqueos y sesiones permanecen '
-          'reservados para SUPERADMIN.',
-        ),
-        const SizedBox(height: 18),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.router_outlined),
-            title: const Text('Gestión de medidores'),
-            subtitle: const Text('Editar nombre, sede y datos autorizados.'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () =>
-                Navigator.pushReplacementNamed(context, AppRoutes.devices),
+        Expanded(
+          child: WhatsAppRecipientsTab(
+            repository: repository,
+            realtimeChanges: realtimeChanges,
           ),
         ),
       ],

@@ -59,6 +59,28 @@ class AppConfig {
     defaultValue: '',
   );
 
+  /// Datos privados de acceso a Tuya Spatial para la guía móvil.
+  /// Se inyectan desde `.env.mobile` durante la compilación.
+  static const String tuyaSpatialProjectQrData = String.fromEnvironment(
+    'TUYA_SPATIAL_PROJECT_QR_DATA',
+    defaultValue: '',
+  );
+
+  static const String tuyaSpatialAccount = String.fromEnvironment(
+    'TUYA_SPATIAL_ACCOUNT',
+    defaultValue: '',
+  );
+
+  static const String tuyaSpatialPassword = String.fromEnvironment(
+    'TUYA_SPATIAL_PASSWORD',
+    defaultValue: '',
+  );
+
+  static bool get tuyaSpatialGuideConfigured =>
+      tuyaSpatialProjectQrData.isNotEmpty &&
+      tuyaSpatialAccount.isNotEmpty &&
+      tuyaSpatialPassword.isNotEmpty;
+
   static bool get firebaseConfigured =>
       firebaseApiKey.isNotEmpty &&
       firebaseAppId.isNotEmpty &&

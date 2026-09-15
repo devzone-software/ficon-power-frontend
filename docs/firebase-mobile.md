@@ -207,6 +207,41 @@ POST /api/mobile/device-tokens
 Al cerrar sesión, el backend revoca el registro del dispositivo. Al volver a
 iniciar sesión, la APK registra el token vigente nuevamente.
 
+Si el registro falla por falta de red o por un error temporal, la APK reintenta
+después de 2, 5, 15 y 30 segundos, y luego de 1 y 5 minutos. El último intervalo
+se conserva mientras continúe el fallo. Al volver la aplicación a primer plano
+también se fuerza un intento inmediato.
+
+En la APK, abre **Notificaciones** para consultar el bloque **Push FCM**. Allí se
+muestran el permiso Android, el estado del registro, los últimos ocho caracteres
+del token, el próximo reintento y el último error. Los botones **Reintentar** y
+**Probar notificación** permiten recuperar el registro o solicitar una entrega
+FCM real al teléfono actual. La prueba usa:
+
+```http
+POST /api/mobile/device-tokens/test
+```
+
+El backend valida que el token esté activo y pertenezca al usuario autenticado.
+Con `FCM_DRY_RUN=true` informa que la entrega es solo una validación y no la
+presenta como una notificación aceptada para entrega.
+
+### Apertura de alertas
+
+La APK escucha `FirebaseMessaging.onMessageOpenedApp` cuando se toca una
+notificación con la aplicación en segundo plano y consulta
+`FirebaseMessaging.instance.getInitialMessage()` cuando el toque inicia una
+aplicación cerrada. Los mensajes con `incidentId` abren **Incidentes** filtrando
+el registro exacto; los mensajes con `deviceId` abren **Dispositivos** mostrando
+el medidor correspondiente. Si no existe una sesión, el destino queda pendiente
+y se abre después de iniciar sesión.
+
+Las alertas FCM recibidas en primer plano se publican como notificaciones
+locales. Su `payload` usa `incident:<uuid>` y el toque sigue el mismo flujo de
+navegación, incluso si esa notificación local vuelve a iniciar la aplicación.
+La pantalla enfocada muestra un aviso con la acción **Ver todos** para retirar
+el filtro proveniente de la notificación.
+
 ## Verificar una notificación
 
 Se genera un evento real o controlado de corte/retorno y se revisa:
@@ -224,9 +259,13 @@ order by created_at desc
 limit 50;
 ```
 
-La prueba final debe ejecutarse con la APK en segundo plano y completamente
-cerrada. Android debe mostrar el push en ambos casos, siempre que Google Play
-Services esté disponible y el permiso continúe habilitado.
+La prueba final debe ejecutarse con la APK visible, en segundo plano y
+completamente cerrada. Cuando está visible, la APK escucha
+`FirebaseMessaging.onMessage` y vuelve a publicar el mensaje como notificación
+local en `fcm_fallback_notification_channel`, con el sonido `power_alarm`. En
+segundo plano o cerrada, Android muestra directamente la notificación entregada
+por FCM. Los tres escenarios requieren Google Play Services y el permiso de
+notificaciones habilitado.
 
 ## Diagnóstico
 

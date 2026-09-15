@@ -8,6 +8,39 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('decodifica eventos SSE aunque los datos tengan varias líneas', () async {
+    final session = AuthSession()
+      ..start(
+        token: 'stream-token',
+        user: const AuthUser(
+          id: 'user-1',
+          username: 'reader',
+          role: 'USER',
+          displayName: 'Reader',
+        ),
+      );
+    final client = FiconApiClient(
+      baseUrl: 'https://ficon.test',
+      session: session,
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/realtime/stream');
+        expect(request.headers['authorization'], 'Bearer stream-token');
+        expect(request.headers['accept'], 'text/event-stream');
+        return http.Response(
+          'id: 12\nevent: device.updated\ndata: {"id":12,\ndata: "entityType":"device"}\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        );
+      }),
+    );
+
+    final event = await client.getEventStream('/api/realtime/stream').first;
+
+    expect(event.id, '12');
+    expect(event.event, 'device.updated');
+    expect(event.data, '{"id":12,\n"entityType":"device"}');
+  });
+
   test('envía el token de sesión y decodifica listas', () async {
     final session = AuthSession()
       ..start(
@@ -71,6 +104,93 @@ void main() {
         isA<ApiException>()
             .having((error) => error.statusCode, 'statusCode', 403)
             .having((error) => error.message, 'message', 'Acceso denegado'),
+      ),
+    );
+  });
+
+  test('traduce validaciones técnicas del backend', () async {
+    final client = FiconApiClient(
+      baseUrl: 'https://ficon.test',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'detail':
+                'Validation failed for field password: size must be between 8 and 120',
+          }),
+          400,
+        ),
+      ),
+    );
+
+    await expectLater(
+      client.getJson('/api/users'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.message,
+          'message',
+          'La contraseña debe tener entre 8 y 120 caracteres.',
+        ),
+      ),
+    );
+  });
+
+  test('lee el contrato uniforme de error y conserva su referencia', () async {
+    final client = FiconApiClient(
+      baseUrl: 'https://ficon.test',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'code': 'validation_error',
+            'message': 'Revisa los datos indicados.',
+            'fieldErrors': [
+              {
+                'field': 'displayName',
+                'message': 'El nombre visible es obligatorio.',
+              },
+            ],
+            'traceId': 'request-123',
+          }),
+          400,
+        ),
+      ),
+    );
+
+    await expectLater(
+      client.getJson('/api/users'),
+      throwsA(
+        isA<ApiException>()
+            .having(
+              (error) => error.message,
+              'message',
+              'El nombre visible es obligatorio.',
+            )
+            .having((error) => error.code, 'code', 'validation_error')
+            .having((error) => error.traceId, 'traceId', 'request-123'),
+      ),
+    );
+  });
+
+  test('los errores de conexión no exponen URL ni excepción técnica', () async {
+    final client = FiconApiClient(
+      baseUrl: 'https://internal.example:8443',
+      client: MockClient((_) async => throw http.ClientException('socket')),
+    );
+
+    await expectLater(
+      client.getJson('/api/devices'),
+      throwsA(
+        isA<ApiException>()
+            .having(
+              (error) => error.message,
+              'message',
+              'No se pudo conectar con el servidor. '
+                  'Revisa tu conexión a Internet.',
+            )
+            .having(
+              (error) => error.message,
+              'does not expose URL',
+              isNot(contains('internal.example')),
+            ),
       ),
     );
   });

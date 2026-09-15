@@ -5,7 +5,10 @@ import '../../theme/ficon_theme.dart';
 import '../../widgets/common.dart';
 
 class MobileIncidentList extends StatelessWidget {
-  const MobileIncidentList({super.key, required this.incidents});
+  const MobileIncidentList({
+    super.key,
+    required this.incidents,
+  });
 
   final List<Incident> incidents;
 

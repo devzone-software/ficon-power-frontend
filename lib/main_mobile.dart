@@ -9,6 +9,9 @@ import 'config/auth_session.dart';
 import 'main.dart';
 import 'mobile/config/mobile_firebase_config.dart';
 import 'mobile/notifications/mobile_event_notification_watcher.dart';
+import 'mobile/notifications/mobile_foreground_notification_listener.dart';
+import 'mobile/notifications/mobile_notification_navigation.dart';
+import 'mobile/notifications/mobile_power_alert_channel.dart';
 import 'mobile/notifications/mobile_push_registration.dart';
 import 'mobile/session/mobile_session_storage.dart';
 import 'mobile/updates/mobile_update_checker.dart';
@@ -26,9 +29,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 /// permite compilar una variante móvil sin afectar la entrada web.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MobilePowerAlertChannel? powerAlertChannel;
   if (MobileFirebaseConfig.isConfigured) {
     await Firebase.initializeApp(options: MobileFirebaseConfig.options);
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    powerAlertChannel = MobilePowerAlertChannel();
+    await powerAlertChannel.ensureCreated();
   }
 
   final session = AuthSession();
@@ -49,12 +55,25 @@ Future<void> main() async {
       showBetaBanner: false,
     ),
   );
+  final notificationsEnabledApp = powerAlertChannel == null
+      ? app
+      : MobileForegroundNotificationListener(
+          channel: powerAlertChannel,
+          child: app,
+        );
+  final notificationNavigationApp = MobileNotificationNavigation(
+    navigatorKey: navigatorKey,
+    session: session,
+    localPayloads: powerAlertChannel?.notificationPayloads,
+    initialLocalPayload: powerAlertChannel?.initialNotificationPayload,
+    child: notificationsEnabledApp,
+  );
   runApp(
     MobileUpdateChecker(
       session: session,
       navigatorKey: navigatorKey,
       child: MobileFirebaseConfig.isConfigured
-          ? app
+          ? notificationNavigationApp
           : MobileEventNotificationWatcher(
               repository: repository,
               session: session,

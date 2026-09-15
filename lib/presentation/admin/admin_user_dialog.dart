@@ -78,7 +78,7 @@ class _UserDialogState extends State<_UserDialog> {
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = UserErrorMessage.from(e));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

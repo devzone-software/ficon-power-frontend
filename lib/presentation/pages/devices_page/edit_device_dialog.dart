@@ -85,7 +85,7 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        _showError('No se pudo guardar: $e');
+        _showError(UserErrorMessage.forAction('No se pudo guardar', e));
       }
     }
   }
@@ -106,7 +106,10 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
           future: _sitesFuture,
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return const Text('No se pudieron cargar las sedes.');
+              return ErrorView(
+                error: snapshot.error,
+                onRetry: () => setState(() => _sitesFuture = widget.getSites()),
+              );
             }
             if (!snapshot.hasData) {
               return const Padding(
@@ -135,7 +138,7 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                 DropdownButtonFormField<String>(
                   initialValue: _isNewSite ? _newSiteValue : selected,
                   decoration: const InputDecoration(
-                    labelText: 'Sede',
+                    labelText: 'Distrito',
                     border: OutlineInputBorder(),
                   ),
                   items: [
@@ -143,8 +146,8 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                       DropdownMenuItem(
                         value: site.id,
                         child: Text(
-                          site.locationLabel.isNotEmpty
-                              ? '${site.name} (${site.locationLabel})'
+                          site.district?.trim().isNotEmpty == true
+                              ? site.district!
                               : site.name,
                         ),
                       ),
@@ -163,7 +166,8 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                     controller: _siteNameController,
                     enabled: !_saving,
                     decoration: const InputDecoration(
-                      labelText: 'Nombre de la nueva sede',
+                      labelText: 'Nombre en Tuya Spatial',
+                      helperText: 'Ejemplo: Timax - Puno',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -172,7 +176,7 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
                     controller: _districtController,
                     enabled: !_saving,
                     decoration: const InputDecoration(
-                      labelText: 'Distrito (opcional)',
+                      labelText: 'Distrito (se infiere si queda vacío)',
                       border: OutlineInputBorder(),
                     ),
                   ),

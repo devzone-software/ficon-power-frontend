@@ -1,29 +1,44 @@
 import '../adapters/http/ficon_monitoring_repository.dart';
 import '../usecase/create_site_service.dart';
 import '../usecase/get_devices_service.dart';
+import '../usecase/get_device_detail_service.dart';
 import '../usecase/get_events_service.dart';
 import '../usecase/get_incidents_service.dart';
 import '../usecase/get_monitoring_overview_service.dart';
 import '../usecase/get_notification_templates_service.dart';
+import '../usecase/get_operations_calendar_service.dart';
 import '../usecase/get_sites_service.dart';
 import '../usecase/update_device_details_service.dart';
+import '../usecase/manage_tuya_plans_service.dart';
+import 'realtime_service.dart';
 
 class FiconDependencies {
   FiconDependencies(FiconMonitoringRepository repository)
-    : getOverview = GetMonitoringOverviewService(repository),
+    : realtime = RealtimeService(
+        repository.openRealtimeChanges,
+        repository.session,
+      ),
+      getOverview = GetMonitoringOverviewService(repository),
+      getDeviceDetail = GetDeviceDetailService(repository),
       getDevices = GetDevicesService(repository),
       getIncidents = GetIncidentsService(repository),
       getEvents = GetEventsService(repository),
       getNotificationTemplates = GetNotificationTemplatesService(repository),
+      getOperationsCalendar = GetOperationsCalendarService(repository),
+      manageTuyaPlans = ManageTuyaPlansService(repository),
       getSites = GetSitesService(repository),
       updateDeviceDetails = UpdateDeviceDetailsService(repository),
       createSite = CreateSiteService(repository);
 
   final GetMonitoringOverviewService getOverview;
+  final RealtimeService realtime;
+  final GetDeviceDetailService getDeviceDetail;
   final GetDevicesService getDevices;
   final GetIncidentsService getIncidents;
   final GetEventsService getEvents;
   final GetNotificationTemplatesService getNotificationTemplates;
+  final GetOperationsCalendarService getOperationsCalendar;
+  final ManageTuyaPlansService manageTuyaPlans;
   final GetSitesService getSites;
   final UpdateDeviceDetailsService updateDeviceDetails;
   final CreateSiteService createSite;

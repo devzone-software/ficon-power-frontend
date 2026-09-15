@@ -23,21 +23,21 @@ class MobileSessionStorage {
   final FlutterSecureStorage _secureStorage;
 
   Future<void> restoreInto(AuthSession session) async {
-    final token = await _secureStorage.read(key: _tokenKey);
-    final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
-    final expiresAt = await _secureStorage.read(key: _expiresAtKey);
-    final refreshExpiresAt = await _secureStorage.read(
-      key: _refreshExpiresAtKey,
-    );
-    final userJson = await _secureStorage.read(key: _userKey);
-    if (token == null ||
-        token.isEmpty ||
-        userJson == null ||
-        userJson.isEmpty) {
-      return;
-    }
-
     try {
+      final token = await _secureStorage.read(key: _tokenKey);
+      final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+      final expiresAt = await _secureStorage.read(key: _expiresAtKey);
+      final refreshExpiresAt = await _secureStorage.read(
+        key: _refreshExpiresAtKey,
+      );
+      final userJson = await _secureStorage.read(key: _userKey);
+      if (token == null ||
+          token.isEmpty ||
+          userJson == null ||
+          userJson.isEmpty) {
+        return;
+      }
+
       final user = AuthUser.fromJson(
         (jsonDecode(userJson) as Map<dynamic, dynamic>).cast<String, dynamic>(),
       );
@@ -49,7 +49,22 @@ class MobileSessionStorage {
         user: user,
       );
     } catch (_) {
+      // Android puede conservar valores cifrados que ya no corresponden con
+      // la clave actual del Keystore después de reinstalar/restaurar la app.
+      // Esa sesión no es recuperable: se descarta y se continúa hacia login.
+      await _discardUnreadableSession();
+    }
+  }
+
+  Future<void> _discardUnreadableSession() async {
+    try {
       await clear();
+    } catch (_) {
+      try {
+        await _secureStorage.deleteAll();
+      } catch (_) {
+        // La restauración nunca debe impedir que la interfaz móvil arranque.
+      }
     }
   }
 

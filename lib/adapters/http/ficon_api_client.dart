@@ -1,20 +1,41 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
+import 'exception_handler.dart';
 
-class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode, this.details});
+class ApiException implements Exception, UserReadableException {
+  ApiException(
+    this.message, {
+    this.statusCode,
+    this.details,
+    this.code,
+    this.traceId,
+  });
 
   final String message;
   final int? statusCode;
   final String? details;
+  final String? code;
+  @override
+  final String? traceId;
 
   @override
-  String toString() =>
-      'ApiException(${statusCode ?? 'sin respuesta'}): $message';
+  String get userMessage => message;
+
+  @override
+  String toString() => message;
+}
+
+class ServerSentEvent {
+  const ServerSentEvent({this.id, this.event, required this.data});
+
+  final String? id;
+  final String? event;
+  final String data;
 }
 
 class FiconApiClient {
@@ -57,6 +78,23 @@ class FiconApiClient {
       throw ApiException('Respuesta inesperada en $path');
     }
     return decoded;
+  }
+
+  Stream<ServerSentEvent> getEventStream(String path) async* {
+    var response = await _openEventStream(path);
+    if (response.statusCode == 401 && session?.canRefresh == true) {
+      await response.stream.drain<void>();
+      if (await _refreshSession()) {
+        response = await _openEventStream(path);
+      }
+    }
+    if (response.statusCode != 200) {
+      final bytes = await response.stream.toBytes();
+      _requireStatus(http.Response.bytes(bytes, response.statusCode), path, {
+        200,
+      });
+    }
+    yield* _decodeEventStream(response.stream);
   }
 
   Future<Map<String, dynamic>> postJson(
@@ -137,8 +175,74 @@ class FiconApiClient {
   Future<http.Response> _request(Future<http.Response> Function() send) async {
     try {
       return await send().timeout(_timeout);
+    } on TimeoutException catch (error) {
+      throw ApiException(
+        'El servidor tardó demasiado en responder. Inténtalo nuevamente.',
+        details: error.toString(),
+      );
     } catch (error) {
-      throw ApiException('No se pudo conectar con $_baseUrl: $error');
+      throw ApiException(
+        'No se pudo conectar con el servidor. Revisa tu conexión a Internet.',
+        details: error.toString(),
+      );
+    }
+  }
+
+  Future<http.StreamedResponse> _openEventStream(String path) async {
+    try {
+      final request = http.Request('GET', Uri.parse('$_baseUrl$path'));
+      request.headers.addAll({..._headers, 'Accept': 'text/event-stream'});
+      return await _client.send(request).timeout(_timeout);
+    } on TimeoutException catch (error) {
+      throw ApiException(
+        'El servidor tardó demasiado en abrir la conexión en tiempo real.',
+        details: error.toString(),
+      );
+    } catch (error) {
+      throw ApiException(
+        'No se pudo abrir la conexión en tiempo real.',
+        details: error.toString(),
+      );
+    }
+  }
+
+  Stream<ServerSentEvent> _decodeEventStream(
+    Stream<List<int>> byteStream,
+  ) async* {
+    String? id;
+    String? event;
+    final data = <String>[];
+
+    await for (final line
+        in byteStream.transform(utf8.decoder).transform(const LineSplitter())) {
+      if (line.isEmpty) {
+        if (data.isNotEmpty) {
+          yield ServerSentEvent(id: id, event: event, data: data.join('\n'));
+        }
+        id = null;
+        event = null;
+        data.clear();
+        continue;
+      }
+      if (line.startsWith(':')) continue;
+      final separator = line.indexOf(':');
+      final field = separator < 0 ? line : line.substring(0, separator);
+      var value = separator < 0 ? '' : line.substring(separator + 1);
+      if (value.startsWith(' ')) value = value.substring(1);
+      switch (field) {
+        case 'id':
+          id = value;
+          break;
+        case 'event':
+          event = value;
+          break;
+        case 'data':
+          data.add(value);
+          break;
+      }
+    }
+    if (data.isNotEmpty) {
+      yield ServerSentEvent(id: id, event: event, data: data.join('\n'));
     }
   }
 
@@ -207,24 +311,12 @@ class FiconApiClient {
   void _requireStatus(http.Response response, String path, Set<int> accepted) {
     if (accepted.contains(response.statusCode)) return;
     throw ApiException(
-      _errorMessage(response, path),
+      ExceptionHandler.fromResponse(response, path),
       statusCode: response.statusCode,
       details: utf8.decode(response.bodyBytes),
+      code: ExceptionHandler.codeFromResponse(response),
+      traceId: ExceptionHandler.traceIdFromResponse(response),
     );
-  }
-
-  String _errorMessage(http.Response response, String path) {
-    final body = utf8.decode(response.bodyBytes);
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final error = decoded['error'] ?? decoded['message'];
-        if (error is String && error.isNotEmpty) return error;
-      }
-    } catch (_) {
-      // Una respuesta no JSON utiliza el mensaje genérico del endpoint.
-    }
-    return 'El backend respondió con un error en $path';
   }
 
   void dispose() => _client.close();

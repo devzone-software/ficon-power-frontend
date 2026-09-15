@@ -2,16 +2,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../application/user_error_message.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
 import '../../domain/site.dart';
+import '../../domain/realtime_change.dart';
 import '../../ports/input/create_site.dart';
 import '../../ports/input/get_devices.dart';
+import '../../ports/input/get_device_detail.dart';
 import '../../ports/input/get_sites.dart';
 import '../../ports/input/update_device_details.dart';
 import '../devices/devices_compact_list.dart';
+import '../devices/device_location_map.dart';
 import '../devices/devices_table.dart';
 import '../devices/onboarding/tuya_spatial_guide.dart';
+import 'device_detail_page.dart';
+import '../widgets/notification_focus_banner.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 import '../widgets/table_filters.dart';
@@ -26,37 +32,66 @@ class DevicesPage extends StatefulWidget {
   const DevicesPage({
     super.key,
     required this.getDevices,
+    required this.getDeviceDetail,
     required this.getSites,
     required this.updateDeviceDetails,
     required this.createSite,
     required this.currentUser,
     required this.onLogout,
+    this.focusDeviceId,
+    this.realtimeChanges,
   });
 
   final GetDevices getDevices;
+  final GetDeviceDetail getDeviceDetail;
   final GetSites getSites;
   final UpdateDeviceDetails updateDeviceDetails;
   final CreateSite createSite;
   final AuthUser currentUser;
   final VoidCallback onLogout;
+  final String? focusDeviceId;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<DevicesPage> createState() => _DevicesPageState();
 }
 
 class _DevicesPageState extends State<DevicesPage> {
-  static const _autoRefreshInterval = Duration(seconds: 10);
+  static const _autoRefreshInterval = Duration(minutes: 3);
 
   late Future<List<Device>> _future;
   Timer? _autoRefreshTimer;
+  Timer? _realtimeDebounce;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
   bool _refreshing = false;
   final ColumnFilterState _columnFilters = ColumnFilterState();
+  late String? _focusDeviceId;
+  DevicesViewMode _viewMode = DevicesViewMode.list;
 
   @override
   void initState() {
     super.initState();
+    _focusDeviceId = widget.focusDeviceId;
     _future = widget.getDevices();
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => _refresh());
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where(
+          (change) => const {
+            'device',
+            'incident',
+            'event',
+            'site',
+          }.contains(change.entityType),
+        )
+        .listen(_scheduleRealtimeRefresh);
+  }
+
+  void _scheduleRealtimeRefresh(RealtimeChange _) {
+    _realtimeDebounce?.cancel();
+    _realtimeDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_refresh()),
+    );
   }
 
   Future<void> _refresh() async {
@@ -87,6 +122,8 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     super.dispose();
   }
 
@@ -114,6 +151,21 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
+  void _openDetail(Device device) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DeviceDetailPage(
+          deviceId: device.id,
+          initialDeviceName: device.name,
+          getDeviceDetail: widget.getDeviceDetail,
+          currentUser: widget.currentUser,
+          onLogout: widget.onLogout,
+          realtimeChanges: widget.realtimeChanges,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AdminScaffold(
@@ -121,6 +173,7 @@ class _DevicesPageState extends State<DevicesPage> {
       title: 'Dispositivos',
       currentUser: widget.currentUser,
       onLogout: widget.onLogout,
+      realtimeChanges: widget.realtimeChanges,
       body: FutureBuilder<List<Device>>(
         future: _future,
         builder: (context, snapshot) {
@@ -132,20 +185,37 @@ class _DevicesPageState extends State<DevicesPage> {
           }
           final devices = snapshot.data!;
           final filteredDevices = _sortedDevices(
-            devices.where(_matchesFilters),
+            devices.where(
+              (device) =>
+                  (_focusDeviceId == null || device.id == _focusDeviceId) &&
+                  _matchesFilters(device),
+            ),
           );
           return RefreshIndicator(
             onRefresh: _refresh,
             child: _DevicesPageContent(
               devices: filteredDevices,
+              focusBanner: _focusDeviceId == null
+                  ? null
+                  : NotificationFocusBanner(
+                      label: 'Mostrando el dispositivo de la notificación',
+                      onClear: _clearNotificationFocus,
+                    ),
               filters: _filters(devices),
               canEdit: widget.currentUser.canEditDevices,
               onEdit: _edit,
+              onOpen: _openDetail,
               onOpenGuide: _openTuyaSpatialGuide,
+              viewMode: _viewMode,
+              onViewModeChanged: (mode) => setState(() => _viewMode = mode),
             ),
           );
         },
       ),
     );
+  }
+
+  void _clearNotificationFocus() {
+    setState(() => _focusDeviceId = null);
   }
 }

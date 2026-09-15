@@ -13,7 +13,7 @@ Incluido:
 
 - Login contra el backend actual.
 - Sesión persistente en almacenamiento seguro del celular hasta cerrar sesión.
-- Acceso a dashboard, dispositivos, incidentes y eventos.
+- Acceso móvil a resumen, dispositivos y administración según rol.
 - Permiso Android de notificaciones.
 - Notificaciones locales al detectar eventos nuevos desde `/api/events`.
 - Configuración Android con nombre `FICON Power`.
@@ -23,7 +23,7 @@ Incluido:
 - Registro de token FCM contra el backend cuando Firebase está configurado.
 - Push FCM para recibir alertas aunque Android cierre la app.
 - Navegación inferior adaptativa y panel lateral de cuenta.
-- Vistas móviles compactas para dashboard, dispositivos, incidentes y eventos.
+- Historial de incidentes y eventos integrado en cada dispositivo.
 - Consola administrativa condicionada por rol.
 - Exportación de dispositivos, incidentes y eventos en CSV/XLSX.
 
@@ -80,6 +80,11 @@ FIREBASE_API_KEY=AIzaSy...
 FIREBASE_APP_ID=1:123456789012:android:...
 FIREBASE_MESSAGING_SENDER_ID=123456789012
 FIREBASE_PROJECT_ID=ficon-power-test
+
+# Guía privada de Tuya Spatial
+TUYA_SPATIAL_PROJECT_QR_DATA='URL_O_CONTENIDO_DEL_QR'
+TUYA_SPATIAL_ACCOUNT='CUENTA_AUTORIZADA'
+TUYA_SPATIAL_PASSWORD='CONTRASEÑA_AUTORIZADA'
 ```
 
 Compilar cargando `.env.mobile`:
@@ -93,6 +98,9 @@ bash scripts/build-mobile-apk.sh
 
 El script lee esas variables del entorno y las inyecta en la APK mediante
 `--dart-define`.
+
+El flujo, la protección visual de la contraseña y sus límites de seguridad se
+documentan por separado en [Guía móvil de Tuya Spatial](tuya-spatial-guide.md).
 
 Variables backend necesarias:
 
@@ -261,11 +269,23 @@ trazabilidad del artefacto publicado. La aplicación tolera este campo adicional
 
 ## Navegación y cuenta
 
-La barra inferior contiene Resumen, Dispositivos, Incidentes y Eventos. Para
-los roles `ADMIN` y `SUPERADMIN` agrega Administración como quinto destino.
-Las operaciones de usuarios, bloqueos, auditoría y sesiones continúan visibles
-exclusivamente para `SUPERADMIN`; `ADMIN` conserva únicamente las herramientas
+La barra inferior contiene Resumen y Dispositivos. Para los roles `ADMIN` y
+`SUPERADMIN` agrega Administración. Incidentes, Eventos y Calendario permanecen
+como vistas web; en móvil, los dos historiales operativos se consultan desde la
+ficha de cada dispositivo mediante un selector exclusivo.
+
+En Administración móvil, `SUPERADMIN` conserva Usuarios, Bloqueados y WhatsApp.
+Audit logs, Logins y Sesiones se consultan solo desde la vista web y por eso el
+móvil tampoco descarga esas colecciones. `ADMIN` conserva las herramientas
 operativas autorizadas.
+
+El resumen móvil muestra primero la fecha y los días restantes para renovar
+Tuya Developer. Debajo presenta, en dos columnas compactas, el total de
+apagados y los apagados de la semana, seguido por un resumen compacto con el
+total de dispositivos, cuántos están en línea y su porcentaje de disponibilidad
+actual. El gráfico mensual conecta los puntos de cada día del mes actual para
+mostrar la evolución de los cortes sin agregar otras series. La tarjeta de
+plantillas Meta ya no forma parte del dashboard.
 
 El avatar abre un panel lateral con cuenta, nivel de acceso, estado del sistema,
 accesos rápidos, versión instalada y cierre de sesión.

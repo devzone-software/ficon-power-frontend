@@ -8,20 +8,22 @@ class DevicesTable extends StatelessWidget {
     super.key,
     required this.devices,
     required this.onEdit,
+    required this.onOpen,
     required this.canEdit,
   });
 
   final List<Device> devices;
   final ValueChanged<Device> onEdit;
+  final ValueChanged<Device> onOpen;
   final bool canEdit;
 
   @override
   Widget build(BuildContext context) {
     return DataTable(
+      showCheckboxColumn: false,
       columns: const [
         DataColumn(label: Text('Nombre')),
         DataColumn(label: Text('ID externo')),
-        DataColumn(label: Text('Sede')),
         DataColumn(label: Text('Distrito')),
         DataColumn(label: Text('Estado')),
         DataColumn(label: Text('Último cambio')),
@@ -35,12 +37,12 @@ class DevicesTable extends StatelessWidget {
 
   DataRow _row(Device device) {
     return DataRow(
+      onSelectChanged: (_) => onOpen(device),
       cells: [
         DataCell(
           Text(device.name.isNotEmpty ? device.name : device.externalId ?? ''),
         ),
         DataCell(Text(device.externalId ?? '')),
-        DataCell(Text(device.siteName ?? '')),
         DataCell(Text(device.district ?? '')),
         DataCell(DeviceStatusChip(online: device.isOnline)),
         DataCell(Text(formatDateTime(device.lastStatusChange))),

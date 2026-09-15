@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../adapters/http/ficon_monitoring_repository.dart';
 import '../../../application/mobile_notification_controller.dart';
 import '../../../application/mobile_data_export.dart';
+import '../../../application/user_error_message.dart';
 import '../../../domain/auth_user.dart';
 import '../../../domain/mobile_notification.dart';
+import '../../../domain/realtime_change.dart';
+import '../../../mobile/notifications/mobile_push_registration.dart';
 import '../overlays/mobile_account_panel.dart';
 import '../overlays/mobile_export_sheet.dart';
 import '../../theme/ficon_theme.dart';
 import '../../navigation/app_routes.dart';
+import '../../widgets/common.dart';
 
 class MobileNavigationShell extends StatefulWidget {
   const MobileNavigationShell({
@@ -20,6 +26,7 @@ class MobileNavigationShell extends StatefulWidget {
     required this.repository,
     required this.onLogout,
     required this.onNavigate,
+    this.realtimeChanges,
   });
 
   final String currentRoute;
@@ -29,6 +36,7 @@ class MobileNavigationShell extends StatefulWidget {
   final FiconMonitoringRepository repository;
   final VoidCallback onLogout;
   final ValueChanged<String> onNavigate;
+  final Stream<RealtimeChange>? realtimeChanges;
 
   @override
   State<MobileNavigationShell> createState() => _MobileNavigationShellState();
@@ -37,6 +45,8 @@ class MobileNavigationShell extends StatefulWidget {
 class _MobileNavigationShellState extends State<MobileNavigationShell>
     with WidgetsBindingObserver {
   late final MobileNotificationController _notifications;
+  StreamSubscription<RealtimeChange>? _realtimeSubscription;
+  Timer? _realtimeDebounce;
 
   @override
   void initState() {
@@ -47,6 +57,15 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
       widget.repository.markMobileNotificationRead,
       widget.repository.markAllMobileNotificationsRead,
     )..refresh();
+    _realtimeSubscription = widget.realtimeChanges
+        ?.where((change) => change.entityType == 'notification')
+        .listen((_) {
+          _realtimeDebounce?.cancel();
+          _realtimeDebounce = Timer(
+            const Duration(milliseconds: 250),
+            () => unawaited(_notifications.refresh()),
+          );
+        });
   }
 
   @override
@@ -57,6 +76,8 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _realtimeDebounce?.cancel();
+    unawaited(_realtimeSubscription?.cancel());
     _notifications.dispose();
     super.dispose();
   }
@@ -64,7 +85,11 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
   @override
   Widget build(BuildContext context) {
     final primaryItems = navItems
-        .where((item) => !item.adminOnly || widget.currentUser.canAccessAdmin)
+        .where(
+          (item) =>
+              mobileNavRoutes.contains(item.route) &&
+              (!item.adminOnly || widget.currentUser.canAccessAdmin),
+        )
         .toList();
     final selected = primaryItems.indexWhere(
       (item) => item.route == widget.currentRoute,
@@ -149,6 +174,7 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
     AppRoutes.dashboard => Icons.dashboard_outlined,
     AppRoutes.devices => Icons.router_outlined,
     AppRoutes.incidents => Icons.warning_amber_outlined,
+    AppRoutes.calendar => Icons.calendar_month_outlined,
     AppRoutes.events => Icons.event_note_outlined,
     AppRoutes.admin => Icons.admin_panel_settings_outlined,
     _ => Icons.circle_outlined,
@@ -177,14 +203,17 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
   Future<void> _openNotifications() async {
     await _notifications.refresh();
     if (!mounted) return;
+    final pushStatus = MobilePushStatusScope.maybeOf(context);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => AnimatedBuilder(
         animation: _notifications,
-        builder: (context, _) =>
-            _NotificationHistorySheet(controller: _notifications),
+        builder: (context, _) => _NotificationHistorySheet(
+          controller: _notifications,
+          pushStatus: pushStatus,
+        ),
       ),
     );
   }
@@ -201,16 +230,27 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudieron exportar los datos: $error')),
+        SnackBar(
+          content: Text(
+            UserErrorMessage.forAction(
+              'No se pudieron exportar los datos',
+              error,
+            ),
+          ),
+        ),
       );
     }
   }
 }
 
 class _NotificationHistorySheet extends StatelessWidget {
-  const _NotificationHistorySheet({required this.controller});
+  const _NotificationHistorySheet({
+    required this.controller,
+    required this.pushStatus,
+  });
 
   final MobileNotificationController controller;
+  final MobilePushStatus? pushStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -233,6 +273,13 @@ class _NotificationHistorySheet extends StatelessWidget {
               ),
             ),
             const Divider(height: 1),
+            if (pushStatus != null) ...[
+              AnimatedBuilder(
+                animation: pushStatus!,
+                builder: (context, _) => _PushStatusCard(status: pushStatus!),
+              ),
+              const Divider(height: 1),
+            ],
             Expanded(child: _history()),
           ],
         ),
@@ -244,8 +291,8 @@ class _NotificationHistorySheet extends StatelessWidget {
     if (controller.loading && controller.items.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (controller.error != null && controller.items.isEmpty) {
-      return Center(child: Text('No se pudo cargar el historial.'));
+    if (controller.error != null) {
+      return ErrorView(error: controller.error, onRetry: controller.refresh);
     }
     if (controller.items.isEmpty) {
       return const Center(child: Text('No hay notificaciones registradas.'));
@@ -264,6 +311,84 @@ class _NotificationHistorySheet extends StatelessWidget {
   }
 }
 
+class _PushStatusCard extends StatelessWidget {
+  const _PushStatusCard({required this.status});
+
+  final MobilePushStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final registered = status.phase == MobilePushPhase.registered;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    registered
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_off_outlined,
+                    color: registered ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Push FCM: ${status.label}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text('Permiso: ${status.permission}'),
+              if (status.tokenHint != null) Text('Token: ${status.tokenHint}'),
+              if (status.nextRetryAt != null)
+                Text('Próximo reintento: ${_clock(status.nextRetryAt!)}'),
+              if (status.lastError != null)
+                Text(
+                  'Último error: ${status.lastError}',
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              if (status.testMessage != null) Text(status.testMessage!),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: status.canRetry ? status.retryNow : null,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reintentar'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: status.canTest ? status.sendTest : null,
+                    icon: status.testing
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.notifications_active_outlined),
+                    label: const Text('Probar notificación'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _clock(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:'
+      '${value.minute.toString().padLeft(2, '0')}:'
+      '${value.second.toString().padLeft(2, '0')}';
+}
+
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile({required this.notification, required this.onTap});
 
@@ -272,12 +397,11 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPowerOutage = notification.eventType == 'power_outage';
     return ListTile(
       onTap: onTap,
       leading: Icon(
-        notification.eventType == 'power_outage'
-            ? Icons.power_off_outlined
-            : Icons.power_outlined,
+        isPowerOutage ? Icons.power_off_outlined : Icons.power_outlined,
         color: notification.unread ? FiconColors.cyan : FiconColors.deepAlt,
       ),
       title: Text(

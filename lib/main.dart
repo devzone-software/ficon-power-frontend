@@ -69,6 +69,7 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
   @override
   void dispose() {
     widget.session.removeListener(_handleSessionChange);
+    _router.dependencies.realtime.dispose();
     super.dispose();
   }
 
@@ -81,6 +82,7 @@ class _FiconPowerAppState extends State<FiconPowerApp> {
         title: widget.title,
         debugShowCheckedModeBanner: false,
         theme: buildFiconTheme(),
+        themeMode: ThemeMode.light,
         builder: (context, child) {
           final content = child ?? const SizedBox.shrink();
           return FiconRepositoryScope(

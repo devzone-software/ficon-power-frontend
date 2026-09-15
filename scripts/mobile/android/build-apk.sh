@@ -15,6 +15,8 @@ APK_TARGET="${PROJECT_DIR}/dist/ficon-power.apk"
 MOBILE_DIST_DIR="${PROJECT_DIR}/dist/mobile"
 MOBILE_APK_TARGET="${MOBILE_DIST_DIR}/ficon-power.apk"
 KEY_PROPERTIES="${PROJECT_DIR}/android/key.properties"
+ALARM_SOUND_SOURCE="${PROJECT_DIR}/resources/mobile/audio/power_alarm.ogg"
+ALARM_SOUND_TARGET="${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.ogg"
 VERSION_LINE="$(grep '^version:' "${PROJECT_DIR}/pubspec.yaml" | awk '{print $2}' | tr -d '\r')"
 APP_VERSION_NAME="${VERSION_LINE%%+*}"
 APP_VERSION_CODE="${VERSION_LINE##*+}"
@@ -25,6 +27,9 @@ FIREBASE_API_KEY="${FIREBASE_API_KEY:-}"
 FIREBASE_APP_ID="${FIREBASE_APP_ID:-}"
 FIREBASE_MESSAGING_SENDER_ID="${FIREBASE_MESSAGING_SENDER_ID:-}"
 FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-}"
+TUYA_SPATIAL_PROJECT_QR_DATA="${TUYA_SPATIAL_PROJECT_QR_DATA:-}"
+TUYA_SPATIAL_ACCOUNT="${TUYA_SPATIAL_ACCOUNT:-}"
+TUYA_SPATIAL_PASSWORD="${TUYA_SPATIAL_PASSWORD:-}"
 
 case "${ANDROID_APK_VARIANT}" in
   arm64)
@@ -52,6 +57,9 @@ FIREBASE_API_KEY="$(printf '%s' "${FIREBASE_API_KEY}" | tr -d '\r')"
 FIREBASE_APP_ID="$(printf '%s' "${FIREBASE_APP_ID}" | tr -d '\r')"
 FIREBASE_MESSAGING_SENDER_ID="$(printf '%s' "${FIREBASE_MESSAGING_SENDER_ID}" | tr -d '\r')"
 FIREBASE_PROJECT_ID="$(printf '%s' "${FIREBASE_PROJECT_ID}" | tr -d '\r')"
+TUYA_SPATIAL_PROJECT_QR_DATA="$(printf '%s' "${TUYA_SPATIAL_PROJECT_QR_DATA}" | tr -d '\r')"
+TUYA_SPATIAL_ACCOUNT="$(printf '%s' "${TUYA_SPATIAL_ACCOUNT}" | tr -d '\r')"
+TUYA_SPATIAL_PASSWORD="$(printf '%s' "${TUYA_SPATIAL_PASSWORD}" | tr -d '\r')"
 
 if [[ ! -f "${KEY_PROPERTIES}" ]]; then
   echo "No existe android/key.properties para firmar actualizaciones."
@@ -60,7 +68,13 @@ if [[ ! -f "${KEY_PROPERTIES}" ]]; then
   exit 1
 fi
 
+if [[ ! -f "${ALARM_SOUND_SOURCE}" ]]; then
+  echo "No existe el audio de alarma en ${ALARM_SOUND_SOURCE}." >&2
+  exit 1
+fi
+
 mkdir -p \
+  "$(dirname "${ALARM_SOUND_TARGET}")" \
   "${CACHE_DIR}/pub" \
   "${CACHE_DIR}/gradle" \
   "${CACHE_DIR}/android-platforms" \
@@ -69,6 +83,11 @@ mkdir -p \
   "${CACHE_DIR}/android-cmake" \
   "${PROJECT_DIR}/dist" \
   "${MOBILE_DIST_DIR}"
+
+rm -f \
+  "${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.wav" \
+  "${PROJECT_DIR}/android/app/src/main/res/raw/power_alarm.ogg"
+cp "${ALARM_SOUND_SOURCE}" "${ALARM_SOUND_TARGET}"
 
 # Normaliza artefactos que pudieron quedar creados por Docker como root.
 docker run --rm \
@@ -95,7 +114,24 @@ docker run --rm \
   -e FICON_ANDROID_ABI_FILTER="${ANDROID_ABI_FILTER}" \
   -w /app \
   "${FLUTTER_DOCKER_IMAGE}" \
-  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release ${FLUTTER_PLATFORM_ARGS} --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' --dart-define=FIREBASE_API_KEY='${FIREBASE_API_KEY}' --dart-define=FIREBASE_APP_ID='${FIREBASE_APP_ID}' --dart-define=FIREBASE_MESSAGING_SENDER_ID='${FIREBASE_MESSAGING_SENDER_ID}' --dart-define=FIREBASE_PROJECT_ID='${FIREBASE_PROJECT_ID}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
+  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release ${FLUTTER_PLATFORM_ARGS} --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' --dart-define=FIREBASE_API_KEY='${FIREBASE_API_KEY}' --dart-define=FIREBASE_APP_ID='${FIREBASE_APP_ID}' --dart-define=FIREBASE_MESSAGING_SENDER_ID='${FIREBASE_MESSAGING_SENDER_ID}' --dart-define=FIREBASE_PROJECT_ID='${FIREBASE_PROJECT_ID}' --dart-define=TUYA_SPATIAL_PROJECT_QR_DATA='${TUYA_SPATIAL_PROJECT_QR_DATA}' --dart-define=TUYA_SPATIAL_ACCOUNT='${TUYA_SPATIAL_ACCOUNT}' --dart-define=TUYA_SPATIAL_PASSWORD='${TUYA_SPATIAL_PASSWORD}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
+
+apk_contains_alarm_sound() {
+  local apk_entry
+
+  while IFS= read -r apk_entry; do
+    if unzip -p "${APK_SOURCE}" "${apk_entry}" | cmp -s - "${ALARM_SOUND_SOURCE}"; then
+      return 0
+    fi
+  done < <(unzip -Z1 "${APK_SOURCE}" | grep -E '\.ogg$' || true)
+
+  return 1
+}
+
+if ! apk_contains_alarm_sound; then
+  echo "La APK no contiene el audio OGG de power_alarm; se cancela la publicación." >&2
+  exit 1
+fi
 
 cp "${APK_SOURCE}" "${APK_TARGET}"
 cp "${APK_SOURCE}" "${MOBILE_APK_TARGET}"

@@ -14,7 +14,7 @@ class MobileEventList extends StatelessWidget {
     if (events.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(32),
-        child: Text('No hay eventos con esos filtros.'),
+        child: Text('No hay eventos registrados para este dispositivo.'),
       );
     }
     return ListView.separated(

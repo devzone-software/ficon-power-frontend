@@ -8,6 +8,7 @@ class DashboardStatistics {
     required this.totalDowntimeSeconds,
     required this.averageIncidentSeconds,
     required this.dailyIncidents,
+    required this.currentMonthDailyIncidents,
     required this.weeklyIncidents,
     required this.monthlyIncidents,
     required this.weekdayIncidents,
@@ -19,6 +20,7 @@ class DashboardStatistics {
   final int totalDowntimeSeconds;
   final int averageIncidentSeconds;
   final List<FrequencyPoint> dailyIncidents;
+  final List<FrequencyPoint> currentMonthDailyIncidents;
   final List<FrequencyPoint> weeklyIncidents;
   final List<FrequencyPoint> monthlyIncidents;
   final List<FrequencyPoint> weekdayIncidents;
@@ -30,6 +32,9 @@ class DashboardStatistics {
     final total = weeklyIncidents.fold<int>(0, (sum, item) => sum + item.count);
     return '${(total / weeklyIncidents.length).toStringAsFixed(1)}/sem';
   }
+
+  int get currentWeekPowerOutages =>
+      weeklyIncidents.isEmpty ? 0 : weeklyIncidents.last.count;
 
   factory DashboardStatistics.from(
     MonitoringOverview data, {
@@ -58,6 +63,7 @@ class DashboardStatistics {
       ),
       averageIncidentSeconds: averageDuration,
       dailyIncidents: frequency.daily(),
+      currentMonthDailyIncidents: frequency.currentMonthDaily(),
       weeklyIncidents: frequency.weekly(),
       monthlyIncidents: frequency.monthly(),
       weekdayIncidents: frequency.byWeekday(),
@@ -112,6 +118,26 @@ class _FrequencyCalculator {
           label: '${_twoDigits(entry.key.day)}/${_twoDigits(entry.key.month)}',
           count: entry.value,
         ),
+      ),
+    );
+  }
+
+  List<FrequencyPoint> currentMonthDaily() {
+    final firstDay = DateTime(referenceTime.year, referenceTime.month);
+    final daysInMonth = DateTime(
+      referenceTime.year,
+      referenceTime.month + 1,
+      0,
+    ).day;
+    final counts = <DateTime, int>{
+      for (var day = 1; day <= daysInMonth; day++)
+        DateTime(firstDay.year, firstDay.month, day): 0,
+    };
+    _countByDate(counts, (date) => _dateOnly(date));
+    return List.unmodifiable(
+      counts.entries.map(
+        (entry) =>
+            FrequencyPoint(label: '${entry.key.day}', count: entry.value),
       ),
     );
   }

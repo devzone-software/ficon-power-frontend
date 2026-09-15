@@ -1,17 +1,25 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../config/auth_session.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
 import '../../domain/device.dart';
+import '../../domain/device_detail.dart';
 import '../../domain/event.dart';
 import '../../domain/incident.dart';
 import '../../domain/mobile_notification.dart';
 import '../../domain/notification_template.dart';
+import '../../domain/operations_calendar.dart';
+import '../../domain/paged_result.dart';
+import '../../domain/realtime_change.dart';
 import '../../domain/site.dart';
+import '../../domain/whatsapp_recipient.dart';
 import '../../ports/output/device_repository.dart';
 import '../../ports/output/monitoring_query_repository.dart';
 import '../../ports/output/notification_template_repository.dart';
+import '../../ports/output/operations_calendar_repository.dart';
 import '../../ports/output/site_repository.dart';
 import 'ficon_api_client.dart';
 
@@ -33,6 +41,28 @@ class LoginResult {
   final AuthUser user;
 }
 
+class MobilePushTestResult {
+  const MobilePushTestResult({
+    required this.configured,
+    required this.tokenRegistered,
+    required this.accepted,
+    required this.message,
+  });
+
+  final bool configured;
+  final bool tokenRegistered;
+  final bool accepted;
+  final String message;
+
+  factory MobilePushTestResult.fromJson(Map<String, dynamic> json) =>
+      MobilePushTestResult(
+        configured: json['configured'] as bool? ?? false,
+        tokenRegistered: json['tokenRegistered'] as bool? ?? false,
+        accepted: json['accepted'] as bool? ?? false,
+        message: json['message'] as String? ?? 'Respuesta FCM no disponible.',
+      );
+}
+
 /// Adaptador HTTP: implementa los puertos de salida
 /// [MonitoringQueryRepository], [NotificationTemplateRepository],
 /// [DeviceRepository] y [SiteRepository] contra la API REST del backend.
@@ -40,6 +70,7 @@ class FiconMonitoringRepository
     implements
         MonitoringQueryRepository,
         NotificationTemplateRepository,
+        OperationsCalendarRepository,
         DeviceRepository,
         SiteRepository {
   FiconMonitoringRepository({
@@ -54,6 +85,7 @@ class FiconMonitoringRepository
 
   final FiconApiClient _api;
   final AuthSession? session;
+  String? _registeredMobilePushToken;
 
   Future<LoginResult> login({
     required String username,
@@ -82,9 +114,13 @@ class FiconMonitoringRepository
       await _api.postJson('/api/auth/logout', {
         if (session?.refreshToken != null)
           'refreshToken': session!.refreshToken,
+        if (_registeredMobilePushToken != null)
+          'deviceToken': _registeredMobilePushToken,
       });
     } catch (_) {
       // El cierre local de sesión no debe bloquearse por red.
+    } finally {
+      _registeredMobilePushToken = null;
     }
   }
 
@@ -100,10 +136,20 @@ class FiconMonitoringRepository
       if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
       if (appVersion != null && appVersion.isNotEmpty) 'appVersion': appVersion,
     });
+    _registeredMobilePushToken = token;
   }
 
   Future<void> revokeMobilePushToken(String token) async {
+    if (_registeredMobilePushToken != token) return;
     await _api.deleteJson('/api/mobile/device-tokens', {'token': token});
+    _registeredMobilePushToken = null;
+  }
+
+  Future<MobilePushTestResult> sendMobilePushTest(String token) async {
+    final data = await _api.postJson('/api/mobile/device-tokens/test', {
+      'token': token,
+    });
+    return MobilePushTestResult.fromJson(data);
   }
 
   Future<List<MobileNotification>> fetchMobileNotifications({
@@ -124,6 +170,16 @@ class FiconMonitoringRepository
 
   Future<void> markAllMobileNotificationsRead() async {
     await _api.patchJson('/api/mobile/notifications/read-all');
+  }
+
+  Stream<RealtimeChange> openRealtimeChanges() async* {
+    await for (final event in _api.getEventStream('/api/realtime/stream')) {
+      if (event.event == 'ready' || event.data.trim().isEmpty) continue;
+      final decoded = jsonDecode(event.data);
+      if (decoded is Map<String, dynamic>) {
+        yield RealtimeChange.fromJson(decoded);
+      }
+    }
   }
 
   Future<List<ManagedUser>> fetchUsers() async {
@@ -181,6 +237,111 @@ class FiconMonitoringRepository
     await _api.postJson('/api/admin/sessions/$id/revoke', const {});
   }
 
+  Future<List<WhatsAppRecipient>> fetchWhatsAppRecipients() async {
+    final data = await _api.getList('/api/whatsapp-recipients');
+    return data.map(WhatsAppRecipient.fromJson).toList();
+  }
+
+  Future<WhatsAppRecipient> saveWhatsAppRecipient({
+    String? id,
+    required String label,
+    required String phone,
+    String? siteId,
+    required bool notifyOutage,
+    required bool notifyRestored,
+    required bool active,
+  }) async {
+    final payload = {
+      'label': label.trim(),
+      'phone': phone.trim(),
+      'siteId': siteId,
+      'notifyOutage': notifyOutage,
+      'notifyRestored': notifyRestored,
+      'active': active,
+    };
+    final data = id == null
+        ? await _api.postJson('/api/whatsapp-recipients', payload)
+        : await _api.putJson('/api/whatsapp-recipients/$id', payload);
+    return WhatsAppRecipient.fromJson(data);
+  }
+
+  Future<void> deleteWhatsAppRecipient(String id) =>
+      _api.deleteJson('/api/whatsapp-recipients/$id', const {});
+
+  Future<WhatsAppTestResult> testWhatsAppRecipient(String id) async {
+    final data = await _api.postJson(
+      '/api/whatsapp-recipients/$id/test',
+      const {},
+    );
+    return WhatsAppTestResult.fromJson(data);
+  }
+
+  @override
+  Future<List<OperationsCalendarEntry>> fetchCalendarEntries({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final data = await _api.getList(
+      _pathWithQuery('/api/calendar', {
+        'from': _dateQueryValue(from),
+        'to': _dateQueryValue(to),
+      }),
+    );
+    return data.map(OperationsCalendarEntry.fromJson).toList();
+  }
+
+  @override
+  Future<List<TuyaPlan>> fetchTuyaPlans() async {
+    final data = await _api.getList('/api/calendar/tuya-plans');
+    return data.map(TuyaPlan.fromJson).toList();
+  }
+
+  @override
+  Future<TuyaPlan> saveTuyaPlan({
+    int? id,
+    required String projectName,
+    required String planName,
+    DateTime? lastRenewedOn,
+    required DateTime nextRenewalOn,
+    required int renewalIntervalMonths,
+    required int reminderDays,
+    String? notes,
+    required bool active,
+  }) async {
+    final payload = {
+      'projectName': projectName.trim(),
+      'planName': planName.trim(),
+      if (lastRenewedOn != null)
+        'lastRenewedOn': _dateQueryValue(lastRenewedOn),
+      'nextRenewalOn': _dateQueryValue(nextRenewalOn),
+      'renewalIntervalMonths': renewalIntervalMonths,
+      'reminderDays': reminderDays,
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      'active': active,
+    };
+    final data = id == null
+        ? await _api.postJson('/api/calendar/tuya-plans', payload)
+        : await _api.putJson('/api/calendar/tuya-plans/$id', payload);
+    return TuyaPlan.fromJson(data);
+  }
+
+  @override
+  Future<TuyaPlan> renewTuyaPlan(
+    int id, {
+    DateTime? renewedOn,
+    String? notes,
+  }) async {
+    final data = await _api.postJson('/api/calendar/tuya-plans/$id/renew', {
+      if (renewedOn != null) 'renewedOn': _dateQueryValue(renewedOn),
+      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+    });
+    return TuyaPlan.fromJson(data);
+  }
+
+  @override
+  Future<void> deleteTuyaPlan(int id) =>
+      _api.deleteJson('/api/calendar/tuya-plans/$id', const {});
+
   Future<List<BlockedLoginUser>> fetchBlockedUsers({int limit = 100}) async {
     final data = await _api.getList('/api/admin/blocked-users?limit=$limit');
     return data.map(BlockedLoginUser.fromJson).toList();
@@ -209,15 +370,78 @@ class FiconMonitoringRepository
   }
 
   @override
+  Future<DeviceDetail> fetchDeviceDetail(String deviceId) async {
+    final data = await _api.getJson('/api/devices/$deviceId/detail');
+    return DeviceDetail.fromJson(data);
+  }
+
+  @override
   Future<List<Incident>> fetchIncidents({int limit = 100}) async {
     final data = await _api.getList('/api/incidents?limit=$limit');
     return data.map(Incident.fromJson).toList();
   }
 
   @override
+  Future<PagedResult<Incident>> fetchIncidentsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String status = '',
+    String deviceName = '',
+    String siteName = '',
+    String incidentId = '',
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final data = await _api.getJson(
+      _pathWithQuery('/api/incidents', {
+        'page': '$page',
+        'size': '$size',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (status.trim().isNotEmpty) 'status': status.trim(),
+        if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
+        if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (incidentId.trim().isNotEmpty) 'incidentId': incidentId.trim(),
+        if (startDate != null) 'startDate': _dateQueryValue(startDate),
+        if (endDate != null) 'endDate': _dateQueryValue(endDate),
+      }),
+    );
+    return PagedResult.fromJson(data, Incident.fromJson);
+  }
+
+  @override
+  Future<void> acknowledgeIncident(String id) async {
+    await _api.patchJson('/api/incidents/$id/acknowledge');
+  }
+
+  @override
   Future<List<Event>> fetchEvents({int limit = 100}) async {
     final data = await _api.getList('/api/events?limit=$limit');
     return data.map(Event.fromJson).toList();
+  }
+
+  @override
+  Future<PagedResult<Event>> fetchEventsPage({
+    int page = 0,
+    int size = 10,
+    String search = '',
+    String eventType = '',
+    String deviceName = '',
+    String siteName = '',
+    DateTime? occurredDate,
+  }) async {
+    final data = await _api.getJson(
+      _pathWithQuery('/api/events', {
+        'page': '$page',
+        'size': '$size',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (eventType.trim().isNotEmpty) 'eventType': eventType.trim(),
+        if (deviceName.trim().isNotEmpty) 'deviceName': deviceName.trim(),
+        if (siteName.trim().isNotEmpty) 'siteName': siteName.trim(),
+        if (occurredDate != null) 'occurredDate': _dateQueryValue(occurredDate),
+      }),
+    );
+    return PagedResult.fromJson(data, Event.fromJson);
   }
 
   @override
@@ -251,6 +475,16 @@ class FiconMonitoringRepository
       if (province != null && province.isNotEmpty) 'province': province,
     });
     return Site.fromJson(data);
+  }
+
+  String _pathWithQuery(String path, Map<String, String> query) {
+    return Uri(path: path, queryParameters: query).toString();
+  }
+
+  String _dateQueryValue(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '${value.year}-$month-$day';
   }
 
   void dispose() => _api.dispose();

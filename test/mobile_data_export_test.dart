@@ -35,6 +35,29 @@ void main() {
     expect(bytes.take(2), [0x50, 0x4b]);
   });
 
+  test('expone distrito sin duplicar la sede en dispositivos', () {
+    final deviceTable = MobileDataExportTables.devices(const [
+      Device(
+        id: 'device-2',
+        name: 'Medidor Puno',
+        siteId: 'site-1',
+        siteName: 'Timax - Puno',
+        district: 'Puno',
+        active: true,
+        status: 'online',
+        eventCount: 0,
+        incidentCount: 0,
+        totalDowntimeSeconds: 0,
+      ),
+    ]);
+
+    expect(deviceTable.headers, contains('Distrito'));
+    expect(deviceTable.headers, isNot(contains('Sede')));
+    expect(deviceTable.headers, isNot(contains('ID sede')));
+    expect(deviceTable.rows.single, contains('Puno'));
+    expect(deviceTable.rows.single, isNot(contains('Timax - Puno')));
+  });
+
   test('solo expone los formatos CSV y XLSX', () {
     expect(MobileExportFormat.values, [
       MobileExportFormat.csv,
