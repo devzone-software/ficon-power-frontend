@@ -79,10 +79,11 @@ void main() {
     expect(find.text('Agregar un medidor'), findsOneWidget);
     expect(find.textContaining('Tuya Spatial'), findsWidgets);
     await tester.scrollUntilVisible(
-      find.text('7. Mantener el equipo energizado'),
-      280,
+      find.text('8. Esperar el emparejamiento'),
+      800,
+      scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('7. Mantener el equipo energizado'), findsOneWidget);
+    expect(find.text('8. Esperar el emparejamiento'), findsOneWidget);
   });
 
   testWidgets('la ficha administrativa conserva campos y acción', (

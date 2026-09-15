@@ -27,6 +27,9 @@ FIREBASE_API_KEY="${FIREBASE_API_KEY:-}"
 FIREBASE_APP_ID="${FIREBASE_APP_ID:-}"
 FIREBASE_MESSAGING_SENDER_ID="${FIREBASE_MESSAGING_SENDER_ID:-}"
 FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-}"
+TUYA_SPATIAL_PROJECT_QR_DATA="${TUYA_SPATIAL_PROJECT_QR_DATA:-}"
+TUYA_SPATIAL_ACCOUNT="${TUYA_SPATIAL_ACCOUNT:-}"
+TUYA_SPATIAL_PASSWORD="${TUYA_SPATIAL_PASSWORD:-}"
 
 case "${ANDROID_APK_VARIANT}" in
   arm64)
@@ -54,6 +57,9 @@ FIREBASE_API_KEY="$(printf '%s' "${FIREBASE_API_KEY}" | tr -d '\r')"
 FIREBASE_APP_ID="$(printf '%s' "${FIREBASE_APP_ID}" | tr -d '\r')"
 FIREBASE_MESSAGING_SENDER_ID="$(printf '%s' "${FIREBASE_MESSAGING_SENDER_ID}" | tr -d '\r')"
 FIREBASE_PROJECT_ID="$(printf '%s' "${FIREBASE_PROJECT_ID}" | tr -d '\r')"
+TUYA_SPATIAL_PROJECT_QR_DATA="$(printf '%s' "${TUYA_SPATIAL_PROJECT_QR_DATA}" | tr -d '\r')"
+TUYA_SPATIAL_ACCOUNT="$(printf '%s' "${TUYA_SPATIAL_ACCOUNT}" | tr -d '\r')"
+TUYA_SPATIAL_PASSWORD="$(printf '%s' "${TUYA_SPATIAL_PASSWORD}" | tr -d '\r')"
 
 if [[ ! -f "${KEY_PROPERTIES}" ]]; then
   echo "No existe android/key.properties para firmar actualizaciones."
@@ -108,7 +114,7 @@ docker run --rm \
   -e FICON_ANDROID_ABI_FILTER="${ANDROID_ABI_FILTER}" \
   -w /app \
   "${FLUTTER_DOCKER_IMAGE}" \
-  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release ${FLUTTER_PLATFORM_ARGS} --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' --dart-define=FIREBASE_API_KEY='${FIREBASE_API_KEY}' --dart-define=FIREBASE_APP_ID='${FIREBASE_APP_ID}' --dart-define=FIREBASE_MESSAGING_SENDER_ID='${FIREBASE_MESSAGING_SENDER_ID}' --dart-define=FIREBASE_PROJECT_ID='${FIREBASE_PROJECT_ID}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
+  bash -lc "mkdir -p /tmp/flutter-home; git config --global --add safe.directory /sdks/flutter; status=0; flutter pub get && flutter build apk -t lib/main_mobile.dart --release ${FLUTTER_PLATFORM_ARGS} --dart-define=API_BASE_URL='${API_BASE_URL}' --dart-define=APP_VERSION_NAME='${APP_VERSION_NAME}' --dart-define=APP_VERSION_CODE='${APP_VERSION_CODE}' --dart-define=MOBILE_UPDATE_MANIFEST_URL='${MOBILE_UPDATE_MANIFEST_URL}' --dart-define=FIREBASE_API_KEY='${FIREBASE_API_KEY}' --dart-define=FIREBASE_APP_ID='${FIREBASE_APP_ID}' --dart-define=FIREBASE_MESSAGING_SENDER_ID='${FIREBASE_MESSAGING_SENDER_ID}' --dart-define=FIREBASE_PROJECT_ID='${FIREBASE_PROJECT_ID}' --dart-define=TUYA_SPATIAL_PROJECT_QR_DATA='${TUYA_SPATIAL_PROJECT_QR_DATA}' --dart-define=TUYA_SPATIAL_ACCOUNT='${TUYA_SPATIAL_ACCOUNT}' --dart-define=TUYA_SPATIAL_PASSWORD='${TUYA_SPATIAL_PASSWORD}' || status=\$?; chown -R ${LOCAL_UID}:${LOCAL_GID} /app/.mobile-build-cache /app/.dart_tool /app/build /app/dist 2>/dev/null || true; exit \$status"
 
 apk_contains_alarm_sound() {
   local apk_entry
