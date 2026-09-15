@@ -4,6 +4,9 @@ class ManagedUser {
     required this.username,
     required this.role,
     required this.displayName,
+    this.email,
+    this.whatsappPhone,
+    this.whatsappEnabled = false,
     required this.active,
   });
 
@@ -11,7 +14,12 @@ class ManagedUser {
   final String username;
   final String role;
   final String displayName;
+  final String? email;
+  final String? whatsappPhone;
+  final bool whatsappEnabled;
   final bool active;
+
+  bool get hasWhatsapp => whatsappPhone?.isNotEmpty == true;
 
   factory ManagedUser.fromJson(Map<String, dynamic> json) {
     return ManagedUser(
@@ -19,9 +27,43 @@ class ManagedUser {
       username: json['username'] as String? ?? '',
       role: json['role'] as String? ?? 'USER',
       displayName: json['displayName'] as String? ?? '',
+      email: json['email'] as String?,
+      whatsappPhone: json['whatsappPhone'] as String?,
+      whatsappEnabled: json['whatsappEnabled'] as bool? ?? false,
       active: json['active'] as bool? ?? false,
     );
   }
+}
+
+class UserWhatsAppDelivery {
+  const UserWhatsAppDelivery({
+    required this.id,
+    required this.eventType,
+    required this.templateName,
+    required this.status,
+    required this.errorMessage,
+    required this.sentAt,
+    required this.createdAt,
+  });
+
+  final int id;
+  final String? eventType;
+  final String? templateName;
+  final String status;
+  final String? errorMessage;
+  final DateTime? sentAt;
+  final DateTime? createdAt;
+
+  factory UserWhatsAppDelivery.fromJson(Map<String, dynamic> json) =>
+      UserWhatsAppDelivery(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        eventType: json['eventType'] as String?,
+        templateName: json['templateName'] as String?,
+        status: json['status'] as String? ?? 'FAILED',
+        errorMessage: json['errorMessage'] as String?,
+        sentAt: DateTime.tryParse(json['sentAt'] as String? ?? ''),
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+      );
 }
 
 class AuditLogEntry {
@@ -118,7 +160,8 @@ class AdminSession {
   final DateTime? expiresAt;
   final DateTime? revokedAt;
 
-  bool get active => revokedAt == null && (expiresAt?.isAfter(DateTime.now()) ?? false);
+  bool get active =>
+      revokedAt == null && (expiresAt?.isAfter(DateTime.now()) ?? false);
 
   factory AdminSession.fromJson(Map<String, dynamic> json) {
     return AdminSession(

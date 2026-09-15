@@ -21,6 +21,7 @@ class AdminTabs extends StatelessWidget {
     required this.filters,
     required this.onCreateUser,
     required this.onEditUser,
+    required this.onOpenUser,
     required this.onUnblockUser,
     required this.onRevokeSession,
     required this.onRefresh,
@@ -32,6 +33,7 @@ class AdminTabs extends StatelessWidget {
   final AdminTableFilters filters;
   final VoidCallback onCreateUser;
   final ValueChanged<ManagedUser> onEditUser;
+  final ValueChanged<ManagedUser> onOpenUser;
   final ValueChanged<BlockedLoginUser> onUnblockUser;
   final ValueChanged<AdminSession> onRevokeSession;
   final Future<void> Function() onRefresh;
@@ -48,28 +50,30 @@ class AdminTabs extends StatelessWidget {
     );
     final tabs = <Tab>[
       const Tab(text: 'Usuarios'),
-      const Tab(text: 'Bloqueados'),
+      if (!compact) const Tab(text: 'Bloqueados'),
       if (!compact) const Tab(text: 'Audit logs'),
       if (!compact) const Tab(text: 'Logins'),
       if (!compact) const Tab(text: 'Sesiones'),
-      const Tab(text: 'WhatsApp'),
+      if (!compact) const Tab(text: 'WhatsApp'),
     ];
     final views = <Widget>[
       UsersTab(
         users: data.users.where(filters.matchesUser).toList(),
         onCreate: onCreateUser,
         onEdit: onEditUser,
+        onOpen: onOpenUser,
         onRefresh: onRefresh,
         filters: definitions.users,
       ),
-      BlockedUsersTab(
-        blockedUsers: filters.sortBlockedUsers(
-          data.blockedUsers.where(filters.matchesBlockedUser),
+      if (!compact)
+        BlockedUsersTab(
+          blockedUsers: filters.sortBlockedUsers(
+            data.blockedUsers.where(filters.matchesBlockedUser),
+          ),
+          onUnblock: onUnblockUser,
+          onRefresh: onRefresh,
+          filters: definitions.blockedUsers,
         ),
-        onUnblock: onUnblockUser,
-        onRefresh: onRefresh,
-        filters: definitions.blockedUsers,
-      ),
       if (!compact)
         AuditTab(
           logs: data.auditLogs.where(filters.matchesAuditLog).toList(),
@@ -91,10 +95,11 @@ class AdminTabs extends StatelessWidget {
           onRevoke: onRevokeSession,
           filters: definitions.sessions,
         ),
-      WhatsAppRecipientsTab(
-        repository: repository,
-        realtimeChanges: realtimeChanges,
-      ),
+      if (!compact)
+        WhatsAppRecipientsTab(
+          repository: repository,
+          realtimeChanges: realtimeChanges,
+        ),
     ];
     return DefaultTabController(
       length: tabs.length,

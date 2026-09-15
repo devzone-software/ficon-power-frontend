@@ -192,12 +192,18 @@ class FiconMonitoringRepository
     required String password,
     required String role,
     required String displayName,
+    String? email,
+    String? whatsappPhone,
+    bool whatsappEnabled = false,
   }) async {
     final data = await _api.postJson('/api/users', {
       'username': username,
       'password': password,
       'role': role,
       'displayName': displayName,
+      'email': email,
+      'whatsappPhone': whatsappPhone,
+      'whatsappEnabled': whatsappEnabled,
     });
     return ManagedUser.fromJson(data);
   }
@@ -206,16 +212,37 @@ class FiconMonitoringRepository
     String id, {
     required String role,
     required String displayName,
+    String? email,
+    String? whatsappPhone,
+    bool whatsappEnabled = false,
     required bool active,
     String? password,
   }) async {
     final data = await _api.putJson('/api/users/$id', {
       'role': role,
       'displayName': displayName,
+      'email': email,
+      'whatsappPhone': whatsappPhone,
+      'whatsappEnabled': whatsappEnabled,
       'active': active,
       if (password != null && password.isNotEmpty) 'password': password,
     });
     return ManagedUser.fromJson(data);
+  }
+
+  Future<List<UserWhatsAppDelivery>> fetchUserWhatsAppDeliveries(
+    String userId,
+  ) async {
+    final data = await _api.getList('/api/users/$userId/whatsapp-deliveries');
+    return data.map(UserWhatsAppDelivery.fromJson).toList();
+  }
+
+  Future<WhatsAppTestResult> testUserWhatsApp(String userId) async {
+    final data = await _api.postJson(
+      '/api/users/$userId/whatsapp-test',
+      const {},
+    );
+    return WhatsAppTestResult.fromJson(data);
   }
 
   Future<List<AuditLogEntry>> fetchAuditLogs({int limit = 100}) async {

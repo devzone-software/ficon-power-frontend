@@ -25,6 +25,8 @@ Incluido:
 - Navegación inferior adaptativa y panel lateral de cuenta.
 - Historial de incidentes y eventos integrado en cada dispositivo.
 - Consola administrativa condicionada por rol.
+- Administración compacta de usuarios con correo y WhatsApp opcionales, ficha
+  detallada, activación e historial de envíos.
 - Exportación de dispositivos, incidentes y eventos en CSV/XLSX.
 
 No incluido todavía:

@@ -7,14 +7,17 @@ import '../../application/admin_activity_controller.dart';
 import '../../application/user_error_message.dart';
 import '../../domain/admin_models.dart';
 import '../../domain/auth_user.dart';
+import '../../domain/peru_phone_number.dart';
 import '../../domain/realtime_change.dart';
 import '../admin/admin_table_filters.dart';
 import '../admin/admin_tabs.dart';
 import '../admin/whatsapp_recipients_tab.dart';
+import '../theme/ficon_theme.dart';
 import '../widgets/admin_scaffold.dart';
 import '../widgets/common.dart';
 
 part '../admin/admin_user_dialog.dart';
+part '../admin/admin_user_detail_dialog.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({
@@ -53,6 +56,8 @@ class _AdminPageState extends State<AdminPage> {
             'audit_log',
             'login_attempt',
             'auth_session',
+            'whatsapp_recipient',
+            'notification_delivery',
           }.contains(change.entityType),
         )
         .listen(_scheduleRealtimeRefresh);
@@ -93,16 +98,13 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<AdminActivityData> _load() async {
     if (_compact) {
-      final results = await Future.wait([
-        widget.repository.fetchUsers(),
-        widget.repository.fetchBlockedUsers(),
-      ]);
+      final users = await widget.repository.fetchUsers();
       return AdminActivityData(
-        users: results[0] as List<ManagedUser>,
+        users: users,
         auditLogs: const [],
         loginAttempts: const [],
         sessions: const [],
-        blockedUsers: results[1] as List<BlockedLoginUser>,
+        blockedUsers: const [],
       );
     }
     final results = await Future.wait([
@@ -119,6 +121,23 @@ class _AdminPageState extends State<AdminPage> {
       sessions: results[3] as List<AdminSession>,
       blockedUsers: results[4] as List<BlockedLoginUser>,
     );
+  }
+
+  Future<void> _openUserDetail(ManagedUser user) async {
+    final action = await showDialog<String>(
+      context: context,
+      builder: (_) =>
+          _UserDetailDialog(repository: widget.repository, user: user),
+    );
+    if (!mounted) return;
+    await _activityController.refresh();
+    if (action == 'edit' && mounted) {
+      final current = _activityController.data!.users.firstWhere(
+        (candidate) => candidate.id == user.id,
+        orElse: () => user,
+      );
+      await _openUserDialog(current);
+    }
   }
 
   Future<void> _openUserDialog([ManagedUser? user]) async {
@@ -261,6 +280,7 @@ class _AdminPageState extends State<AdminPage> {
       filters: _filters,
       onCreateUser: _openUserDialog,
       onEditUser: _openUserDialog,
+      onOpenUser: _openUserDetail,
       onUnblockUser: _unblockUser,
       onRevokeSession: _revokeSession,
       onRefresh: _activityController.refresh,
