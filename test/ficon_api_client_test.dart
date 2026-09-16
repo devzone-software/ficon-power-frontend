@@ -223,6 +223,14 @@ void main() {
                 'expiresAt': '2026-08-25T12:00:00Z',
                 'refreshToken': 'rotated-refresh-token',
                 'refreshExpiresAt': '2026-11-23T12:00:00Z',
+                'user': {
+                  'id': 'user-1',
+                  'username': 'admin',
+                  'role': 'ADMIN',
+                  'displayName': 'Admin actualizado',
+                  'email': 'admin@ficon.test',
+                  'whatsappPhone': '+51987654321',
+                },
               }),
               200,
             );
@@ -248,6 +256,9 @@ void main() {
       expect(deviceRequests, 2);
       expect(session.token, 'renewed-access-token');
       expect(session.refreshToken, 'rotated-refresh-token');
+      expect(session.user?.displayName, 'Admin actualizado');
+      expect(session.user?.email, 'admin@ficon.test');
+      expect(session.user?.whatsappPhone, '+51987654321');
     },
   );
 

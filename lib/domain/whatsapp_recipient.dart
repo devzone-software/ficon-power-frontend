@@ -1,6 +1,7 @@
 class WhatsAppRecipient {
   const WhatsAppRecipient({
     required this.id,
+    required this.userId,
     required this.label,
     required this.phone,
     required this.siteId,
@@ -14,6 +15,7 @@ class WhatsAppRecipient {
   });
 
   final String id;
+  final String? userId;
   final String label;
   final String phone;
   final String? siteId;
@@ -26,10 +28,12 @@ class WhatsAppRecipient {
   final DateTime? lastTestAt;
 
   bool get global => siteId == null;
+  bool get linkedToUser => userId?.isNotEmpty == true;
 
   factory WhatsAppRecipient.fromJson(Map<String, dynamic> json) =>
       WhatsAppRecipient(
         id: json['id'] as String? ?? '',
+        userId: json['userId'] as String?,
         label: json['label'] as String? ?? '',
         phone: json['phone'] as String? ?? '',
         siteId: json['siteId'] as String?,

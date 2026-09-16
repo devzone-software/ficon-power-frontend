@@ -97,7 +97,9 @@ class DashboardBody extends StatelessWidget {
   }
 }
 
-class _MobileDashboard extends StatelessWidget {
+enum _DashboardChartPeriod { weekly, monthly }
+
+class _MobileDashboard extends StatefulWidget {
   const _MobileDashboard({
     required this.stats,
     required this.plans,
@@ -111,8 +113,15 @@ class _MobileDashboard extends StatelessWidget {
   final int onlineDevices;
 
   @override
+  State<_MobileDashboard> createState() => _MobileDashboardState();
+}
+
+class _MobileDashboardState extends State<_MobileDashboard> {
+  _DashboardChartPeriod _period = _DashboardChartPeriod.monthly;
+
+  @override
   Widget build(BuildContext context) {
-    final activePlans = plans.where((plan) => plan.active).toList()
+    final activePlans = widget.plans.where((plan) => plan.active).toList()
       ..sort(
         (first, second) => first.nextRenewalOn.compareTo(second.nextRenewalOn),
       );
@@ -131,7 +140,7 @@ class _MobileDashboard extends StatelessWidget {
               Expanded(
                 child: _MobileMetricCard(
                   title: 'Apagados registrados',
-                  value: '${stats.totalPowerOutages}',
+                  value: '${widget.stats.totalPowerOutages}',
                   icon: Icons.power_off_outlined,
                   color: FiconColors.logoBlue,
                 ),
@@ -140,7 +149,7 @@ class _MobileDashboard extends StatelessWidget {
               Expanded(
                 child: _MobileMetricCard(
                   title: 'Esta semana',
-                  value: '${stats.currentWeekPowerOutages}',
+                  value: '${widget.stats.currentWeekPowerOutages}',
                   icon: Icons.date_range_outlined,
                   color: FiconColors.cyanSoft,
                 ),
@@ -149,12 +158,43 @@ class _MobileDashboard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _MobileFleetSummary(total: totalDevices, online: onlineDevices),
+        _MobileFleetSummary(
+          total: widget.totalDevices,
+          online: widget.onlineDevices,
+        ),
         const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: SegmentedButton<_DashboardChartPeriod>(
+            segments: const [
+              ButtonSegment(
+                value: _DashboardChartPeriod.weekly,
+                icon: Icon(Icons.calendar_view_week_outlined),
+                label: Text('Semana'),
+              ),
+              ButtonSegment(
+                value: _DashboardChartPeriod.monthly,
+                icon: Icon(Icons.calendar_month_outlined),
+                label: Text('Mes'),
+              ),
+            ],
+            selected: {_period},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) =>
+                setState(() => _period = selection.first),
+          ),
+        ),
+        const SizedBox(height: 8),
         FrequencyDotChart(
-          title: 'Cortes del mes',
-          subtitle: 'Número de cortes por cada día del mes actual',
-          points: stats.currentMonthDailyIncidents,
+          title: _period == _DashboardChartPeriod.monthly
+              ? 'Cortes del mes'
+              : 'Cortes de la semana',
+          subtitle: _period == _DashboardChartPeriod.monthly
+              ? 'Número de cortes por cada día del mes actual'
+              : 'Número de cortes de lunes a domingo',
+          points: _period == _DashboardChartPeriod.monthly
+              ? widget.stats.currentMonthDailyIncidents
+              : widget.stats.currentWeekDailyIncidents,
         ),
       ],
     );

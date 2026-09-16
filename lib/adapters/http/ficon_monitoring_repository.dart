@@ -241,6 +241,7 @@ class FiconMonitoringRepository
     final data = await _api.postJson(
       '/api/users/$userId/whatsapp-test',
       const {},
+      timeout: const Duration(seconds: 45),
     );
     return WhatsAppTestResult.fromJson(data);
   }
@@ -299,6 +300,7 @@ class FiconMonitoringRepository
     final data = await _api.postJson(
       '/api/whatsapp-recipients/$id/test',
       const {},
+      timeout: const Duration(seconds: 45),
     );
     return WhatsAppTestResult.fromJson(data);
   }

@@ -531,7 +531,11 @@ class _DeviceHistory extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (selection == _DeviceHistoryView.incidents)
-              MobileIncidentList(incidents: detail.recentIncidents)
+              MobileIncidentList(
+                incidents: detail.recentIncidents,
+                emptyMessage:
+                    'Este dispositivo todavía no tiene incidentes registrados.',
+              )
             else
               MobileEventList(events: detail.recentEvents),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/auth_user.dart';
+import '../../domain/peru_phone_number.dart';
 import '../../domain/realtime_change.dart';
 import '../../application/ficon_repository_scope.dart';
 import '../mobile/shell/mobile_navigation_shell.dart';
@@ -145,7 +146,22 @@ class _UserMenu extends StatelessWidget {
       itemBuilder: (context) => [
         PopupMenuItem(
           enabled: false,
-          child: Text('${user.displayName} · ${user.role}'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user.displayName,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(_contact(user.email, 'Correo no registrado')),
+              Text(
+                user.whatsappPhone?.trim().isNotEmpty == true
+                    ? formatPeruMobilePhone(user.whatsappPhone!)
+                    : 'WhatsApp no registrado',
+              ),
+            ],
+          ),
         ),
         const PopupMenuDivider(),
         const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
@@ -162,6 +178,11 @@ class _UserMenu extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _contact(String? value, String fallback) {
+    final normalized = value?.trim();
+    return normalized?.isNotEmpty == true ? normalized! : fallback;
   }
 }
 

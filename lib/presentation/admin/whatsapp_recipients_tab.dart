@@ -166,8 +166,9 @@ class _WhatsAppRecipientsTabState extends State<WhatsAppRecipientsTab> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Los destinatarios globales reciben alertas de todas las sedes. '
-                'Las credenciales y el número emisor permanecen en el servidor.',
+                'Aquí se muestran los destinatarios generales y los números '
+                'asignados a usuarios. Los vinculados a una cuenta se editan '
+                'desde la pestaña Usuarios.',
               ),
               const SizedBox(height: 16),
               if (recipients.isEmpty)
@@ -186,7 +187,7 @@ class _WhatsAppRecipientsTabState extends State<WhatsAppRecipientsTab> {
                     title: Text(recipient.label),
                     subtitle: Text(
                       '${formatPeruMobilePhone(recipient.phone)} · '
-                      '${recipient.siteName ?? 'Todas las sedes'}\n'
+                      '${recipient.linkedToUser ? 'Cuenta de usuario' : recipient.siteName ?? 'Todas las sedes'}\n'
                       '${recipient.notifyOutage ? 'Cortes' : ''}'
                       '${recipient.notifyOutage && recipient.notifyRestored ? ' y ' : ''}'
                       '${recipient.notifyRestored ? 'Reconexiones' : ''}'
@@ -203,12 +204,16 @@ class _WhatsAppRecipientsTabState extends State<WhatsAppRecipientsTab> {
                         ),
                         IconButton(
                           tooltip: 'Editar',
-                          onPressed: () => _edit(sites, recipient),
+                          onPressed: recipient.linkedToUser
+                              ? null
+                              : () => _edit(sites, recipient),
                           icon: const Icon(Icons.edit_outlined),
                         ),
                         IconButton(
                           tooltip: 'Eliminar',
-                          onPressed: () => _delete(recipient),
+                          onPressed: recipient.linkedToUser
+                              ? null
+                              : () => _delete(recipient),
                           icon: const Icon(Icons.delete_outline),
                         ),
                       ],

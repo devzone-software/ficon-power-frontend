@@ -111,14 +111,6 @@ class _DevicesPageState extends State<DevicesPage> {
     setState(() => _columnFilters.setText(keyName, value));
   }
 
-  void _setDateFilter(String keyName, DateTime? value) {
-    setState(() => _columnFilters.setDate(keyName, value));
-  }
-
-  void _setSortFilter(String keyName, ColumnSortDirection? value) {
-    setState(() => _columnFilters.setSort(keyName, value));
-  }
-
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
@@ -184,17 +176,21 @@ class _DevicesPageState extends State<DevicesPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final devices = snapshot.data!;
-          final filteredDevices = _sortedDevices(
-            devices.where(
-              (device) =>
-                  (_focusDeviceId == null || device.id == _focusDeviceId) &&
-                  _matchesFilters(device),
-            ),
-          );
+          final focusedDevices = devices
+              .where(
+                (device) =>
+                    _focusDeviceId == null || device.id == _focusDeviceId,
+              )
+              .toList(growable: false);
+          final filteredDevices = focusedDevices
+              .where(_matchesFilters)
+              .toList(growable: false);
           return RefreshIndicator(
             onRefresh: _refresh,
             child: _DevicesPageContent(
-              devices: filteredDevices,
+              devices: _viewMode == DevicesViewMode.map
+                  ? focusedDevices
+                  : filteredDevices,
               focusBanner: _focusDeviceId == null
                   ? null
                   : NotificationFocusBanner(

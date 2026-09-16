@@ -37,11 +37,13 @@ class AuthSession extends ChangeNotifier {
     required String refreshToken,
     required DateTime? expiresAt,
     required DateTime? refreshExpiresAt,
+    AuthUser? user,
   }) {
     _token = token;
     _refreshToken = refreshToken;
     _expiresAt = expiresAt;
     _refreshExpiresAt = refreshExpiresAt;
+    _user = user ?? _user;
     notifyListeners();
   }
 

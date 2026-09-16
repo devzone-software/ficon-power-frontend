@@ -6,13 +6,24 @@ import '../widgets/common.dart';
 import 'dashboard_formatters.dart';
 import 'dashboard_section_header.dart';
 import 'frequency_bar_chart.dart';
+import 'frequency_dot_chart.dart';
 import 'insight_metric_card.dart';
 import 'ranking_bars_card.dart';
 
-class DashboardAnalyticsSection extends StatelessWidget {
+enum _AnalyticsPeriod { weekly, monthly }
+
+class DashboardAnalyticsSection extends StatefulWidget {
   const DashboardAnalyticsSection({super.key, required this.stats});
 
   final DashboardStatistics stats;
+
+  @override
+  State<DashboardAnalyticsSection> createState() =>
+      _DashboardAnalyticsSectionState();
+}
+
+class _DashboardAnalyticsSectionState extends State<DashboardAnalyticsSection> {
+  _AnalyticsPeriod _period = _AnalyticsPeriod.monthly;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +48,28 @@ class DashboardAnalyticsSection extends StatelessWidget {
               children: _metricCards(metricWidth),
             ),
             const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SegmentedButton<_AnalyticsPeriod>(
+                segments: const [
+                  ButtonSegment(
+                    value: _AnalyticsPeriod.weekly,
+                    icon: Icon(Icons.calendar_view_week_outlined),
+                    label: Text('Semana'),
+                  ),
+                  ButtonSegment(
+                    value: _AnalyticsPeriod.monthly,
+                    icon: Icon(Icons.calendar_month_outlined),
+                    label: Text('Mes'),
+                  ),
+                ],
+                selected: {_period},
+                showSelectedIcon: false,
+                onSelectionChanged: (selection) =>
+                    setState(() => _period = selection.first),
+              ),
+            ),
+            const SizedBox(height: 12),
             if (constraints.maxWidth < 720)
               _MobileChartCarousel(charts: charts)
             else if (constraints.maxWidth >= 1000)
@@ -59,7 +92,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
     InsightMetricCard(
       width: width,
       title: 'Apagados registrados',
-      value: '${stats.totalPowerOutages}',
+      value: '${widget.stats.totalPowerOutages}',
       description: 'Cortes detectados en todos los medidores',
       icon: Icons.power_off_outlined,
       color: FiconColors.logoBlue,
@@ -67,7 +100,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
     InsightMetricCard(
       width: width,
       title: 'Promedio semanal',
-      value: stats.weeklyAverageText,
+      value: widget.stats.weeklyAverageText,
       description: 'Frecuencia de apagados en las últimas semanas',
       icon: Icons.date_range_outlined,
       color: StatusColors.offline,
@@ -75,7 +108,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
     InsightMetricCard(
       width: width,
       title: 'Tiempo fuera acumulado',
-      value: formatDashboardDuration(stats.totalDowntimeSeconds),
+      value: formatDashboardDuration(widget.stats.totalDowntimeSeconds),
       description: 'Suma de downtime reportado por la flota',
       icon: Icons.timer_off_outlined,
       color: StatusColors.acknowledged,
@@ -83,7 +116,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
     InsightMetricCard(
       width: width,
       title: 'Duración promedio',
-      value: formatDashboardDuration(stats.averageIncidentSeconds),
+      value: formatDashboardDuration(widget.stats.averageIncidentSeconds),
       description: 'Tiempo promedio antes de volver la energía',
       icon: Icons.av_timer_outlined,
       color: FiconColors.cyan,
@@ -91,33 +124,37 @@ class DashboardAnalyticsSection extends StatelessWidget {
   ];
 
   List<Widget> _charts() => [
-    FrequencyBarChart(
-      title: 'Apagados por día',
-      subtitle: 'Cuántas veces se apagaron medidores en los últimos 7 días',
-      icon: Icons.calendar_view_week_outlined,
-      color: FiconColors.logoBlue,
-      points: stats.dailyIncidents,
+    FrequencyDotChart(
+      title: _period == _AnalyticsPeriod.monthly
+          ? 'Cortes del mes'
+          : 'Cortes de la semana',
+      subtitle: _period == _AnalyticsPeriod.monthly
+          ? 'Número de cortes por cada día del mes actual'
+          : 'Número de cortes de lunes a domingo',
+      points: _period == _AnalyticsPeriod.monthly
+          ? widget.stats.currentMonthDailyIncidents
+          : widget.stats.currentWeekDailyIncidents,
     ),
     FrequencyBarChart(
       title: 'Apagados por semana',
       subtitle: 'Frecuencia semanal acumulada para todos los medidores',
       icon: Icons.stacked_bar_chart_outlined,
       color: StatusColors.offline,
-      points: stats.weeklyIncidents,
+      points: widget.stats.weeklyIncidents,
     ),
     FrequencyBarChart(
       title: 'Apagados por mes',
       subtitle: 'Comparación mensual para ver estacionalidad',
       icon: Icons.calendar_month_outlined,
       color: FiconColors.cyanSoft,
-      points: stats.monthlyIncidents,
+      points: widget.stats.monthlyIncidents,
     ),
     FrequencyBarChart(
       title: 'Días con más apagados',
       subtitle: 'Ayuda a detectar patrones por día de la semana',
       icon: Icons.event_repeat_outlined,
       color: StatusColors.acknowledged,
-      points: stats.weekdayIncidents,
+      points: widget.stats.weekdayIncidents,
     ),
     RankingBarsCard(
       title: 'Medidores con más apagados',
@@ -125,7 +162,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
       icon: Icons.electric_meter_outlined,
       color: StatusColors.offline,
       emptyMessage: 'No hay apagados por medidor.',
-      items: stats.deviceRankings
+      items: widget.stats.deviceRankings
           .map(
             (device) => RankingBarItem(
               label: device.label,
@@ -140,7 +177,7 @@ class DashboardAnalyticsSection extends StatelessWidget {
       subtitle: 'En qué momento del día se concentran los cortes',
       icon: Icons.schedule_outlined,
       color: FiconColors.logoBlue,
-      points: stats.timeOfDayIncidents,
+      points: widget.stats.timeOfDayIncidents,
     ),
   ];
 }

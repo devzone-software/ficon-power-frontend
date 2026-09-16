@@ -4,12 +4,16 @@ class AuthUser {
     required this.username,
     required this.role,
     required this.displayName,
+    this.email,
+    this.whatsappPhone,
   });
 
   final String id;
   final String username;
   final String role;
   final String displayName;
+  final String? email;
+  final String? whatsappPhone;
 
   bool get canEditMessages => role == 'ADMIN' || role == 'SUPERADMIN';
   bool get canEditDevices => role == 'ADMIN' || role == 'SUPERADMIN';
@@ -22,6 +26,8 @@ class AuthUser {
       username: json['username'] as String? ?? '',
       role: json['role'] as String? ?? 'USER',
       displayName: json['displayName'] as String? ?? '',
+      email: json['email'] as String?,
+      whatsappPhone: json['whatsappPhone'] as String?,
     );
   }
 
@@ -31,6 +37,8 @@ class AuthUser {
       'username': username,
       'role': role,
       'displayName': displayName,
+      'email': email,
+      'whatsappPhone': whatsappPhone,
     };
   }
 }

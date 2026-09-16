@@ -8,6 +8,7 @@ class DashboardStatistics {
     required this.totalDowntimeSeconds,
     required this.averageIncidentSeconds,
     required this.dailyIncidents,
+    required this.currentWeekDailyIncidents,
     required this.currentMonthDailyIncidents,
     required this.weeklyIncidents,
     required this.monthlyIncidents,
@@ -20,6 +21,7 @@ class DashboardStatistics {
   final int totalDowntimeSeconds;
   final int averageIncidentSeconds;
   final List<FrequencyPoint> dailyIncidents;
+  final List<FrequencyPoint> currentWeekDailyIncidents;
   final List<FrequencyPoint> currentMonthDailyIncidents;
   final List<FrequencyPoint> weeklyIncidents;
   final List<FrequencyPoint> monthlyIncidents;
@@ -63,6 +65,7 @@ class DashboardStatistics {
       ),
       averageIncidentSeconds: averageDuration,
       dailyIncidents: frequency.daily(),
+      currentWeekDailyIncidents: frequency.currentWeekDaily(),
       currentMonthDailyIncidents: frequency.currentMonthDaily(),
       weeklyIncidents: frequency.weekly(),
       monthlyIncidents: frequency.monthly(),
@@ -140,6 +143,26 @@ class _FrequencyCalculator {
             FrequencyPoint(label: '${entry.key.day}', count: entry.value),
       ),
     );
+  }
+
+  List<FrequencyPoint> currentWeekDaily() {
+    const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    final today = _dateOnly(referenceTime);
+    final monday = today.subtract(
+      Duration(days: today.weekday - DateTime.monday),
+    );
+    final counts = <DateTime, int>{
+      for (var offset = 0; offset < 7; offset++)
+        monday.add(Duration(days: offset)): 0,
+    };
+    _countByDate(counts, (date) => _dateOnly(date));
+    return List.unmodifiable([
+      for (var index = 0; index < labels.length; index++)
+        FrequencyPoint(
+          label: labels[index],
+          count: counts[monday.add(Duration(days: index))]!,
+        ),
+    ]);
   }
 
   List<FrequencyPoint> weekly() {
