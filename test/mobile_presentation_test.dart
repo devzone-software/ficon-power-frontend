@@ -1,6 +1,7 @@
 import 'package:ficon_power_frontend/presentation/admin/mobile/admin_record_card.dart';
 import 'package:ficon_power_frontend/presentation/devices/onboarding/tuya_spatial_guide.dart';
 import 'package:ficon_power_frontend/presentation/login/widgets/login_form_card.dart';
+import 'package:ficon_power_frontend/presentation/login/widgets/login_support_dialog.dart';
 import 'package:ficon_power_frontend/domain/auth_user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,6 +70,25 @@ void main() {
 
     await tester.tap(find.byTooltip('Mostrar contraseña'));
     expect(visible, isTrue);
+  });
+
+  testWidgets('la ayuda de acceso dirige al correo de soporte', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showLoginSupportDialog(context),
+            child: const Text('Abrir ayuda'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir ayuda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Contacte con '), findsOneWidget);
+    expect(find.text('soporte'), findsOneWidget);
   });
 
   testWidgets('la guía explica que el alta pertenece a Tuya Spatial', (

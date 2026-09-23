@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+final Uri _supportEmail = Uri(
+  scheme: 'mailto',
+  path: 'soporte@ficon.pe',
+);
 
 Future<void> showLoginSupportDialog(BuildContext context) {
   return showDialog<void>(
@@ -6,10 +12,25 @@ Future<void> showLoginSupportDialog(BuildContext context) {
     builder: (context) => AlertDialog(
       icon: const Icon(Icons.support_agent),
       title: const Text('Acceso al sistema'),
-      content: const Text(
-        'La recuperación y creación de cuentas se administra internamente. '
-        'Contacta al responsable de FICON Power para verificar el usuario, '
-        'restablecer la contraseña o desbloquear el acceso.',
+      content: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const Text('Contacte con '),
+          InkWell(
+            onTap: () => launchUrl(
+              _supportEmail,
+              mode: LaunchMode.externalApplication,
+            ),
+            child: Text(
+              'soporte',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+          const Text('.'),
+        ],
       ),
       actions: [
         FilledButton(
