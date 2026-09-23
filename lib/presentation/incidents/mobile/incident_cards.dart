@@ -8,16 +8,18 @@ class MobileIncidentList extends StatelessWidget {
   const MobileIncidentList({
     super.key,
     required this.incidents,
+    this.emptyMessage = 'No hay incidentes con esos filtros.',
   });
 
   final List<Incident> incidents;
+  final String emptyMessage;
 
   @override
   Widget build(BuildContext context) {
     if (incidents.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(32),
-        child: Text('No hay incidentes con esos filtros.'),
+      return Padding(
+        padding: const EdgeInsets.all(32),
+        child: Text(emptyMessage),
       );
     }
     return ListView.separated(

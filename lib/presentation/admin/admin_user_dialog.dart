@@ -18,9 +18,12 @@ class _UserDialog extends StatefulWidget {
 class _UserDialogState extends State<_UserDialog> {
   late final TextEditingController _username;
   late final TextEditingController _displayName;
+  late final TextEditingController _email;
+  late final TextEditingController _whatsappPhone;
   late final TextEditingController _password;
   late String _role;
   late bool _active;
+  late bool _whatsappEnabled;
   bool _saving = false;
   bool _showPassword = false;
   String? _error;
@@ -37,23 +40,51 @@ class _UserDialogState extends State<_UserDialog> {
     super.initState();
     _username = TextEditingController(text: widget.user?.username ?? '');
     _displayName = TextEditingController(text: widget.user?.displayName ?? '');
+    _email = TextEditingController(text: widget.user?.email ?? '');
+    _whatsappPhone = TextEditingController(
+      text: widget.user?.whatsappPhone == null
+          ? ''
+          : formatPeruMobilePhone(
+              widget.user!.whatsappPhone!,
+              includeCountryCode: false,
+            ),
+    )..addListener(_phoneChanged);
     _password = TextEditingController();
     final initialRole = widget.user?.role ?? 'USER';
     _role = _assignableRoles.contains(initialRole)
         ? initialRole
         : _assignableRoles.first;
     _active = widget.user?.active ?? true;
+    _whatsappEnabled = widget.user?.whatsappEnabled ?? false;
   }
 
   @override
   void dispose() {
     _username.dispose();
     _displayName.dispose();
+    _email.dispose();
+    _whatsappPhone
+      ..removeListener(_phoneChanged)
+      ..dispose();
     _password.dispose();
     super.dispose();
   }
 
+  void _phoneChanged() {
+    if (normalizePeruMobilePhone(_whatsappPhone.text) == null &&
+        _whatsappEnabled) {
+      setState(() => _whatsappEnabled = false);
+    }
+  }
+
   Future<void> _save() async {
+    if (_whatsappPhone.text.trim().isNotEmpty &&
+        normalizePeruMobilePhone(_whatsappPhone.text) == null) {
+      setState(() {
+        _error = 'Ingresa un celular peruano válido de 9 dígitos.';
+      });
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -65,6 +96,9 @@ class _UserDialogState extends State<_UserDialog> {
           widget.user!.id,
           role: roleToSave,
           displayName: _displayName.text.trim(),
+          email: _email.text.trim().isEmpty ? null : _email.text.trim(),
+          whatsappPhone: normalizePeruMobilePhone(_whatsappPhone.text),
+          whatsappEnabled: _whatsappEnabled,
           active: _active,
           password: _password.text.trim(),
         );
@@ -74,6 +108,9 @@ class _UserDialogState extends State<_UserDialog> {
           password: _password.text.trim(),
           role: _role,
           displayName: _displayName.text.trim(),
+          email: _email.text.trim().isEmpty ? null : _email.text.trim(),
+          whatsappPhone: normalizePeruMobilePhone(_whatsappPhone.text),
+          whatsappEnabled: _whatsappEnabled,
         );
       }
       if (mounted) Navigator.pop(context, true);
@@ -104,6 +141,40 @@ class _UserDialogState extends State<_UserDialog> {
                 controller: _displayName,
                 enabled: !_saving,
                 decoration: const InputDecoration(labelText: 'Nombre visible'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _email,
+                enabled: !_saving,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Correo opcional',
+                  hintText: 'usuario@ejemplo.com',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _whatsappPhone,
+                enabled: !_saving,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Celular WhatsApp opcional',
+                  hintText: '987 654 321',
+                  prefixText: '+51 ',
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Recibir alertas por WhatsApp'),
+                subtitle: const Text(
+                  'Recibirá avisos de cortes y restablecimientos.',
+                ),
+                value: _whatsappEnabled,
+                onChanged:
+                    _saving ||
+                        normalizePeruMobilePhone(_whatsappPhone.text) == null
+                    ? null
+                    : (value) => setState(() => _whatsappEnabled = value),
               ),
               const SizedBox(height: 12),
               if (_editingSuperadmin)

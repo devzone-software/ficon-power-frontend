@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../config/app_config.dart';
 import '../../../domain/auth_user.dart';
+import '../../../domain/peru_phone_number.dart';
 import '../../navigation/app_routes.dart';
 import '../../theme/ficon_theme.dart';
 
@@ -143,9 +144,19 @@ class _AccountSummary extends StatelessWidget {
         ),
         const Divider(height: 1),
         ListTile(
-          title: const Text('Nivel de acceso'),
-          subtitle: Text(user.role),
-          trailing: Chip(label: Text(_roleLabel(user.role))),
+          leading: const Icon(Icons.email_outlined),
+          title: const Text('Correo'),
+          subtitle: Text(_textOrFallback(user.email, 'No registrado')),
+        ),
+        const Divider(height: 1),
+        ListTile(
+          leading: const Icon(Icons.chat_outlined),
+          title: const Text('WhatsApp'),
+          subtitle: Text(
+            user.whatsappPhone?.trim().isNotEmpty == true
+                ? formatPeruMobilePhone(user.whatsappPhone!)
+                : 'No registrado',
+          ),
         ),
         const Divider(height: 1),
         const ListTile(
@@ -157,11 +168,10 @@ class _AccountSummary extends StatelessWidget {
     ),
   );
 
-  String _roleLabel(String role) => switch (role) {
-    'SUPERADMIN' => 'Permisos raíz',
-    'ADMIN' => 'Administrador',
-    _ => 'Solo lectura',
-  };
+  String _textOrFallback(String? value, String fallback) {
+    final normalized = value?.trim();
+    return normalized?.isNotEmpty == true ? normalized! : fallback;
+  }
 }
 
 class _QuickAccess extends StatelessWidget {

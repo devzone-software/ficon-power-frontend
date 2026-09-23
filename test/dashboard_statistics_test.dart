@@ -56,6 +56,9 @@ void main() {
     expect(stats.currentMonthDailyIncidents, hasLength(31));
     expect(stats.currentMonthDailyIncidents[11].count, 1);
     expect(stats.currentMonthDailyIncidents[12].count, 1);
+    expect(stats.currentWeekDailyIncidents, hasLength(7));
+    expect(stats.currentWeekDailyIncidents[2].count, 1);
+    expect(stats.currentWeekDailyIncidents[3].count, 1);
     expect(stats.currentWeekPowerOutages, 2);
     expect(stats.timeOfDayIncidents.map((item) => item.count), [1, 0, 1, 0]);
     expect(stats.deviceRankings.first.label, 'Medidor principal');

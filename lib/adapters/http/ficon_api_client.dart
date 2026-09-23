@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
 import '../../config/auth_session.dart';
+import '../../domain/auth_user.dart';
 import 'exception_handler.dart';
 
 class ApiException implements Exception, UserReadableException {
@@ -101,7 +102,14 @@ class FiconApiClient {
     String path,
     Map<String, dynamic> payload, {
     bool authenticated = true,
-  }) => _sendJson('POST', path, payload, authenticated: authenticated);
+    Duration? timeout,
+  }) => _sendJson(
+    'POST',
+    path,
+    payload,
+    authenticated: authenticated,
+    timeout: timeout,
+  );
 
   Future<Map<String, dynamic>> putJson(
     String path,
@@ -130,6 +138,7 @@ class FiconApiClient {
     String path,
     Map<String, dynamic> payload, {
     bool authenticated = true,
+    Duration? timeout,
   }) async {
     final uri = Uri.parse('$_baseUrl$path');
     final headers = {
@@ -156,6 +165,7 @@ class FiconApiClient {
                     headers: {..._headers, 'Content-Type': 'application/json'},
                     body: body,
                   ),
+            timeout: timeout,
           )
         : await _request(
             () => method == 'POST'
@@ -163,6 +173,7 @@ class FiconApiClient {
                 : method == 'PUT'
                 ? _client.put(uri, headers: headers, body: body)
                 : _client.patch(uri, headers: headers, body: body),
+            timeout: timeout,
           );
     _requireStatus(response, path, const {200, 201});
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
@@ -172,9 +183,12 @@ class FiconApiClient {
     return decoded;
   }
 
-  Future<http.Response> _request(Future<http.Response> Function() send) async {
+  Future<http.Response> _request(
+    Future<http.Response> Function() send, {
+    Duration? timeout,
+  }) async {
     try {
-      return await send().timeout(_timeout);
+      return await send().timeout(timeout ?? _timeout);
     } on TimeoutException catch (error) {
       throw ApiException(
         'El servidor tardó demasiado en responder. Inténtalo nuevamente.',
@@ -247,14 +261,15 @@ class FiconApiClient {
   }
 
   Future<http.Response> _requestWithRefresh(
-    Future<http.Response> Function() send,
-  ) async {
-    final response = await _request(send);
+    Future<http.Response> Function() send, {
+    Duration? timeout,
+  }) async {
+    final response = await _request(send, timeout: timeout);
     if (response.statusCode != 401 || session?.canRefresh != true) {
       return response;
     }
     if (await _refreshSession()) {
-      return _request(send);
+      return _request(send, timeout: timeout);
     }
     return response;
   }
@@ -304,6 +319,11 @@ class FiconApiClient {
       refreshExpiresAt: DateTime.tryParse(
         data['refreshExpiresAt'] as String? ?? '',
       ),
+      user: data['user'] is Map
+          ? AuthUser.fromJson(
+              (data['user'] as Map<dynamic, dynamic>).cast<String, dynamic>(),
+            )
+          : null,
     );
     return true;
   }

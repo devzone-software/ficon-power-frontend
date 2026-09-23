@@ -195,7 +195,7 @@ class _MapSummary extends StatelessWidget {
                   ),
                   Text(
                     hidden.isEmpty
-                        ? 'Todas las ubicaciones filtradas están visibles.'
+                        ? 'Todas las ubicaciones registradas están visibles.'
                         : 'No se muestran: ${hidden.join(' · ')}.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

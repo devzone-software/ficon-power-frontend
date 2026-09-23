@@ -84,7 +84,8 @@ class _DevicesPageContent extends StatelessWidget {
                   ],
                 ),
               ),
-              TableFiltersBar(filters: filters),
+              if (viewMode == DevicesViewMode.list)
+                TableFiltersBar(filters: filters),
               if (devices.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 48),
