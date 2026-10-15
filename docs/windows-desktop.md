@@ -45,10 +45,20 @@ Las pruebas realizadas en Linux no equivalen a esa validación.
 
 Soporte nativo agregado a partir de las plantillas de Flutter 3.44.8, con icono
 FICON y nombre de ventana personalizados. Sintaxis PowerShell validada y
-análisis Dart correcto (`No issues found`). La suite Flutter local quedó
-bloqueada por permisos de la configuración de herramientas del SDK compartido.
-Todavía no se generó ni se ejecutó el EXE: falta un runner Windows. El workflow
-incluye las pruebas para ejecutarlas antes de producir el artefacto.
+análisis Dart local correcto (`No issues found`). La suite Flutter local quedó
+bloqueada por permisos del SDK compartido, y se ejecutó posteriormente en
+Windows mediante GitHub Actions.
+
+La etapa de análisis, pruebas y compilación release terminó correctamente
+para el commit `e2a0d66`. El artefacto `FiconPower-Windows-x64` fue publicado y
+descargado; la integridad ZIP y la presencia del EXE, DLL y recursos se
+comprobaron localmente. Falta la prueba manual de interfaz y conexión real en
+un equipo Windows; el éxito de compilación no equivale a esa prueba.
+
+Ejecución: https://github.com/devzone-software/ficon-power-frontend/actions/runs/38811471765
+
+Artefacto (requiere acceso al repositorio; retención de 14 días):
+https://github.com/devzone-software/ficon-power-frontend/actions/runs/38811471765/artifacts/12008783195
 
 Referencias: https://docs.flutter.dev/platform-integration/windows/setup y
 https://docs.flutter.dev/platform-integration/windows/building.
