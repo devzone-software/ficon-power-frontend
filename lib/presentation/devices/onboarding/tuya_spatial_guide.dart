@@ -18,8 +18,8 @@ class TuyaSpatialGuidePage extends StatelessWidget {
   final String account;
   final String password;
 
-  static final Uri _playStoreUri = Uri.parse(
-    'https://play.google.com/store/apps/details?id=com.smart.spatial',
+  static final Uri downloadUri = Uri.parse(
+    'https://images.tuyacn.com/smart/app/package/1283285297/1785838705-tyindustry1.23.0r46_huawei_international.apk',
   );
 
   static const _deviceSteps = [
@@ -51,7 +51,7 @@ class TuyaSpatialGuidePage extends StatelessWidget {
       'Detectar y agregar el medidor',
       [
         'Energiza el WIFI Energy Meter y colócalo en modo de emparejamiento.',
-        'Espera mientras Tuya Spatial busca dispositivos cercanos.',
+        'Espera mientras Smart Industry busca dispositivos cercanos.',
         'Cuando aparezca el medidor, toca «Agregar», señalado con el número 2.',
       ],
       'assets/guides/tuya_spatial/device-detected.webp',
@@ -74,7 +74,7 @@ class TuyaSpatialGuidePage extends StatelessWidget {
       [
         'Espera mientras el estado del WIFI Energy Meter indique «Being added».',
         'El indicador 6 muestra el progreso del registro.',
-        'No cierres Tuya Spatial, no cambies de red y no retires la energía del medidor.',
+        'No cierres Smart Industry, no cambies de red y no retires la energía del medidor.',
       ],
       'assets/guides/tuya_spatial/pairing-progress.webp',
       'Figura 11. Medidor en proceso de agregado.',
@@ -116,7 +116,7 @@ class TuyaSpatialGuidePage extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Text(
-              'El alta se realiza en Tuya Spatial. FICON registra el medidor '
+              'El alta se realiza en Smart Industry. FICON registra el medidor '
               'durante la sincronización con Tuya o cuando recibe su primer '
               'evento de conectividad.',
               style: TextStyle(fontWeight: FontWeight.w600),
@@ -125,7 +125,7 @@ class TuyaSpatialGuidePage extends StatelessWidget {
           const SizedBox(height: 18),
           const _RequirementsCard(),
           const SizedBox(height: 10),
-          _DownloadStep(onOpen: () => _openPlayStore(context)),
+          _DownloadStep(onOpen: () => _openDownload(context)),
           _ProjectQrStep(qrData: projectQrData),
           _CredentialsStep(account: account, password: password),
           for (var index = 0; index < _deviceSteps.length; index++)
@@ -140,14 +140,16 @@ class TuyaSpatialGuidePage extends StatelessWidget {
     );
   }
 
-  Future<void> _openPlayStore(BuildContext context) async {
+  Future<void> _openDownload(BuildContext context) async {
     final opened = await launchUrl(
-      _playStoreUri,
+      downloadUri,
       mode: LaunchMode.externalApplication,
     );
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir Google Play.')),
+        const SnackBar(
+          content: Text('No se pudo abrir la descarga de Smart Industry.'),
+        ),
       );
     }
   }
@@ -212,16 +214,20 @@ class _DownloadStep extends StatelessWidget {
     return _StepCard(
       index: 1,
       icon: Icons.shop_outlined,
-      title: 'Descargar Tuya Spatial',
+      title: 'Descargar Smart Industry',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Instala la aplicación oficial antes de continuar.'),
+          const Text(
+            'Descarga e instala Smart Industry 1.23.0 desde el servidor de Tuya. '
+            'Si Android lo solicita, permite instalar aplicaciones desde el '
+            'navegador. Conserva Tuya Spatial si ya la tienes instalada.',
+          ),
           const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: onOpen,
             icon: const Icon(Icons.open_in_new),
-            label: const Text('Abrir Google Play'),
+            label: const Text('Descargar APK internacional'),
           ),
         ],
       ),
@@ -244,7 +250,8 @@ class _ProjectQrStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Abre Tuya Spatial y escanea el QR autorizado del proyecto. Este '
+            'Abre Smart Industry, toca SCAN y escanea el QR del proyecto '
+            'Timax-Energy-Detector. Este '
             'código vincula la aplicación con el proyecto cloud; si existen '
             'varios tenants, confirma con el administrador que corresponda al '
             'tenant correcto. Puedes mostrarlo en otra pantalla para facilitar '
@@ -265,7 +272,7 @@ class _ProjectQrStep extends StatelessWidget {
                   data: qrData,
                   size: 220,
                   backgroundColor: Colors.white,
-                  semanticsLabel: 'QR del proyecto Tuya Spatial',
+                  semanticsLabel: 'QR del proyecto Timax-Energy-Detector',
                 ),
               ),
             ),

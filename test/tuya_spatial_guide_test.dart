@@ -17,7 +17,14 @@ void main() {
       ),
     );
 
-    expect(find.text('1. Descargar Tuya Spatial'), findsOneWidget);
+    expect(find.text('1. Descargar Smart Industry'), findsOneWidget);
+    expect(find.text('Descargar APK internacional'), findsOneWidget);
+    expect(find.text('Abrir Google Play'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('2. Escanear el QR del proyecto'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('2. Escanear el QR del proyecto'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
     await tester.scrollUntilVisible(
@@ -46,7 +53,21 @@ void main() {
   ) async {
     await tester.pumpWidget(const MaterialApp(home: TuyaSpatialGuidePage()));
 
-    expect(find.textContaining('TUYA_SPATIAL_PROJECT_QR_DATA'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byType(QrImageView),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byType(QrImageView), findsOneWidget);
+    final projectUri = Uri.parse(
+      tester
+          .widget<TuyaSpatialGuidePage>(find.byType(TuyaSpatialGuidePage))
+          .projectQrData,
+    );
+    expect(projectUri.host, 'smartapp.tuya.com');
+    expect(projectUri.path, '/tyIndustry');
+    expect(projectUri.queryParameters['t'], '1792161730208');
+    expect(find.textContaining('TUYA_SPATIAL_PROJECT_QR_DATA'), findsNothing);
     await tester.scrollUntilVisible(
       find.textContaining('TUYA_SPATIAL_ACCOUNT'),
       400,

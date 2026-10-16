@@ -61,10 +61,17 @@ class AppConfig {
 
   /// Datos privados de acceso a Tuya Spatial para la guía móvil.
   /// Se inyectan desde `.env.mobile` durante la compilación.
-  static const String tuyaSpatialProjectQrData = String.fromEnvironment(
+  static const String _tuyaSpatialProjectQrOverride = String.fromEnvironment(
     'TUYA_SPATIAL_PROJECT_QR_DATA',
     defaultValue: '',
   );
+
+  /// QR del proyecto Timax-Energy-Detector proporcionado el 16/10/2026.
+  /// Un valor no vacío de compilación permite usar otro proyecto.
+  static const String tuyaSpatialProjectQrData =
+      _tuyaSpatialProjectQrOverride != ''
+      ? _tuyaSpatialProjectQrOverride
+      : 'https://smartapp.tuya.com/tyIndustry?c=ShVJQF5cVFRHU11UXUUNWwl6XVIHbwEBDgcCDwAEXkZZVF0QFVVbJQsHV3gLFW1bXFdJGnZeV0JfHho9HD8PCUY1QxUVEENTVl5cXhAKGg9DDQk4UEUdNUFSV1NBXxxCVlFIHkwSThgMOEQJXTcTSg==&t=1792161730208';
 
   static const String tuyaSpatialAccount = String.fromEnvironment(
     'TUYA_SPATIAL_ACCOUNT',
