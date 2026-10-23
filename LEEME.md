@@ -1,5 +1,8 @@
 # FICON Power
 
+Equipo: DCALJ. La primera línea de `lib/main.dart` contiene `// DCALJ`.
+Ese archivo es el punto de entrada compartido de Android y Windows.
+
 Aplicación autónoma para Android y Windows, basada en el frontend del proyecto.
 Esta versión se publica únicamente en la rama `feature/autonomous-windows` del
 frontend para su compilación en GitHub Actions. No se integra en `main` ni se
