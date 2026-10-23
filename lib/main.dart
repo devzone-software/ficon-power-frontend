@@ -13,8 +13,12 @@ import 'config/auth_session.dart';
 import 'presentation/theme/ficon_theme.dart';
 import 'presentation/navigation/app_routes.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const LocalStartup());
+}
+
+Future<Widget> _initializeLocalApp() async {
   final directory = await getApplicationSupportDirectory();
   final engine = await LocalEngine.open(directory.path);
   final session = AuthSession();
@@ -29,12 +33,91 @@ Future<void> main() async {
   final alerts = LocalAlerts(engine, session, LocalConsole.openNotification);
   // OS notifications are optional; the application must open even if denied.
   unawaited(alerts.start());
-  runApp(
-    FiconPowerApp(
-      repository: repository,
-      session: session,
-      navigatorKey: LocalConsole.navigatorKey,
-    ),
+  return FiconPowerApp(
+    repository: repository,
+    session: session,
+    navigatorKey: LocalConsole.navigatorKey,
+  );
+}
+
+/// Render immediately, before accessing native plugins or the persistent store.
+/// Initialization failures are recoverable and never erase the user's data.
+class LocalStartup extends StatefulWidget {
+  const LocalStartup({super.key, this.initialize});
+  final Future<Widget> Function()? initialize;
+
+  @override
+  State<LocalStartup> createState() => _LocalStartupState();
+}
+
+class _LocalStartupState extends State<LocalStartup> {
+  late Future<Widget> _application;
+
+  @override
+  void initState() {
+    super.initState();
+    _application = _initialize();
+  }
+
+  Future<Widget> _initialize() async {
+    try {
+      return await (widget.initialize ?? _initializeLocalApp)();
+    } catch (error, stack) {
+      debugPrint('FICON local startup failed: $error\n$stack');
+      rethrow;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Widget>(
+    future: _application,
+    builder: (context, snapshot) {
+      if (snapshot.hasData) return snapshot.data!;
+      return MaterialApp(
+        title: 'FICON Power',
+        debugShowCheckedModeBanner: false,
+        theme: buildFiconTheme(),
+        home: Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const FiconBrandMark(height: 44),
+                    const SizedBox(height: 24),
+                    if (!snapshot.hasError) ...[
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      const Text('Abriendo FICON Power…'),
+                    ] else ...[
+                      const Text(
+                        'No se pudo iniciar FICON Power.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No se borraron tus datos. Reintenta o instala la versión actualizada.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: () => setState(() {
+                          _application = _initialize();
+                        }),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
   );
 }
 

@@ -29,7 +29,7 @@ void main() {
         );
         final login = await repository.login(
           username: 'superadmin',
-          password: 'FiconLocal2026!',
+          password: '1234',
         );
         session.start(token: login.token, user: login.user);
       });

@@ -50,8 +50,22 @@ class LocalEngine {
       data = _seed();
     }
     final engine = LocalEngine._(file, data);
-    if (!await file.exists()) await engine._save();
+    final credentialsUpdated = engine._updateInitialCredentials();
+    if (!await file.exists() || credentialsUpdated) await engine._save();
     return engine;
+  }
+
+  bool _updateInitialCredentials() {
+    if (state['credentialRevision'] == 1) return false;
+    for (final user in rows('users')) {
+      if (const ['u-superadmin', 'u-admin', 'u-tecnico'].contains(user['id']) &&
+          user['salt'] is String &&
+          _hash('FiconLocal2026!', user['salt']) == user['passwordHash']) {
+        _password(user, '1234');
+      }
+    }
+    state['credentialRevision'] = 1;
+    return true;
   }
 
   List<Row> rows(String table) => (state[table] as List).cast<Row>();
@@ -856,7 +870,7 @@ class LocalEngine {
         'active': true,
         'whatsappEnabled': false,
       };
-      _password(user, 'FiconLocal2026!');
+      _password(user, '1234');
       users.add(user);
     }
     final towns = ['Alto Puno', 'Juliaca', 'Lampa', 'Putina'];
@@ -931,6 +945,7 @@ class LocalEngine {
     }
     return {
       'schema': 1,
+      'credentialRevision': 1,
       'sequence': 0,
       'users': users,
       'sites': sites,

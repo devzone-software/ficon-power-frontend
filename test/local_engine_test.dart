@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ficon_power_frontend/offline/local_engine.dart';
 import 'package:ficon_power_frontend/adapters/http/ficon_monitoring_repository.dart';
@@ -20,7 +22,7 @@ void main() {
     );
     final login = await repository.login(
       username: 'superadmin',
-      password: 'FiconLocal2026!',
+      password: '1234',
     );
     session.start(token: login.token, user: login.user);
   });
@@ -108,10 +110,7 @@ void main() {
     },
   );
   test('technician cannot mutate devices or users; sessions revoke', () async {
-    final login = await repository.login(
-      username: 'tecnico',
-      password: 'FiconLocal2026!',
-    );
+    final login = await repository.login(username: 'tecnico', password: '1234');
     final token = login.token;
     await expectLater(
       engine.request(
@@ -146,10 +145,71 @@ void main() {
         throwsA(anything),
       );
       expect((await repository.fetchLoginAttempts()).first.success, false);
-      expect(
-        await engine.file.readAsString(),
-        isNot(contains('FiconLocal2026!')),
+      for (final user in engine.rows('users')) {
+        expect(user.containsKey('password'), isFalse);
+        expect(user['passwordHash'], isNot('1234'));
+      }
+    },
+  );
+  test('all three initial accounts accept 1234', () async {
+    for (final username in ['superadmin', 'admin', 'tecnico']) {
+      final login = await repository.login(
+        username: username,
+        password: '1234',
       );
+      expect(login.user.username, username);
+    }
+  });
+
+  test(
+    'existing default credentials migrate once without erasing data or custom passwords',
+    () async {
+      engine.state.remove('credentialRevision');
+      for (final user in engine.rows('users')) {
+        const salt = 'legacy-test-salt';
+        final password = user['username'] == 'admin'
+            ? 'Personal123!'
+            : 'FiconLocal2026!';
+        List<int> hash = utf8.encode('$salt:$password');
+        for (var iteration = 0; iteration < 10000; iteration++) {
+          hash = sha256.convert(hash).bytes;
+        }
+        user['salt'] = salt;
+        user['passwordHash'] = base64Encode(hash);
+      }
+      await engine.file.writeAsString(jsonEncode(engine.state), flush: true);
+      final migrated = await LocalEngine.open(directory.path);
+      final migratedRepository = FiconMonitoringRepository(
+        client: LocalClient(migrated),
+        baseUrl: 'http://local.ficon',
+      );
+      try {
+        for (final username in ['superadmin', 'tecnico']) {
+          expect(
+            (await migratedRepository.login(
+              username: username,
+              password: '1234',
+            )).user.username,
+            username,
+          );
+        }
+        expect(
+          (await migratedRepository.login(
+            username: 'admin',
+            password: 'Personal123!',
+          )).user.username,
+          'admin',
+        );
+        expect(migrated.rows('devices'), hasLength(4));
+        expect(migrated.rows('incidents'), hasLength(24));
+        final stored = await migrated.file.readAsString();
+        final reopened = await LocalEngine.open(directory.path);
+        expect(await reopened.file.readAsString(), stored);
+        await reopened.changes.close();
+      } finally {
+        migratedRepository.dispose();
+        await migrated.changes.close();
+      }
     },
   );
   test('unknown operations fail and never fall back to network', () async {

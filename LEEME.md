@@ -9,9 +9,9 @@ publica en el VPS. No contiene archivos `.env` ni claves de producción.
 
 | Usuario | Rol | Contraseña inicial |
 |---|---|---|
-| superadmin | Administrador general | FiconLocal2026! |
-| admin | Administrador | FiconLocal2026! |
-| tecnico | Técnico | FiconLocal2026! |
+| superadmin | Administrador general | 1234 |
+| admin | Administrador | 1234 |
+| tecnico | Técnico | 1234 |
 
 Son cuentas locales ficticias, no cuentas del sistema de producción. El
 superadministrador puede modificar las contraseñas en Usuarios. Cada instalación
@@ -67,6 +67,14 @@ distinto del sistema original. Sin clave privada, Gradle utiliza la firma de
 desarrollo; conservar esa clave local para poder actualizar la instalación.
 No ejecutar los scripts antiguos de publicación del proyecto original.
 
+APK local actual: 1.0.2 (3), con el arranque Android corregido y clave inicial
+`1234`. Al actualizar, solo se cambia la clave predeterminada de esas tres
+cuentas; se conservan las contraseñas personalizadas y todos los registros.
+El script prepara
+los plugins mediante `flutter pub get` y verifica que el paquete incluya la
+biblioteca JNI antes de publicarlo en `dist/mobile`. No sustituir esa etapa por
+`dart pub get` ni omitirla al construir una copia nueva.
+
 ## Compilación Windows
 
 En Windows x64 con Flutter y Visual Studio con desarrollo de escritorio C++:
@@ -80,6 +88,10 @@ Salida: `dist/windows/FiconPower-Windows-x64.zip`. Extraer el ZIP completo y abr
 El ZIP incluye las DLL del runtime C++ para no depender de su instalación previa.
 No necesita backend. Esta compilación requiere Windows; Linux no produce un
 ejecutable Flutter Windows mediante compilación cruzada.
+
+La versión Windows 1.0.2 también utiliza `1234` para las tres cuentas iniciales.
+Al abrirla sobre una instalación anterior, migra las claves predeterminadas
+sin borrar el historial; no cambia contraseñas personalizadas.
 
 ### GitHub Actions
 
