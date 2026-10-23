@@ -117,3 +117,19 @@ SHA-256 de Android 1.0.2:
 El ejecutable Windows 1.0.0 distribuido anteriormente mantiene su contraseña
 anterior. Se prepara Windows 1.0.2 en `feature/autonomous-windows` para aplicar
 las mismas claves y la migración al abrir los datos locales existentes.
+
+## Corrección de etiquetas diarias — versión 1.0.3
+
+La ficha titulada «Últimos 7 días» recibía 30 barras en el motor local. Al
+repartirse en el ancho disponible, los textos de fecha se dividían en varias
+líneas y parecían verticales. Se ajusta la consulta a siete días y cuatro
+semanas, de acuerdo con los títulos de las gráficas.
+
+Las etiquetas diarias se muestran como `dd/MM`, sin año ni hora. Todas las
+etiquetas de barras tienen una sola línea, un ancho mínimo por barra y
+desplazamiento horizontal cuando hace falta; el tooltip conserva la etiqueta
+completa y el número de cortes. No cambia el historial ni la paleta de colores.
+
+Se agregaron pruebas de formato y de presentación a 320 y 1024 píxeles, y
+comprobaciones de los periodos de siete días/cuatro semanas. La versión se
+compila para Android y Windows en la misma rama independiente.

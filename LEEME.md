@@ -67,7 +67,7 @@ distinto del sistema original. Sin clave privada, Gradle utiliza la firma de
 desarrollo; conservar esa clave local para poder actualizar la instalación.
 No ejecutar los scripts antiguos de publicación del proyecto original.
 
-APK local actual: 1.0.2 (3), con el arranque Android corregido y clave inicial
+APK local actual: 1.0.3 (4), con las fechas de gráficos corregidas, arranque Android recuperable y clave inicial
 `1234`. Al actualizar, solo se cambia la clave predeterminada de esas tres
 cuentas; se conservan las contraseñas personalizadas y todos los registros.
 El script prepara
@@ -89,7 +89,7 @@ El ZIP incluye las DLL del runtime C++ para no depender de su instalación previ
 No necesita backend. Esta compilación requiere Windows; Linux no produce un
 ejecutable Flutter Windows mediante compilación cruzada.
 
-La versión Windows 1.0.2 también utiliza `1234` para las tres cuentas iniciales.
+La versión Windows 1.0.3 también utiliza `1234` para las tres cuentas iniciales.
 Al abrirla sobre una instalación anterior, migra las claves predeterminadas
 sin borrar el historial; no cambia contraseñas personalizadas.
 

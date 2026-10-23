@@ -24,13 +24,13 @@ class AppConfig {
   /// Código de versión móvil inyectado por el script de build.
   static const int appVersionCode = int.fromEnvironment(
     'APP_VERSION_CODE',
-    defaultValue: 3,
+    defaultValue: 4,
   );
 
   /// Nombre de versión móvil inyectado por el script de build.
   static const String appVersionName = String.fromEnvironment(
     'APP_VERSION_NAME',
-    defaultValue: '1.0.2',
+    defaultValue: '1.0.3',
   );
 
   /// URL del manifiesto de actualización móvil.

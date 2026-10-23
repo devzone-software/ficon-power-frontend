@@ -687,8 +687,8 @@ class LocalEngine {
                 .clamp(0, 100)
                 .toDouble(),
       },
-      'dailyIncidents': buckets(30, 1),
-      'weeklyIncidents': buckets(12, 7),
+      'dailyIncidents': buckets(7, 1),
+      'weeklyIncidents': buckets(4, 7),
       'monthlyIncidents': List.generate(6, (i) {
         final start = DateTime(current.year, current.month - 5 + i);
         final end = DateTime(start.year, start.month + 1);

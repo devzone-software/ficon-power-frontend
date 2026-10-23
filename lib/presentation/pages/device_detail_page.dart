@@ -429,6 +429,7 @@ class _Charts extends StatelessWidget {
                 icon: Icons.calendar_view_week_outlined,
                 color: FiconColors.logoBlue,
                 points: _points(detail.dailyIncidents),
+                compactDates: true,
               ),
             ),
             SizedBox(

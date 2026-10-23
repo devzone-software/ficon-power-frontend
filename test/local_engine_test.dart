@@ -66,6 +66,9 @@ void main() {
     },
   );
   test('paging filters and detail use the same history', () async {
+    final detail = await repository.fetchDeviceDetail('d-1');
+    expect(detail.dailyIncidents, hasLength(7));
+    expect(detail.weeklyIncidents, hasLength(4));
     final page = await repository.fetchIncidentsPage(
       deviceName: 'Timax - Juliaca',
       size: 2,
