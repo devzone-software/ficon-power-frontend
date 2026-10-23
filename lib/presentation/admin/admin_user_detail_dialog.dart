@@ -79,10 +79,7 @@ class _UserDetailDialogState extends State<_UserDetailDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            UserErrorMessage.forAction(
-              'No se pudo actualizar WhatsApp',
-              error,
-            ),
+            UserErrorMessage.forAction('No se pudo actualizar WhatsApp', error),
           ),
         ),
       );
@@ -193,7 +190,7 @@ class _UserDetailDialogState extends State<_UserDetailDialog> {
               children: [
                 Expanded(
                   child: Text(
-                    'Mensajes enviados',
+                    'Historial de mensajes',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: FiconColors.ink,
                       fontWeight: FontWeight.w800,
@@ -202,10 +199,11 @@ class _UserDetailDialogState extends State<_UserDetailDialog> {
                 ),
                 IconButton(
                   tooltip: 'Actualizar historial',
-                  onPressed: () => setState(
-                    () => _deliveries = widget.repository
-                        .fetchUserWhatsAppDeliveries(user.id),
-                  ),
+                  onPressed: () => setState(() {
+                    _deliveries = widget.repository.fetchUserWhatsAppDeliveries(
+                      user.id,
+                    );
+                  }),
                   icon: const Icon(Icons.refresh),
                 ),
               ],
@@ -217,10 +215,10 @@ class _UserDetailDialogState extends State<_UserDetailDialog> {
                 if (snapshot.hasError) {
                   return ErrorView(
                     error: snapshot.error,
-                    onRetry: () => setState(
-                      () => _deliveries = widget.repository
-                          .fetchUserWhatsAppDeliveries(user.id),
-                    ),
+                    onRetry: () => setState(() {
+                      _deliveries = widget.repository
+                          .fetchUserWhatsAppDeliveries(user.id);
+                    }),
                   );
                 }
                 if (!snapshot.hasData) {
@@ -303,7 +301,13 @@ class _DeliveryCard extends StatelessWidget {
               ? delivery.errorMessage!
               : _formatDateTime(context, delivery.sentAt ?? delivery.createdAt),
         ),
-        trailing: Text(sent ? 'Enviado' : 'Falló'),
+        trailing: Text(
+          delivery.status == 'SIMULATED'
+              ? 'Simulado'
+              : sent
+              ? 'Enviado'
+              : 'Falló',
+        ),
       ),
     );
   }

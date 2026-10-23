@@ -89,7 +89,9 @@ class _OperationsCalendarPageState extends State<OperationsCalendarPage> {
 
   Future<void> _refresh() async {
     if (!mounted) return;
-    setState(() => _future = _fetch());
+    setState(() {
+      _future = _fetch();
+    });
     try {
       await _future;
     } catch (_) {

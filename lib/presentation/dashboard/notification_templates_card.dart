@@ -29,7 +29,9 @@ class _NotificationTemplatesCardState extends State<NotificationTemplatesCard> {
   }
 
   void _reload() {
-    setState(() => _future = widget.getNotificationTemplates());
+    setState(() {
+      _future = widget.getNotificationTemplates();
+    });
   }
 
   @override

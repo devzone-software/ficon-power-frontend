@@ -1,4 +1,13 @@
-# FICON Power Frontend
+# FICON Power
+
+Esta rama contiene la versión autónoma para Android y Windows: datos locales,
+sin backend ni conexiones a Tuya, Firebase, Supabase o Meta. No se despliega al VPS.
+
+Consulta [LEEME.md](LEEME.md) para las cuentas iniciales y el recorrido de uso,
+y [VALIDACION.md](VALIDACION.md) para el estado de las verificaciones.
+GitHub Actions compila el ejecutable en Windows y entrega el paquete completo.
+
+## Referencia del frontend conectado original
 
 Frontend en Flutter para el sistema de gestión de continuidad eléctrica y alerta temprana de Grupo FICON S.A.C. Consume la API REST del [backend Java/Spring Boot](../ficon-power-backend).
 

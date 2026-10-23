@@ -1,4 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'offline/local_engine.dart';
+import 'offline/local_console.dart';
+import 'offline/local_alerts.dart';
 
 import 'adapters/http/ficon_monitoring_repository.dart';
 import 'application/ficon_app_router.dart';
@@ -8,10 +13,29 @@ import 'config/auth_session.dart';
 import 'presentation/theme/ficon_theme.dart';
 import 'presentation/navigation/app_routes.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final directory = await getApplicationSupportDirectory();
+  final engine = await LocalEngine.open(directory.path);
   final session = AuthSession();
-  final repository = FiconMonitoringRepository(session: session);
-  runApp(FiconPowerApp(repository: repository, session: session));
+  final repository = FiconMonitoringRepository(
+    session: session,
+    client: LocalClient(engine),
+    baseUrl: 'http://local.ficon',
+  );
+  LocalConsole.engine = engine;
+  LocalConsole.session = session;
+  session.addListener(LocalConsole.flushNotification);
+  final alerts = LocalAlerts(engine, session, LocalConsole.openNotification);
+  // OS notifications are optional; the application must open even if denied.
+  unawaited(alerts.start());
+  runApp(
+    FiconPowerApp(
+      repository: repository,
+      session: session,
+      navigatorKey: LocalConsole.navigatorKey,
+    ),
+  );
 }
 
 class FiconPowerApp extends StatefulWidget {

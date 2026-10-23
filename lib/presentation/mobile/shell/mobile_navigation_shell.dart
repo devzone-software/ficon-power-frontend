@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../offline/local_console.dart';
 
 import '../../../adapters/http/ficon_monitoring_repository.dart';
 import '../../../application/mobile_notification_controller.dart';
@@ -103,15 +104,23 @@ class _MobileNavigationShellState extends State<MobileNavigationShell>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const FiconBrandMark(height: 34),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(widget.title, overflow: TextOverflow.ellipsis),
-              ),
+              const Flexible(child: FiconBrandMark(height: 28)),
+              if (MediaQuery.sizeOf(context).width >= 480) ...[
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(widget.title, overflow: TextOverflow.ellipsis),
+                ),
+              ],
             ],
           ),
         ),
         actions: [
+          if (widget.currentUser.canEditDevices)
+            IconButton(
+              tooltip: 'Operaciones',
+              onPressed: () => LocalConsole.open(context),
+              icon: const Icon(Icons.electrical_services),
+            ),
           IconButton(
             tooltip: 'Exportar datos',
             onPressed: _exportData,
@@ -304,7 +313,11 @@ class _NotificationHistorySheet extends StatelessWidget {
         final item = controller.items[index];
         return _NotificationTile(
           notification: item,
-          onTap: item.unread ? () => controller.read(item.id) : null,
+          onTap: () {
+            if (item.unread) unawaited(controller.read(item.id));
+            Navigator.of(context).pop();
+            LocalConsole.openNotification(item.data);
+          },
         );
       },
     );

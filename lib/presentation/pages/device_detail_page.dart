@@ -86,7 +86,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = widget.getDeviceDetail(widget.deviceId));
+    setState(() {
+      _future = widget.getDeviceDetail(widget.deviceId);
+    });
     try {
       await _future;
     } catch (_) {

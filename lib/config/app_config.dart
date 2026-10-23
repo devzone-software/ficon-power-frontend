@@ -12,7 +12,7 @@ class AppConfig {
   /// URL base del backend FICON Power.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: 'http://local.ficon',
   );
 
   /// Clave para el header `X-API-Key`. Vacía si el backend no la exige.
@@ -30,7 +30,7 @@ class AppConfig {
   /// Nombre de versión móvil inyectado por el script de build.
   static const String appVersionName = String.fromEnvironment(
     'APP_VERSION_NAME',
-    defaultValue: '0.1.0',
+    defaultValue: '1.0.0',
   );
 
   /// URL del manifiesto de actualización móvil.
@@ -66,12 +66,8 @@ class AppConfig {
     defaultValue: '',
   );
 
-  /// QR del proyecto Timax-Energy-Detector proporcionado el 16/10/2026.
-  /// Un valor no vacío de compilación permite usar otro proyecto.
-  static const String tuyaSpatialProjectQrData =
-      _tuyaSpatialProjectQrOverride != ''
-      ? _tuyaSpatialProjectQrOverride
-      : 'https://smartapp.tuya.com/tyIndustry?c=ShVJQF5cVFRHU11UXUUNWwl6XVIHbwEBDgcCDwAEXkZZVF0QFVVbJQsHV3gLFW1bXFdJGnZeV0JfHho9HD8PCUY1QxUVEENTVl5cXhAKGg9DDQk4UEUdNUFSV1NBXxxCVlFIHkwSThgMOEQJXTcTSg==&t=1792161730208';
+  /// La copia autónoma no contiene el QR del proyecto real.
+  static const String tuyaSpatialProjectQrData = _tuyaSpatialProjectQrOverride;
 
   static const String tuyaSpatialAccount = String.fromEnvironment(
     'TUYA_SPATIAL_ACCOUNT',

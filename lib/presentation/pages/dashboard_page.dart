@@ -79,7 +79,9 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
     try {
       await _future;
     } catch (_) {

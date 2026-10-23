@@ -108,7 +108,9 @@ class _EditDeviceDialogState extends State<_EditDeviceDialog> {
             if (snapshot.hasError) {
               return ErrorView(
                 error: snapshot.error,
-                onRetry: () => setState(() => _sitesFuture = widget.getSites()),
+                onRetry: () => setState(() {
+                  _sitesFuture = widget.getSites();
+                }),
               );
             }
             if (!snapshot.hasData) {

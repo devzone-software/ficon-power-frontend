@@ -91,19 +91,19 @@ void main() {
     expect(find.text('soporte'), findsOneWidget);
   });
 
-  testWidgets('la guía explica que el alta pertenece a Tuya Spatial', (
+  testWidgets('la guía explica el registro local de dispositivos', (
     tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: TuyaSpatialGuidePage()));
 
-    expect(find.text('Agregar un medidor'), findsOneWidget);
-    expect(find.textContaining('Tuya Spatial'), findsWidgets);
+    expect(find.text('Guía de dispositivos'), findsOneWidget);
+    expect(find.text('1. Agregar un dispositivo'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('8. Esperar el emparejamiento'),
+      find.text('5. Restaurar la energía'),
       800,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('8. Esperar el emparejamiento'), findsOneWidget);
+    expect(find.text('5. Restaurar la energía'), findsOneWidget);
   });
 
   testWidgets('la ficha administrativa conserva campos y acción', (

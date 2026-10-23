@@ -73,7 +73,9 @@ class _IncidentsPageState extends State<IncidentsPage> {
   Future<void> _refresh() async {
     if (!mounted || _refreshing) return;
     _refreshing = true;
-    setState(() => _future = _loadPage());
+    setState(() {
+      _future = _loadPage();
+    });
     try {
       await _future;
     } catch (_) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../offline/local_console.dart';
 
 import '../../domain/auth_user.dart';
 import '../../domain/peru_phone_number.dart';
@@ -73,6 +74,8 @@ class AdminScaffold extends StatelessWidget {
           ),
         ),
         actions: [
+          if (currentUser.canEditDevices)
+            IconButton(tooltip: 'Operaciones', onPressed: () => LocalConsole.open(context), icon: const Icon(Icons.electrical_services)),
           LayoutBuilder(
             builder: (context, constraints) {
               final wide = MediaQuery.of(context).size.width >= 720;
