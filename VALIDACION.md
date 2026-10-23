@@ -16,7 +16,7 @@ Implementación local: 22 de octubre de 2026. Compilación Windows: 23 de octubr
 | Comprobación | Resultado |
 |---|---|
 | Análisis de `lib` y `test` | Sin observaciones |
-| Suite completa de pruebas | 88 pruebas aprobadas en Linux tras el fix de arranque y la actualización de claves |
+| Suite completa de pruebas | 91 pruebas aprobadas en Linux y Windows para la versión 1.0.3 |
 | Recorrido móvil con el motor local | Aprobado: abrir Operaciones y registrar corte |
 | Persistencia al reabrir el motor | Aprobada |
 | Corte repetido sin duplicación | Aprobado |
@@ -26,14 +26,14 @@ Implementación local: 22 de octubre de 2026. Compilación Windows: 23 de octubr
 | Historial de WhatsApp simulado | Aprobado; no entrega mensajes externos |
 | Permisos del técnico y revocación de sesión | Aprobados |
 | Retiro de dispositivo conservando historial | Aprobado |
-| APK Android de lanzamiento | Compilada, ARM64, versión 1.0.2 (3) |
+| APK Android de lanzamiento | Compilada, ARM64, versión 1.0.3 (4) |
 | Identificador Android | `pe.ficon.power.local` |
 | Permiso Android INTERNET | Ausente, verificado en la APK final |
 | Sonido de alarma | Recurso `raw/power_alarm` conservado en la APK |
 | Firma Android | Certificado de desarrollo; no es la firma de producción |
 | Instalación y arranque en un teléfono físico | Aprobados: actualización con datos conservados y login visible en Redmi 24117RN76L |
-| Compilación Windows x64 | Generada en GitHub Actions sobre Windows 2022 |
-| Pruebas automatizadas en Windows | 84 aprobadas; análisis sin observaciones |
+| Compilación Windows x64 | Versión 1.0.3 generada en GitHub Actions sobre Windows 2022 |
+| Pruebas automatizadas en Windows | 91 aprobadas; análisis sin observaciones |
 | Runtime C++ incluido | `msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll` y DLL asociadas |
 | Prueba manual en un equipo Windows | Pendiente |
 
@@ -59,7 +59,7 @@ Las pantallas usan el motor local común. La rama de compilación de GitHub no
 despliega al VPS. La compilación Windows se verifica en GitHub Actions; no se
 considera una prueba manual de uso en un equipo Windows.
 
-## Trazabilidad de Windows
+## Trazabilidad de Windows 1.0.0 (primera compilación)
 
 - Rama: `feature/autonomous-windows`.
 - Commit de compilación: `b1ba51bb9eb11ab821f8e2f6efc9a322beca9f1a`.
@@ -115,8 +115,10 @@ SHA-256 de Android 1.0.2:
 `2864af43a24d30894f199ab5d4cb00f94ee55a91bf6ed2d4cfbfb297542883b3`.
 
 El ejecutable Windows 1.0.0 distribuido anteriormente mantiene su contraseña
-anterior. Se prepara Windows 1.0.2 en `feature/autonomous-windows` para aplicar
-las mismas claves y la migración al abrir los datos locales existentes.
+anterior. Windows 1.0.2 se generó correctamente en la ejecución
+[39963538406](https://github.com/devzone-software/ficon-power-frontend/actions/runs/39963538406)
+con las mismas claves y migración. La versión actual 1.0.3 también incorpora la
+corrección de gráficos solicitada durante ese trabajo.
 
 ## Corrección de etiquetas diarias — versión 1.0.3
 
@@ -132,4 +134,21 @@ completa y el número de cortes. No cambia el historial ni la paleta de colores.
 
 Se agregaron pruebas de formato y de presentación a 320 y 1024 píxeles, y
 comprobaciones de los periodos de siete días/cuatro semanas. La versión se
-compila para Android y Windows en la misma rama independiente.
+compiló para Android y Windows en la misma rama independiente, con 91 pruebas
+aprobadas y análisis sin observaciones en ambos entornos.
+
+### Entregables actuales 1.0.3
+
+- Android 1.0.3 (4): actualizado en el Redmi mediante `install -r`, sin borrar
+  datos; arranque en frío correcto y versión instalada comprobada.
+- SHA-256 de la APK:
+  `3bdb3949ccb8512444bcc7ef75146f7493988bcf57432f5cdfa2d9da3fbae18d`.
+- Windows x64: `dist/windows/FiconPower-Windows-x64-1.0.3.zip`, con alias
+  `FiconPower-Windows-x64.zip`. Contiene EXE, DLL, datos y guía con clave `1234`.
+- Commit de compilación: `551da6e26dfabfc97451e7bc25428a7efa4f3ce3`.
+- [Ejecución Windows 1.0.3](https://github.com/devzone-software/ficon-power-frontend/actions/runs/39965107622),
+  artefacto `12507061510`.
+- SHA-256 del ZIP de distribución:
+  `6ab6ddbca0d6b1fb934ba22c52884c56b41851369b2f61c3f34f28401e12f513`.
+- Descarga e integridad verificadas, incluido el digest del artefacto remoto.
+- La revisión manual completa del ejecutable en un equipo Windows sigue pendiente.
