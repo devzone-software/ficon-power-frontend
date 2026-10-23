@@ -77,6 +77,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build-windows-local.ps1
 
 Salida: `dist/windows/FiconPower-Windows-x64.zip`. Extraer el ZIP completo y abrir
 `ficon_power.exe`; no separar el ejecutable de las DLL y la carpeta `data`.
+El ZIP incluye las DLL del runtime C++ para no depender de su instalación previa.
 No necesita backend. Esta compilación requiere Windows; Linux no produce un
 ejecutable Flutter Windows mediante compilación cruzada.
 
